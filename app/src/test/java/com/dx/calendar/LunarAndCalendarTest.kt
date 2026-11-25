@@ -1,6 +1,7 @@
 package com.dx.calendar
 
 import com.dx.calendar.data.model.RecurrenceType
+import com.dx.calendar.update.GitHubAutoUpdater
 import com.dx.calendar.util.LunarCalendarEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -41,5 +42,13 @@ class LunarAndCalendarTest {
     @Test
     fun verifyRecurrenceTypesExist() {
         assertEquals(8, RecurrenceType.entries.size)
+    }
+
+    @Test
+    fun verifyGitHubSemanticVersionComparison() {
+        assertTrue(GitHubAutoUpdater.compareSemVer("v1.1.0", "1.0.0") > 0)
+        assertTrue(GitHubAutoUpdater.compareSemVer("v1.10.0", "v1.2.0") > 0)
+        assertEquals(0, GitHubAutoUpdater.compareSemVer("v1.1.0", "1.1.0"))
+        assertTrue(GitHubAutoUpdater.compareSemVer("v1.0.0", "1.1.0") < 0)
     }
 }

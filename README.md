@@ -15,7 +15,7 @@
 
 ### 📲 下載安裝 (GitHub Releases)
 
-前往 [**GitHub Releases 最新發行頁面**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) 下載 **`DX-Calendar-v1.0.0.apk`** 直接安裝即可使用。
+前往 [**GitHub Releases 最新發行頁面**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) 下載最新簽章版 APK 直接安裝即可使用（App 設定內建 **GitHub 自動檢查與進度條一鍵下載更新**）。
 
 ### ✨ 核心特色
 
@@ -39,6 +39,8 @@
 - **🔐 雙指紋鎖「隱私日曆」獨立加密保險箱**
   - 開啟隱私日曆時強制執行 **第一道指紋 (1/2) → 第二道指紋 (2/2)** 連續雙重生物辨識驗證（防止單指誤觸，並提供雙重隱私 PIN 碼備援）。
   - 隱私密件採用 Android Keystore `AES-256-GCM` 硬體級加密儲存，未解鎖或切換至背景時立即自動上鎖，絕不外洩於一般月曆、搜尋結果或桌面小工具。
+- **🔄 內建 GitHub 連結與自動更新下載器（附即時進度條）**
+  - 設定頁內建專案 GitHub 直達連結，支援啟動與進入設定時**自動判讀 GitHub 最新 Release 版本**，發現新版即自動下載並顯示即時百分比／MB 進度條，完成後自動喚起系統安裝覆蓋更新。
 
 ---
 
@@ -49,7 +51,7 @@
 
 ### 📲 Download & Install
 
-Grab the latest signed **`DX-Calendar-v1.0.0.apk`** directly from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest).
+Grab the latest signed APK directly from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) (includes a built-in **GitHub Auto-Updater with live download progress bar** inside Settings).
 
 ### ✨ Key Features
 
@@ -72,6 +74,8 @@ Grab the latest signed **`DX-Calendar-v1.0.0.apk`** directly from [**GitHub Rele
 - **🔐 Dual-Fingerprint Privacy Calendar Vault**
   - Protected by sequential **Two-Step Biometric Verification (Fingerprint 1/2 → Fingerprint 2/2)** with dual-entry PIN fallback.
   - Encrypts sensitive titles, locations, and notes via Android Keystore `AES-256-GCM`, auto-locks when backgrounded, and strictly isolates private items from public views and widgets.
+- **🔄 Built-in GitHub Link & Auto-Updater with Progress Bar**
+  - Direct links to the GitHub repository & Releases inside Settings, with automatic semantic version checking, automatic APK streaming download with a live percentage/MB progress bar, and one-tap package installation.
 
 ---
 

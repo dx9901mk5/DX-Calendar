@@ -33,7 +33,8 @@ data class UserSettings(
     val googleAccountEmail: String = "",
     val hiddenSystemCalIds: Set<String> = emptySet(),
     val widgetDarkStyle: Boolean = true,
-    val widgetOpacity: Float = 0.85f
+    val widgetOpacity: Float = 0.85f,
+    val autoCheckUpdate: Boolean = true
 )
 
 class AppPreferences(private val context: Context) {
@@ -56,6 +57,7 @@ class AppPreferences(private val context: Context) {
         private val KEY_HIDDEN_SYS_CALS = stringSetPreferencesKey("hidden_sys_cals")
         private val KEY_WIDGET_DARK = booleanPreferencesKey("widget_dark")
         private val KEY_WIDGET_OPACITY = floatPreferencesKey("widget_opacity")
+        private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
 
         fun sha256(input: String): String {
             val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
@@ -89,7 +91,8 @@ class AppPreferences(private val context: Context) {
             googleAccountEmail = prefs[KEY_GOOGLE_EMAIL] ?: "",
             hiddenSystemCalIds = prefs[KEY_HIDDEN_SYS_CALS] ?: emptySet(),
             widgetDarkStyle = prefs[KEY_WIDGET_DARK] ?: true,
-            widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.85f
+            widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.85f,
+            autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true
         )
     }
 
@@ -165,5 +168,9 @@ class AppPreferences(private val context: Context) {
             it[KEY_WIDGET_DARK] = dark
             it[KEY_WIDGET_OPACITY] = opacity.coerceIn(0.2f, 1.0f)
         }
+    }
+
+    suspend fun setAutoCheckUpdate(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_AUTO_CHECK_UPDATE] = enabled }
     }
 }

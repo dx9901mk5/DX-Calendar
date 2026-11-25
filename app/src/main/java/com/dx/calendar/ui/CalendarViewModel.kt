@@ -27,15 +27,20 @@ import com.dx.calendar.data.sync.GoogleTasksSyncManager
 import com.dx.calendar.data.sync.IcsManager
 import com.dx.calendar.data.sync.SystemCalendarAccountInfo
 import com.dx.calendar.ui.screens.EditorSavePayload
+import com.dx.calendar.update.GitHubAutoUpdater
+import com.dx.calendar.update.ReleaseUpdateInfo
+import com.dx.calendar.update.UpdateCheckResult
 import com.dx.calendar.util.PrivacyCryptoManager
 import com.dx.calendar.widget.WidgetRefreshHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
@@ -45,6 +50,29 @@ import java.io.File
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+
+enum class UpdatePhase {
+    IDLE,
+    CHECKING,
+    UP_TO_DATE,
+    UPDATE_AVAILABLE,
+    DOWNLOADING,
+    READY_TO_INSTALL,
+    ERROR
+}
+
+data class AppUpdateUiState(
+    val phase: UpdatePhase = UpdatePhase.IDLE,
+    val currentVersion: String = "1.1.0",
+    val latestVersion: String = "",
+    val releaseInfo: ReleaseUpdateInfo? = null,
+    val progressFraction: Float = 0f,
+    val downloadedBytes: Long = 0L,
+    val totalBytes: Long = 0L,
+    val downloadedApkPath: String? = null,
+    val statusMessage: String = "",
+    val showAutoPromptDialog: Boolean = false
+)
 
 data class EditorLaunchState(
     val isOpen: Boolean = false,
@@ -112,6 +140,12 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private val _isSyncingTasks = MutableStateFlow(false)
     val isSyncingTasks: StateFlow<Boolean> = _isSyncingTasks.asStateFlow()
 
+    private val _updateState = MutableStateFlow(
+        AppUpdateUiState(currentVersion = GitHubAutoUpdater.getCurrentVersionName(app))
+    )
+    val updateState: StateFlow<AppUpdateUiState> = _updateState.asStateFlow()
+    private var activeDownloadJob: Job? = null
+
     private val _refreshTick = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -149,6 +183,10 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
+            val initSettings = repo.prefs.settingsFlow.first()
+            if (initSettings.autoCheckUpdate) {
+                checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = true)
+            }
         }
     }
 
@@ -212,6 +250,12 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openSettings(open: Boolean) {
         _isSettingsOpen.value = open
+        if (open && _updateState.value.phase != UpdatePhase.DOWNLOADING) {
+            checkGitHubUpdate(
+                autoDownloadIfFound = settings.value.autoCheckUpdate,
+                showDialogIfOnMain = false
+            )
+        }
     }
 
     fun openNewEditor(
@@ -640,6 +684,132 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
         }.getOrNull()
+    }
+
+    fun setAutoCheckUpdate(enabled: Boolean) = viewModelScope.launch {
+        repo.prefs.setAutoCheckUpdate(enabled)
+    }
+
+    fun checkGitHubUpdate(autoDownloadIfFound: Boolean = true, showDialogIfOnMain: Boolean = false) {
+        if (_updateState.value.phase == UpdatePhase.CHECKING || _updateState.value.phase == UpdatePhase.DOWNLOADING) return
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val curVer = GitHubAutoUpdater.getCurrentVersionName(app)
+            _updateState.value = _updateState.value.copy(
+                phase = UpdatePhase.CHECKING,
+                currentVersion = curVer,
+                statusMessage = "正在連線 GitHub 判讀是否有新版本..."
+            )
+            when (val res = GitHubAutoUpdater.checkLatestRelease(app)) {
+                is UpdateCheckResult.UpToDate -> {
+                    _updateState.value = _updateState.value.copy(
+                        phase = UpdatePhase.UP_TO_DATE,
+                        currentVersion = res.currentVersion,
+                        latestVersion = res.latestVersion,
+                        statusMessage = "目前已是最新版本 (v${res.currentVersion})",
+                        showAutoPromptDialog = false
+                    )
+                }
+
+                is UpdateCheckResult.UpdateAvailable -> {
+                    _updateState.value = _updateState.value.copy(
+                        phase = UpdatePhase.UPDATE_AVAILABLE,
+                        currentVersion = res.currentVersion,
+                        latestVersion = res.info.cleanVersion,
+                        releaseInfo = res.info,
+                        totalBytes = res.info.apkSizeBytes,
+                        statusMessage = "發現新版本 ${res.info.tagName}！",
+                        showAutoPromptDialog = showDialogIfOnMain && !_isSettingsOpen.value
+                    )
+                    if (autoDownloadIfFound) {
+                        startUpdateDownload(res.info)
+                    }
+                }
+
+                is UpdateCheckResult.Error -> {
+                    _updateState.value = _updateState.value.copy(
+                        phase = UpdatePhase.ERROR,
+                        currentVersion = curVer,
+                        statusMessage = res.message
+                    )
+                }
+            }
+        }
+    }
+
+    fun startUpdateDownload(info: ReleaseUpdateInfo? = _updateState.value.releaseInfo) {
+        val targetInfo = info ?: return
+        if (_updateState.value.phase == UpdatePhase.DOWNLOADING) return
+        activeDownloadJob?.cancel()
+        activeDownloadJob = viewModelScope.launch {
+            val app = getApplication<Application>()
+            _updateState.value = _updateState.value.copy(
+                phase = UpdatePhase.DOWNLOADING,
+                releaseInfo = targetInfo,
+                progressFraction = 0f,
+                downloadedBytes = 0L,
+                totalBytes = targetInfo.apkSizeBytes,
+                statusMessage = "正在下載 ${targetInfo.tagName}..."
+            )
+
+            val dlResult = GitHubAutoUpdater.downloadReleaseApk(app, targetInfo) { downloaded, total, frac ->
+                _updateState.value = _updateState.value.copy(
+                    phase = UpdatePhase.DOWNLOADING,
+                    downloadedBytes = downloaded,
+                    totalBytes = total,
+                    progressFraction = frac,
+                    statusMessage = "正在下載 ${targetInfo.tagName} (${(frac * 100).toInt()}%)"
+                )
+            }
+
+            dlResult.onSuccess { apkFile ->
+                _updateState.value = _updateState.value.copy(
+                    phase = UpdatePhase.READY_TO_INSTALL,
+                    progressFraction = 1f,
+                    downloadedBytes = apkFile.length(),
+                    totalBytes = apkFile.length(),
+                    downloadedApkPath = apkFile.absolutePath,
+                    statusMessage = "下載完成！正在啟動安裝程序..."
+                )
+                val launched = GitHubAutoUpdater.launchApkInstaller(app, apkFile)
+                if (!launched) {
+                    toast("請允許「安裝未知應用程式」權限後，再點一次「立即安裝新版本」")
+                }
+            }.onFailure { err ->
+                _updateState.value = _updateState.value.copy(
+                    phase = UpdatePhase.ERROR,
+                    statusMessage = "下載中斷或失敗：${err.localizedMessage ?: "請重試"}"
+                )
+            }
+        }
+    }
+
+    fun cancelUpdateDownload() {
+        activeDownloadJob?.cancel()
+        activeDownloadJob = null
+        val info = _updateState.value.releaseInfo
+        _updateState.value = _updateState.value.copy(
+            phase = if (info != null) UpdatePhase.UPDATE_AVAILABLE else UpdatePhase.IDLE,
+            progressFraction = 0f,
+            statusMessage = "已取消下載"
+        )
+    }
+
+    fun installDownloadedUpdate() {
+        val path = _updateState.value.downloadedApkPath ?: return
+        val file = File(path)
+        if (file.exists()) {
+            val ok = GitHubAutoUpdater.launchApkInstaller(getApplication(), file)
+            if (!ok) {
+                toast("請先開啟「允許來自此來源的應用程式」授權開關")
+            }
+        } else {
+            startUpdateDownload()
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        _updateState.value = _updateState.value.copy(showAutoPromptDialog = false)
     }
 
     private fun toast(msg: String) {

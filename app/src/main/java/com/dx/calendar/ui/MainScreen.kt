@@ -2,6 +2,7 @@ package com.dx.calendar.ui
 
 import android.app.DatePickerDialog
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,12 +44,15 @@ import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
@@ -127,6 +131,7 @@ fun DXCalendarRootApp(
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
     val systemCalendars by viewModel.systemCalendars.collectAsState()
     val isSyncingTasks by viewModel.isSyncingTasks.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
     val rangeItems by viewModel.visibleRangeItems.collectAsState()
 
     val context = LocalContext.current
@@ -168,10 +173,21 @@ fun DXCalendarRootApp(
         if (isSettingsOpen) {
             SettingsAndManageScreen(
                 settings = settings,
+                updateState = updateState,
                 categories = categories,
                 systemCalendars = systemCalendars,
                 hasCalendarPermission = hasCalendarPermission,
                 onClose = { viewModel.openSettings(false) },
+                onOpenUrl = { url ->
+                    runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    }
+                },
+                onToggleAutoCheckUpdate = { viewModel.setAutoCheckUpdate(it) },
+                onManualCheckUpdate = { viewModel.checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = false) },
+                onStartUpdateDownload = { viewModel.startUpdateDownload() },
+                onCancelUpdateDownload = { viewModel.cancelUpdateDownload() },
+                onInstallDownloadedApk = { viewModel.installDownloadedUpdate() },
                 onSelectBrand = { viewModel.setBrandStyle(it) },
                 onSelectDarkMode = { viewModel.setDarkThemeMode(it) },
                 onToggleStartMonday = { viewModel.setStartMonday(it) },
@@ -657,6 +673,101 @@ fun DXCalendarRootApp(
                 },
                 dismissButton = {
                     TextButton(onClick = { showPinDialog = false }) { Text("取消") }
+                }
+            )
+        }
+
+        // === 啟動時自動偵測到 GitHub 新版本下載進度條彈窗 ===
+        if (updateState.showAutoPromptDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    if (updateState.phase != UpdatePhase.DOWNLOADING) {
+                        viewModel.dismissUpdateDialog()
+                    }
+                },
+                title = {
+                    Text("發現新版本 ${updateState.releaseInfo?.tagName.orEmpty()}")
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "目前版本 v${updateState.currentVersion} → 最新版本 v${updateState.latestVersion}",
+                            color = tokens.accentColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        when (updateState.phase) {
+                            UpdatePhase.DOWNLOADING -> {
+                                val pct = (updateState.progressFraction * 100).toInt()
+                                val dlMb = updateState.downloadedBytes / (1024f * 1024f)
+                                val totMb = updateState.totalBytes / (1024f * 1024f)
+                                Text(
+                                    text = if (updateState.totalBytes > 0) {
+                                        "正在自動下載更新包：$pct% (%.1f / %.1f MB)".format(dlMb, totMb)
+                                    } else "正在自動下載更新包：$pct%",
+                                    fontSize = 13.sp
+                                )
+                                LinearProgressIndicator(
+                                    progress = { updateState.progressFraction },
+                                    color = tokens.accentColor,
+                                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
+                                )
+                            }
+
+                            UpdatePhase.READY_TO_INSTALL -> {
+                                Text("✓ 下載完成 (100%)！請點擊下方按鈕安裝更新。", color = Color(0xFF00C853), fontWeight = FontWeight.Bold)
+                                LinearProgressIndicator(
+                                    progress = { 1f },
+                                    color = Color(0xFF00C853),
+                                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
+                                )
+                            }
+
+                            else -> {
+                                val notes = updateState.releaseInfo?.releaseNotes.orEmpty()
+                                if (notes.isNotBlank()) {
+                                    Text(notes.lines().take(6).joinToString("\n"), fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    when (updateState.phase) {
+                        UpdatePhase.READY_TO_INSTALL -> {
+                            Button(
+                                onClick = { viewModel.installDownloadedUpdate() },
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
+                            ) {
+                                Text("立即安裝")
+                            }
+                        }
+                        UpdatePhase.DOWNLOADING -> {
+                            TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
+                                Text("背景繼續下載")
+                            }
+                        }
+                        else -> {
+                            Button(
+                                onClick = { viewModel.startUpdateDownload() },
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
+                            ) {
+                                Text("立即下載更新")
+                            }
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            if (updateState.phase == UpdatePhase.DOWNLOADING) {
+                                viewModel.cancelUpdateDownload()
+                            }
+                            viewModel.dismissUpdateDialog()
+                        }
+                    ) {
+                        Text(if (updateState.phase == UpdatePhase.DOWNLOADING) "取消下載" else "稍後")
+                    }
                 }
             )
         }

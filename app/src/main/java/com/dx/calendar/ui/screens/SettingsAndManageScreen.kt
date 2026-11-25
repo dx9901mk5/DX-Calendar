@@ -24,19 +24,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -62,7 +68,10 @@ import com.dx.calendar.data.model.BrandStyle
 import com.dx.calendar.data.model.CalendarCategoryEntity
 import com.dx.calendar.data.model.DarkThemeMode
 import com.dx.calendar.data.sync.SystemCalendarAccountInfo
+import com.dx.calendar.ui.AppUpdateUiState
+import com.dx.calendar.ui.UpdatePhase
 import com.dx.calendar.ui.theme.LocalBrandTokens
+import com.dx.calendar.update.GitHubAutoUpdater
 
 private val CATEGORY_COLOR_PALETTE = listOf(
     0xFFFF5238.toInt(),
@@ -82,10 +91,17 @@ private val CATEGORY_COLOR_PALETTE = listOf(
 @Composable
 fun SettingsAndManageScreen(
     settings: UserSettings,
+    updateState: AppUpdateUiState,
     categories: List<CalendarCategoryEntity>,
     systemCalendars: List<SystemCalendarAccountInfo>,
     hasCalendarPermission: Boolean,
     onClose: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onToggleAutoCheckUpdate: (Boolean) -> Unit,
+    onManualCheckUpdate: () -> Unit,
+    onStartUpdateDownload: () -> Unit,
+    onCancelUpdateDownload: () -> Unit,
+    onInstallDownloadedApk: () -> Unit,
     onSelectBrand: (BrandStyle) -> Unit,
     onSelectDarkMode: (DarkThemeMode) -> Unit,
     onToggleStartMonday: (Boolean) -> Unit,
@@ -135,6 +151,21 @@ fun SettingsAndManageScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
+                // 0. GitHub 專案連結與自動版本判讀 / 進度條下載更新中心 (置頂一目了然)
+                item {
+                    GitHubUpdateCard(
+                        autoCheckEnabled = settings.autoCheckUpdate,
+                        updateState = updateState,
+                        onOpenGitHubRepo = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
+                        onOpenGitHubReleases = { onOpenUrl(GitHubAutoUpdater.GITHUB_RELEASES_URL) },
+                        onToggleAutoCheck = onToggleAutoCheckUpdate,
+                        onCheckNow = onManualCheckUpdate,
+                        onStartDownload = onStartUpdateDownload,
+                        onCancelDownload = onCancelUpdateDownload,
+                        onInstallApk = onInstallDownloadedApk
+                    )
+                }
+
                 // 1. 五大品牌主題風格選擇器 (vivo 基底 + OPPO, 小米, Google, 三星)
                 item {
                     Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
@@ -440,6 +471,233 @@ fun SettingsAndManageScreen(
                 TextButton(onClick = { showUrlImportDialog = false }) { Text("取消") }
             }
         )
+    }
+}
+
+@Composable
+private fun GitHubUpdateCard(
+    autoCheckEnabled: Boolean,
+    updateState: AppUpdateUiState,
+    onOpenGitHubRepo: () -> Unit,
+    onOpenGitHubReleases: () -> Unit,
+    onToggleAutoCheck: (Boolean) -> Unit,
+    onCheckNow: () -> Unit,
+    onStartDownload: () -> Unit,
+    onCancelDownload: () -> Unit,
+    onInstallApk: () -> Unit
+) {
+    val tokens = LocalBrandTokens.current
+
+    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.SystemUpdate, contentDescription = null, tint = tokens.accentColor)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "關於 DX日曆 & GitHub 自動更新",
+                            color = tokens.primaryTextColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "目前版本：v${updateState.currentVersion} · 開發者：dx9901mk5",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            // GitHub 儲存庫首頁與 Releases 快速連結按鈕
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onOpenGitHubRepo, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("GitHub 儲存庫", fontSize = 13.sp)
+                }
+                OutlinedButton(onClick = onOpenGitHubReleases, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Releases 頁面", fontSize = 13.sp)
+                }
+            }
+
+            HorizontalDivider(color = tokens.gridLineColor)
+
+            SettingSwitchRow(
+                label = "自動判讀 GitHub 新版並直接下載更新",
+                checked = autoCheckEnabled,
+                onCheckedChange = onToggleAutoCheck
+            )
+
+            // 版本判讀狀態與下載進度條區域
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(tokens.elevatedSurfaceColor.copy(alpha = 0.75f))
+                    .padding(12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    when (updateState.phase) {
+                        UpdatePhase.CHECKING -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = tokens.accentColor
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = updateState.statusMessage.ifBlank { "正在連線 GitHub 判讀最新版本..." },
+                                    color = tokens.primaryTextColor,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+
+                        UpdatePhase.DOWNLOADING -> {
+                            val pct = (updateState.progressFraction * 100).toInt()
+                            val dlMb = updateState.downloadedBytes / (1024f * 1024f)
+                            val totMb = updateState.totalBytes / (1024f * 1024f)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "正在下載新版本 ${updateState.releaseInfo?.tagName.orEmpty()}",
+                                    color = tokens.accentColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (updateState.totalBytes > 0) {
+                                        "$pct% (%.1f / %.1f MB)".format(dlMb, totMb)
+                                    } else "$pct%",
+                                    color = tokens.primaryTextColor,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            LinearProgressIndicator(
+                                progress = { updateState.progressFraction },
+                                color = tokens.accentColor,
+                                trackColor = tokens.gridLineColor,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.End,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                TextButton(onClick = onCancelDownload) {
+                                    Text("取消下載", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                                }
+                            }
+                        }
+
+                        UpdatePhase.READY_TO_INSTALL -> {
+                            Text(
+                                text = "✓ 新版本 ${updateState.releaseInfo?.tagName.orEmpty()} 下載完成 (100%)",
+                                color = Color(0xFF00C853),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            LinearProgressIndicator(
+                                progress = { 1f },
+                                color = Color(0xFF00C853),
+                                trackColor = tokens.gridLineColor,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                            Button(
+                                onClick = onInstallApk,
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("立即安裝新版本覆蓋更新")
+                            }
+                        }
+
+                        UpdatePhase.UPDATE_AVAILABLE -> {
+                            Text(
+                                text = "🎉 發現新版本：${updateState.releaseInfo?.tagName.orEmpty()}",
+                                color = tokens.accentColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            val notesPreview = updateState.releaseInfo?.releaseNotes.orEmpty()
+                            if (notesPreview.isNotBlank()) {
+                                Text(
+                                    text = notesPreview.lines().take(5).joinToString("\n"),
+                                    color = tokens.secondaryTextColor,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Button(
+                                onClick = onStartDownload,
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("立即下載並更新")
+                            }
+                        }
+
+                        UpdatePhase.UP_TO_DATE -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color(0xFF00C853), modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "目前已是最新版本 (v${updateState.currentVersion})",
+                                        color = tokens.primaryTextColor,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                                TextButton(onClick = onCheckNow) {
+                                    Text("重新檢查", fontSize = 12.sp)
+                                }
+                            }
+                        }
+
+                        UpdatePhase.ERROR, UpdatePhase.IDLE -> {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = updateState.statusMessage.ifBlank { "點擊右側按鈕檢查 GitHub 最新版本" },
+                                    color = tokens.secondaryTextColor,
+                                    fontSize = 12.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedButton(onClick = onCheckNow) {
+                                    Text("檢查更新", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
