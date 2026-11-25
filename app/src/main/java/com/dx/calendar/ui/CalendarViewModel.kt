@@ -690,6 +690,53 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         repo.prefs.setAutoCheckUpdate(enabled)
     }
 
+    fun syncDynamicAppIconNow() = viewModelScope.launch(Dispatchers.IO) {
+        val enabled = repo.prefs.getSettingsOnce().dynamicDayIconEnabled
+        com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), enabled)
+        com.dx.calendar.util.DynamicAppIconManager.scheduleMidnightRefresh(getApplication())
+    }
+
+    fun setDynamicDayIconEnabled(enabled: Boolean) = viewModelScope.launch {
+        repo.prefs.setDynamicDayIconEnabled(enabled)
+        withContext(Dispatchers.IO) {
+            com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), enabled)
+            com.dx.calendar.util.DynamicAppIconManager.scheduleMidnightRefresh(getApplication())
+        }
+        toast(
+            if (enabled) "已開啟 1–31 動態日期圖示，桌面圖示將自動顯示今日日期"
+            else "已切回預設靜態 App 圖示"
+        )
+    }
+
+    fun setLiveUpdateIslandEnabled(enabled: Boolean) = viewModelScope.launch {
+        repo.prefs.setLiveUpdateIslandEnabled(enabled)
+        toast(
+            if (enabled) "已開啟原子島 / Live Updates 通知上島"
+            else "已關閉通知上島"
+        )
+    }
+
+    fun triggerLiveUpdateIslandDemo() {
+        val app = getApplication<Application>()
+        val res = com.dx.calendar.alarm.LiveUpdateIslandHelper.postDemoIslandNotification(app)
+        val msg = when {
+            !res.isAndroid16OrHigher ->
+                "已發送相容即時通知（目前系統非 Android 16，於 Android 16 / OriginOS 6 將自動以 Live Updates 上島）"
+            !res.canPostPromoted ->
+                "已發送通知，但系統「即時更新 / 上島」開關未開啟，請點上方按鈕前往開啟！"
+            res.hasPromotableCharacteristics ->
+                "✓ 符合 Android 16 上島資格 (hasPromotableCharacteristics=true)，已推播至原子島！"
+            else ->
+                "已發送測試通知 (hasPromotableCharacteristics=false)，請檢查通知頻道與權限設定"
+        }
+        toast(msg)
+    }
+
+    fun cancelLiveUpdateIslandDemo() {
+        com.dx.calendar.alarm.LiveUpdateIslandHelper.cancelIslandNotification(getApplication())
+        toast("已關閉原子島測試通知")
+    }
+
     fun checkGitHubUpdate(autoDownloadIfFound: Boolean = true, showDialogIfOnMain: Boolean = false) {
         if (_updateState.value.phase == UpdatePhase.CHECKING || _updateState.value.phase == UpdatePhase.DOWNLOADING) return
         viewModelScope.launch {

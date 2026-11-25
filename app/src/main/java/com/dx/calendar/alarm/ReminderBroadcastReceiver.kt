@@ -10,9 +10,13 @@ import android.media.AudioAttributes
 import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 import com.dx.calendar.MainActivity
+import com.dx.calendar.data.local.AppPreferences
+import com.dx.calendar.util.DynamicAppIconManager
+import com.dx.calendar.widget.WidgetRefreshHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 class ReminderBroadcastReceiver : BroadcastReceiver() {
 
@@ -25,8 +29,29 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 CoroutineScope(Dispatchers.IO).launch {
+                    val settings = AppPreferences(context).getSettingsOnce()
+                    DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
+                    DynamicAppIconManager.scheduleMidnightRefresh(context)
                     MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(context)
+                    WidgetRefreshHelper.refreshAllWidgets(context)
                 }
+            }
+
+            Intent.ACTION_DATE_CHANGED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            DynamicAppIconManager.ACTION_UPDATE_DYNAMIC_ICON -> {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val settings = AppPreferences(context).getSettingsOnce()
+                    DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
+                    DynamicAppIconManager.scheduleMidnightRefresh(context)
+                    WidgetRefreshHelper.refreshAllWidgets(context)
+                }
+            }
+
+            LiveUpdateIslandHelper.ACTION_DISMISS_ISLAND -> {
+                val notifId = intent.getIntExtra("notif_id", LiveUpdateIslandHelper.DEMO_ISLAND_NOTIF_ID)
+                LiveUpdateIslandHelper.cancelIslandNotification(context, notifId)
             }
 
             MultiCallAlarmScheduler.ACTION_DISMISS_BURST -> {
@@ -39,6 +64,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 MultiCallAlarmScheduler.cancelRemainingBurstCalls(context, sourceType, itemId, offsetMin, total)
                 val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 nm.cancel(notifId)
+                nm.cancel(notifId + 50000)
                 AlarmRingingActivity.stopActiveRinging()
             }
 
@@ -200,6 +226,35 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(notifId, builder.build())
+
+        // 同步發布 Android 16 原生 Live Updates（OriginOS 6 原子島上島通知）
+        val liveIslandEnabled = runCatching {
+            runBlocking(Dispatchers.IO) { AppPreferences(context).getSettingsOnce().liveUpdateIslandEnabled }
+        }.getOrDefault(true)
+        if (liveIslandEnabled) {
+            val shortText = when {
+                enableMultiCall && burstTotal > 1 -> "連段$burstIndex/$burstTotal"
+                offsetMin > 0 -> "${offsetMin}分後"
+                else -> "進行中"
+            }
+            val progressPct = if (enableMultiCall && burstTotal > 1) {
+                ((burstIndex.toFloat() / burstTotal.toFloat()) * 100f).toInt().coerceIn(10, 100)
+            } else if (offsetMin > 0) {
+                (100 - (offsetMin * 2)).coerceIn(15, 95)
+            } else {
+                100
+            }
+            LiveUpdateIslandHelper.postLiveUpdateNotification(
+                context = context,
+                notifId = notifId + 50000,
+                title = displayTitle,
+                body = displayBody,
+                shortCriticalText = shortText,
+                progressPercent = progressPct,
+                dismissPendingIntent = dismissPi,
+                snoozePendingIntent = snoozePi
+            )
+        }
     }
 
     private fun ensureNotificationChannels(context: Context) {

@@ -5,6 +5,20 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.2.0] - 2026-11-25 (`versionCode = 3`)
+
+### 🆕 新增功能 / Added
+- **📅 動態日期 App 圖示（1–31 日即時顯示）(`DynamicAppIconManager`)**：
+  - 內建 **31 組高解析度向量自適應日曆圖示 (`1`～`31`)**（vivo OriginOS 紅橘頂欄＋白色日曆頁風格），依據當下日期自動切換桌面圖示顯示「幾日」。
+  - 支援午夜跨日自動排程、`DATE_CHANGED` / `TIME_CHANGED` / `TIMEZONE_CHANGED` / 開機與啟動 App 自動同步，並於設定頁提供一鍵開關（可隨時切回預設靜態圖示）。
+- **🏝️ Android 16 原生 Live Updates 通知上島（台／陸版 vivo OriginOS 6 原子島通用）(`LiveUpdateIslandHelper`)**：
+  - 升級 `compileSdk = 36` / `targetSdk = 36`，宣告 `android.permission.POST_PROMOTED_NOTIFICATIONS` 權限。
+  - 日程提醒與連段追擊呼叫同步推播 Android 16 原生 Live Updates（`setOngoing(true)`、`setRequestPromotedOngoing(true)`、`setShortCriticalText` ≤ 7 字元、`Notification.ProgressStyle` 進度條樣式），嚴格遵守系統上島規範（不使用 `RemoteViews`、`setColorized(true)`、`IMPORTANCE_MIN` 或 Group Summary）。
+  - 設定頁新增 **「原子島 / Live Updates 通知上島」專區**：即時偵測 `canPostPromotedNotifications()` 授權狀態、提供一鍵導引至 `Settings.ACTION_APP_NOTIFICATION_PROMOTION_SETTINGS`，以及「立即測試上島（回報 `hasPromotableCharacteristics()` 資格）」與「關閉測試通知」按鈕。
+- **🧪 單元測試擴充**：新增動態圖示別名邊界測試與膠囊短文字 7 字元限制測試。
+
+---
+
 ## [v1.1.0] - 2026-11-25 (`versionCode = 2`)
 
 ### 🆕 新增功能 / Added

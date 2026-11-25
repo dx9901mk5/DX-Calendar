@@ -39,6 +39,9 @@
 - **🔐 雙指紋鎖「隱私日曆」獨立加密保險箱**
   - 開啟隱私日曆時強制執行 **第一道指紋 (1/2) → 第二道指紋 (2/2)** 連續雙重生物辨識驗證（防止單指誤觸，並提供雙重隱私 PIN 碼備援）。
   - 隱私密件採用 Android Keystore `AES-256-GCM` 硬體級加密儲存，未解鎖或切換至背景時立即自動上鎖，絕不外洩於一般月曆、搜尋結果或桌面小工具。
+- **📅 動態日期 App 圖示（1–31 日）＋ 🏝️ Android 16 Live Updates 原子島通知上島**
+  - 內建 31 組向量自適應日曆圖示，依當下日期自動切換桌面 App 圖示顯示當日日期（1–31），並支援跨日午夜自動刷新與設定頁自由開關。
+  - 原生實作 **Android 16 Live Updates**（`POST_PROMOTED_NOTIFICATIONS`、`setRequestPromotedOngoing(true)`、`setShortCriticalText`、`Notification.ProgressStyle`），免白名單即可同時登上**台版與陸版 vivo OriginOS 6 原子島**，設定頁內建權限狀態檢查、系統上島開關直達與一鍵測試上島功能。
 - **🔄 內建 GitHub 連結與自動更新下載器（附即時進度條）**
   - 設定頁內建專案 GitHub 直達連結，支援啟動與進入設定時**自動判讀 GitHub 最新 Release 版本**，發現新版即自動下載並顯示即時百分比／MB 進度條，完成後自動喚起系統安裝覆蓋更新。
 

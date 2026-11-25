@@ -34,7 +34,9 @@ data class UserSettings(
     val hiddenSystemCalIds: Set<String> = emptySet(),
     val widgetDarkStyle: Boolean = true,
     val widgetOpacity: Float = 0.85f,
-    val autoCheckUpdate: Boolean = true
+    val autoCheckUpdate: Boolean = true,
+    val dynamicDayIconEnabled: Boolean = true,
+    val liveUpdateIslandEnabled: Boolean = true
 )
 
 class AppPreferences(private val context: Context) {
@@ -58,6 +60,8 @@ class AppPreferences(private val context: Context) {
         private val KEY_WIDGET_DARK = booleanPreferencesKey("widget_dark")
         private val KEY_WIDGET_OPACITY = floatPreferencesKey("widget_opacity")
         private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
+        private val KEY_DYNAMIC_DAY_ICON = booleanPreferencesKey("dynamic_day_icon_enabled")
+        private val KEY_LIVE_UPDATE_ISLAND = booleanPreferencesKey("live_update_island_enabled")
 
         fun sha256(input: String): String {
             val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
@@ -92,7 +96,9 @@ class AppPreferences(private val context: Context) {
             hiddenSystemCalIds = prefs[KEY_HIDDEN_SYS_CALS] ?: emptySet(),
             widgetDarkStyle = prefs[KEY_WIDGET_DARK] ?: true,
             widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.85f,
-            autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true
+            autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true,
+            dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: true,
+            liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true
         )
     }
 
@@ -172,5 +178,13 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setAutoCheckUpdate(enabled: Boolean) {
         context.dataStore.edit { it[KEY_AUTO_CHECK_UPDATE] = enabled }
+    }
+
+    suspend fun setDynamicDayIconEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_DYNAMIC_DAY_ICON] = enabled }
+    }
+
+    suspend fun setLiveUpdateIslandEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_LIVE_UPDATE_ISLAND] = enabled }
     }
 }

@@ -1,7 +1,9 @@
 package com.dx.calendar
 
+import com.dx.calendar.alarm.LiveUpdateIslandHelper
 import com.dx.calendar.data.model.RecurrenceType
 import com.dx.calendar.update.GitHubAutoUpdater
+import com.dx.calendar.util.DynamicAppIconManager
 import com.dx.calendar.util.LunarCalendarEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -50,5 +52,27 @@ class LunarAndCalendarTest {
         assertTrue(GitHubAutoUpdater.compareSemVer("v1.10.0", "v1.2.0") > 0)
         assertEquals(0, GitHubAutoUpdater.compareSemVer("v1.1.0", "1.1.0"))
         assertTrue(GitHubAutoUpdater.compareSemVer("v1.0.0", "1.1.0") < 0)
+    }
+
+    @Test
+    fun verifyDynamicDayIconAliasNaming() {
+        assertEquals("com.dx.calendar.MainActivityAliasDay01", DynamicAppIconManager.dayAliasName(1))
+        assertEquals("com.dx.calendar.MainActivityAliasDay09", DynamicAppIconManager.dayAliasName(9))
+        assertEquals("com.dx.calendar.MainActivityAliasDay25", DynamicAppIconManager.dayAliasName(25))
+        assertEquals("com.dx.calendar.MainActivityAliasDay31", DynamicAppIconManager.dayAliasName(31))
+        // 邊界夾緊測試
+        assertEquals("com.dx.calendar.MainActivityAliasDay01", DynamicAppIconManager.dayAliasName(0))
+        assertEquals("com.dx.calendar.MainActivityAliasDay31", DynamicAppIconManager.dayAliasName(99))
+    }
+
+    @Test
+    fun verifyLiveUpdateShortCriticalTextConstraint() {
+        assertEquals("3 min", LiveUpdateIslandHelper.formatShortCriticalText("3 min"))
+        assertEquals("連段1/3", LiveUpdateIslandHelper.formatShortCriticalText("連段1/3"))
+        assertEquals("提醒中", LiveUpdateIslandHelper.formatShortCriticalText("   "))
+        assertTrue(
+            LiveUpdateIslandHelper.formatShortCriticalText("這是一段超過七個字元的超長提醒").length <=
+                LiveUpdateIslandHelper.MAX_SHORT_CRITICAL_CHARS
+        )
     }
 }

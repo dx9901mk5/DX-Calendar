@@ -63,6 +63,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.os.Build
+import com.dx.calendar.alarm.LiveUpdateIslandStatus
 import com.dx.calendar.data.local.UserSettings
 import com.dx.calendar.data.model.BrandStyle
 import com.dx.calendar.data.model.CalendarCategoryEntity
@@ -119,7 +121,13 @@ fun SettingsAndManageScreen(
     onImportIcsFile: () -> Unit,
     onImportIcsUrl: (String) -> Unit,
     onExportIcsShare: () -> Unit,
-    onTestMultiCallAlarmDemo: () -> Unit
+    onTestMultiCallAlarmDemo: () -> Unit,
+    liveUpdateStatus: LiveUpdateIslandStatus,
+    onToggleDynamicDayIcon: (Boolean) -> Unit,
+    onToggleLiveUpdateIsland: (Boolean) -> Unit,
+    onOpenLiveUpdateSettings: () -> Unit,
+    onTestLiveUpdateIsland: () -> Unit,
+    onCancelLiveUpdateIsland: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
     var showNewCatDialog by remember { mutableStateOf(false) }
@@ -164,6 +172,72 @@ fun SettingsAndManageScreen(
                         onCancelDownload = onCancelUpdateDownload,
                         onInstallApk = onInstallDownloadedApk
                     )
+                }
+
+                // 0.5 動態日期圖示 (1–31) 與 Android 16 原子島 / Live Updates 通知上島
+                item {
+                    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                text = "動態日期圖示 (1–31) 與原子島通知上島",
+                                color = tokens.primaryTextColor,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            SettingSwitchRow(
+                                label = "桌面 App 圖示自動顯示今日日期 (1–31 日)",
+                                checked = settings.dynamicDayIconEnabled,
+                                onCheckedChange = onToggleDynamicDayIcon
+                            )
+                            Text(
+                                text = "每日 00:00 跨日與開啟 App 時自動切換為當日數字圖示（vivo 紅橘日曆樣式）；關閉則恢復預設靜態圖示。",
+                                color = tokens.secondaryTextColor,
+                                fontSize = 12.sp
+                            )
+
+                            HorizontalDivider(color = tokens.gridLineColor)
+
+                            SettingSwitchRow(
+                                label = "日程提醒上島 (Android 16 Live Updates / OriginOS 6 原子島)",
+                                checked = settings.liveUpdateIslandEnabled,
+                                onCheckedChange = onToggleLiveUpdateIsland
+                            )
+
+                            val statusText = when {
+                                liveUpdateStatus.isAndroid16OrHigher && liveUpdateStatus.canPostPromoted ->
+                                    "✓ Android 16+ 系統已授權 Live Updates 上島通知（台/陸版 OriginOS 6 通用）"
+                                liveUpdateStatus.isAndroid16OrHigher ->
+                                    "⚠ 尚未開啟系統「即時更新 / 上島通知」開關，請點擊下方按鈕前往開啟"
+                                else ->
+                                    "ℹ 目前系統為 Android ${Build.VERSION.RELEASE}（升級至 Android 16 / OriginOS 6 即自動以原生 Live Updates 上島，目前以相容持續進度通知呈現）"
+                            }
+                            val statusColor = when {
+                                liveUpdateStatus.isAndroid16OrHigher && liveUpdateStatus.canPostPromoted -> Color(0xFF00C853)
+                                liveUpdateStatus.isAndroid16OrHigher -> Color(0xFFFFB300)
+                                else -> tokens.secondaryTextColor
+                            }
+                            Text(text = statusText, color = statusColor, fontSize = 12.sp)
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                OutlinedButton(onClick = onOpenLiveUpdateSettings, modifier = Modifier.weight(1f)) {
+                                    Text("系統上島權限", fontSize = 12.sp)
+                                }
+                                Button(
+                                    onClick = onTestLiveUpdateIsland,
+                                    colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("立即測試上島", fontSize = 12.sp)
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = onCancelLiveUpdateIsland,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("關閉測試上島通知", fontSize = 12.sp)
+                            }
+                        }
+                    }
                 }
 
                 // 1. 五大品牌主題風格選擇器 (vivo 基底 + OPPO, 小米, Google, 三星)

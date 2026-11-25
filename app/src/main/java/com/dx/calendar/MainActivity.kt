@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat
 import com.dx.calendar.security.DualBiometricHelper
 import com.dx.calendar.ui.CalendarViewModel
 import com.dx.calendar.ui.DXCalendarRootApp
+import com.dx.calendar.util.DynamicAppIconManager
 import com.dx.calendar.widget.WidgetRefreshHelper
 import com.google.android.gms.common.AccountPicker
 
@@ -92,6 +93,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         handleWidgetIntent(intent)
+        DynamicAppIconManager.scheduleMidnightRefresh(this)
+        viewModel.syncDynamicAppIconNow()
 
         setContent {
             DXCalendarRootApp(
@@ -151,6 +154,8 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleWidgetIntent(intent)
+        DynamicAppIconManager.scheduleMidnightRefresh(this)
+        viewModel.syncDynamicAppIconNow()
     }
 
     private fun handleWidgetIntent(intent: Intent?) {
@@ -158,6 +163,11 @@ class MainActivity : AppCompatActivity() {
             intent.removeExtra(WidgetRefreshHelper.EXTRA_QUICK_ADD)
             viewModel.openNewEditor()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.syncDynamicAppIconNow()
     }
 
     override fun onStop() {

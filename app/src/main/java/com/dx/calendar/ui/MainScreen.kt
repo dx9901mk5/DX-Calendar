@@ -209,7 +209,13 @@ fun DXCalendarRootApp(
                         context.startActivity(Intent.createChooser(it, "匯出分享 DX日曆 (.ics)"))
                     }
                 },
-                onTestMultiCallAlarmDemo = { MultiCallAlarmScheduler.triggerImmediateDemoAlarm(context) }
+                onTestMultiCallAlarmDemo = { MultiCallAlarmScheduler.triggerImmediateDemoAlarm(context) },
+                liveUpdateStatus = com.dx.calendar.alarm.LiveUpdateIslandHelper.getStatus(context),
+                onToggleDynamicDayIcon = { viewModel.setDynamicDayIconEnabled(it) },
+                onToggleLiveUpdateIsland = { viewModel.setLiveUpdateIslandEnabled(it) },
+                onOpenLiveUpdateSettings = { com.dx.calendar.alarm.LiveUpdateIslandHelper.openPromotionSettings(context) },
+                onTestLiveUpdateIsland = { viewModel.triggerLiveUpdateIslandDemo() },
+                onCancelLiveUpdateIsland = { viewModel.cancelLiveUpdateIslandDemo() }
             )
             return@DXCalendarTheme
         }
