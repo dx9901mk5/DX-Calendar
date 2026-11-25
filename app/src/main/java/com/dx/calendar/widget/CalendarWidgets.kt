@@ -42,6 +42,8 @@ object WidgetRefreshHelper {
     const val EXTRA_TASK_ID = "extra_widget_task_id"
     const val EXTRA_QUICK_ADD = "extra_open_quick_add"
     const val EXTRA_OPEN_EPOCH_DAY = "extra_widget_open_epoch_day"
+    const val EXTRA_OPEN_ITEM_RAW_ID = "extra_widget_open_item_raw_id"
+    const val EXTRA_OPEN_DAY_VIEW = "extra_widget_open_day_view"
     const val EXTRA_CLICK_IS_TASK = "extra_widget_click_is_task"
     const val EXTRA_WIDGET_MODE = "extra_widget_list_mode"
 
@@ -261,8 +263,17 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                         7
                     )
                     views.setOnClickPendingIntent(R.id.btn_widget_mode, toggleWeekPi)
-                    // 桌面點擊月曆區域可直接展開/收合單週，點擊標題列開啟主程式
-                    views.setOnClickPendingIntent(R.id.widget_canvas_img, toggleWeekPi)
+                    // 桌面整個月曆／單週 7 天每一格皆可直接點擊跳至當日呈現；單週展開下半部點擊回切月檢視，標題列開啟主程式
+                    if (weekMode) {
+                        views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.GONE)
+                        views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.VISIBLE)
+                        bindWeekTapCells(context, views, id, anchorDate, settings.startWeekOnMonday)
+                        views.setOnClickPendingIntent(R.id.widget_canvas_img, toggleWeekPi)
+                    } else {
+                        views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
+                        views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
+                        bindMonthTapCells(context, views, id, ym, settings.startWeekOnMonday)
+                    }
                     views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(context, id * 10 + 4, quickAdd = true))
                     views.setOnClickPendingIntent(R.id.widget_month_title, buildMainAppPi(context, id * 10 + 6, quickAdd = false))
 
@@ -376,7 +387,10 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                         buildBroadcastPi(context, GoogleMonthWidgetProvider::class.java, WidgetRefreshHelper.ACTION_RESET_TODAY, id, 13)
                     )
                     views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(context, id * 10 + 14, quickAdd = true))
-                    views.setOnClickPendingIntent(R.id.widget_canvas_img, buildMainAppPi(context, id * 10 + 15, quickAdd = false))
+                    views.setOnClickPendingIntent(R.id.widget_month_title, buildMainAppPi(context, id * 10 + 16, quickAdd = false))
+                    views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
+                    views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
+                    bindMonthTapCells(context, views, id, ym, settings.startWeekOnMonday)
 
                     mgr.updateAppWidget(id, views)
                 }
@@ -445,7 +459,9 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
             for (id in ids) {
                 val views = RemoteViews(context.packageName, R.layout.widget_scrollable_list)
                 views.setTextViewText(R.id.widget_list_header_title, header)
-                views.setTextViewText(R.id.widget_list_badge, "時間表")
+                // 移除「時間表」三個字，保持頂欄極簡清爽
+                views.setTextViewText(R.id.widget_list_badge, "")
+                views.setViewVisibility(R.id.widget_list_badge, android.view.View.INVISIBLE)
 
                 val svcIntent = Intent(context, ScheduleRemoteViewsService::class.java).apply {
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -458,10 +474,12 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
                 views.setOnClickPendingIntent(R.id.btn_widget_list_add, buildMainAppPi(context, id * 10 + 21, quickAdd = true))
                 views.setOnClickPendingIntent(R.id.widget_list_header_title, buildMainAppPi(context, id * 10 + 22, quickAdd = false))
 
-                val clickTemplate = Intent(context, GoogleScheduleWidgetProvider::class.java).apply {
-                    action = WidgetRefreshHelper.ACTION_TOGGLE_TASK
+                // 關鍵修復：直接使用 PendingIntent.getActivity 作為模板，即使 App 被從背景滑掉（冷啟動）
+                // 也不會遭 Android 12–16 背景啟動限制 (BAL) 攔截，點擊事件立即直接呈現該事件詳情！
+                val clickTemplate = Intent(context, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
-                val templatePi = PendingIntent.getBroadcast(
+                val templatePi = PendingIntent.getActivity(
                     context,
                     id * 10 + 23,
                     clickTemplate,
@@ -619,6 +637,7 @@ private class ScheduleRemoteViewsFactory(
         val fillIn = Intent().apply {
             putExtra(WidgetRefreshHelper.EXTRA_WIDGET_MODE, mode)
             putExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY, item.date.toEpochDay())
+            putExtra(WidgetRefreshHelper.EXTRA_OPEN_ITEM_RAW_ID, item.rawId)
             putExtra(WidgetRefreshHelper.EXTRA_CLICK_IS_TASK, item.isTask)
             if (item.isTask) {
                 putExtra(WidgetRefreshHelper.EXTRA_TASK_ID, item.rawId)
@@ -946,6 +965,71 @@ private fun buildBroadcastPi(
     return PendingIntent.getBroadcast(
         context,
         widgetId * 100 + reqOffset,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+}
+
+private val MONTH_CELL_VIEW_IDS = intArrayOf(
+    R.id.widget_cell_00, R.id.widget_cell_01, R.id.widget_cell_02, R.id.widget_cell_03, R.id.widget_cell_04, R.id.widget_cell_05, R.id.widget_cell_06,
+    R.id.widget_cell_07, R.id.widget_cell_08, R.id.widget_cell_09, R.id.widget_cell_10, R.id.widget_cell_11, R.id.widget_cell_12, R.id.widget_cell_13,
+    R.id.widget_cell_14, R.id.widget_cell_15, R.id.widget_cell_16, R.id.widget_cell_17, R.id.widget_cell_18, R.id.widget_cell_19, R.id.widget_cell_20,
+    R.id.widget_cell_21, R.id.widget_cell_22, R.id.widget_cell_23, R.id.widget_cell_24, R.id.widget_cell_25, R.id.widget_cell_26, R.id.widget_cell_27,
+    R.id.widget_cell_28, R.id.widget_cell_29, R.id.widget_cell_30, R.id.widget_cell_31, R.id.widget_cell_32, R.id.widget_cell_33, R.id.widget_cell_34,
+    R.id.widget_cell_35, R.id.widget_cell_36, R.id.widget_cell_37, R.id.widget_cell_38, R.id.widget_cell_39, R.id.widget_cell_40, R.id.widget_cell_41
+)
+
+private val WEEK_CELL_VIEW_IDS = intArrayOf(
+    R.id.widget_week_cell_0, R.id.widget_week_cell_1, R.id.widget_week_cell_2,
+    R.id.widget_week_cell_3, R.id.widget_week_cell_4, R.id.widget_week_cell_5, R.id.widget_week_cell_6
+)
+
+private fun bindMonthTapCells(
+    context: Context,
+    views: RemoteViews,
+    widgetId: Int,
+    yearMonth: YearMonth,
+    startMonday: Boolean
+) {
+    val firstOfMonth = yearMonth.atDay(1)
+    val shift = if (startMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
+    val startDate = firstOfMonth.minusDays(shift.toLong())
+    for (idx in 0 until 42) {
+        val cellDate = startDate.plusDays(idx.toLong())
+        views.setOnClickPendingIntent(
+            MONTH_CELL_VIEW_IDS[idx],
+            buildOpenDatePi(context, widgetId * 1000 + idx + 100, cellDate.toEpochDay())
+        )
+    }
+}
+
+private fun bindWeekTapCells(
+    context: Context,
+    views: RemoteViews,
+    widgetId: Int,
+    anchorDate: LocalDate,
+    startMonday: Boolean
+) {
+    val shift = if (startMonday) anchorDate.dayOfWeek.value - 1 else anchorDate.dayOfWeek.value % 7
+    val weekStart = anchorDate.minusDays(shift.toLong())
+    for (c in 0 until 7) {
+        val cellDate = weekStart.plusDays(c.toLong())
+        views.setOnClickPendingIntent(
+            WEEK_CELL_VIEW_IDS[c],
+            buildOpenDatePi(context, widgetId * 1000 + c + 200, cellDate.toEpochDay())
+        )
+    }
+}
+
+private fun buildOpenDatePi(context: Context, reqCode: Int, epochDay: Long): PendingIntent {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        putExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY, epochDay)
+        putExtra(WidgetRefreshHelper.EXTRA_OPEN_DAY_VIEW, true)
+    }
+    return PendingIntent.getActivity(
+        context,
+        reqCode,
         intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )

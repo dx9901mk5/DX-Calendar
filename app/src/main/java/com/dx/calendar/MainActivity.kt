@@ -160,10 +160,21 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleWidgetIntent(intent: Intent?) {
         val openEpochDay = intent?.getLongExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY, Long.MIN_VALUE) ?: Long.MIN_VALUE
+        val openItemRawId = intent?.getLongExtra(WidgetRefreshHelper.EXTRA_OPEN_ITEM_RAW_ID, -1L) ?: -1L
+        val openIsTask = intent?.getBooleanExtra(WidgetRefreshHelper.EXTRA_CLICK_IS_TASK, false) ?: false
+        val openDayView = intent?.getBooleanExtra(WidgetRefreshHelper.EXTRA_OPEN_DAY_VIEW, false) ?: false
+
         if (openEpochDay != Long.MIN_VALUE) {
             intent?.removeExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY)
-            viewModel.selectDate(java.time.LocalDate.ofEpochDay(openEpochDay))
-            viewModel.setMainSection(com.dx.calendar.data.model.MainSection.CALENDAR)
+            intent?.removeExtra(WidgetRefreshHelper.EXTRA_OPEN_ITEM_RAW_ID)
+            intent?.removeExtra(WidgetRefreshHelper.EXTRA_CLICK_IS_TASK)
+            intent?.removeExtra(WidgetRefreshHelper.EXTRA_OPEN_DAY_VIEW)
+
+            if (openItemRawId > 0L) {
+                viewModel.openEventFromWidget(openEpochDay, openItemRawId, openIsTask)
+            } else {
+                viewModel.openDateFromWidget(openEpochDay, switchToDayView = openDayView)
+            }
         }
         if (intent?.getBooleanExtra(WidgetRefreshHelper.EXTRA_QUICK_ADD, false) == true) {
             intent.removeExtra(WidgetRefreshHelper.EXTRA_QUICK_ADD)

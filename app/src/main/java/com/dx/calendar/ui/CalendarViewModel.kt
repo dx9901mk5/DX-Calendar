@@ -128,6 +128,13 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private val _focusedItem = MutableStateFlow<UnifiedCalendarItem?>(null)
     val focusedItem: StateFlow<UnifiedCalendarItem?> = _focusedItem.asStateFlow()
 
+    private data class PendingWidgetEventFocus(
+        val date: LocalDate,
+        val rawId: Long,
+        val isTask: Boolean
+    )
+    private var pendingWidgetFocus: PendingWidgetEventFocus? = null
+
     private val _editorState = MutableStateFlow(EditorLaunchState())
     val editorState: StateFlow<EditorLaunchState> = _editorState.asStateFlow()
 
@@ -174,6 +181,17 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 settings = input.settings,
                 isPrivacyUnlocked = input.privacyUnlocked
             )
+            pendingWidgetFocus?.let { target ->
+                val matched = built.firstOrNull {
+                    it.date == target.date && it.rawId == target.rawId && it.isTask == target.isTask
+                } ?: built.firstOrNull {
+                    it.date == target.date && it.rawId == target.rawId
+                }
+                if (matched != null) {
+                    _focusedItem.value = matched
+                    pendingWidgetFocus = null
+                }
+            }
             emit(built)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -203,6 +221,37 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         val ym = YearMonth.from(date)
         if (ym != _currentYearMonth.value) {
             _currentYearMonth.value = ym
+        }
+    }
+
+    fun openDateFromWidget(epochDay: Long, switchToDayView: Boolean = true) {
+        val date = LocalDate.ofEpochDay(epochDay)
+        pendingWidgetFocus = null
+        _mainSection.value = MainSection.CALENDAR
+        _selectedDate.value = date
+        _currentYearMonth.value = YearMonth.from(date)
+        _focusedItem.value = null
+        if (switchToDayView) {
+            _viewMode.value = CalendarViewMode.DAY
+        }
+    }
+
+    fun openEventFromWidget(epochDay: Long, rawId: Long, isTask: Boolean) {
+        val date = LocalDate.ofEpochDay(epochDay)
+        _mainSection.value = MainSection.CALENDAR
+        _selectedDate.value = date
+        _currentYearMonth.value = YearMonth.from(date)
+        val alreadyLoaded = visibleRangeItems.value.firstOrNull {
+            it.date == date && it.rawId == rawId && it.isTask == isTask
+        } ?: visibleRangeItems.value.firstOrNull {
+            it.date == date && it.rawId == rawId
+        }
+        if (alreadyLoaded != null) {
+            pendingWidgetFocus = null
+            _focusedItem.value = alreadyLoaded
+        } else {
+            pendingWidgetFocus = PendingWidgetEventFocus(date, rawId, isTask)
+            _refreshTick.value += 1
         }
     }
 
