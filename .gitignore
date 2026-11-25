@@ -13,3 +13,5 @@ app/build
 apk/
 *.jks
 *.keystore
+DEV_RECORD.md
+.agents/
