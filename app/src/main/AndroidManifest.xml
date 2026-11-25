@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Pixelbook / Chromebook 與無指紋硬體裝置相容性宣告 -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
+
+    <!-- 日曆雙向同步權限 -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+
+    <!-- 多重連段提醒、全螢幕強喚醒與連動系統時鐘鬧鐘權限 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- 雙指紋鎖生物辨識權限 -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <!-- Google Tasks 同步與 ICS 訂閱網路權限 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.DXCalendar">
+
+        <!-- 支援手機、8吋/10吋平板、Pixelbook 桌面視窗與自由小視窗任意縮放 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode|keyboard|keyboardHidden">
+            <layout
+                android:defaultWidth="980dp"
+                android:defaultHeight="700dp"
+                android:gravity="center"
+                android:minWidth="300dp"
+                android:minHeight="360dp" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 全螢幕多重連段鬧鐘響鈴頁面 -->
+        <activity
+            android:name=".alarm.AlarmRingingActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true" />
+
+        <!-- 多重呼叫連段提醒與開機重排程 Receiver -->
+        <receiver
+            android:name=".alarm.ReminderBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="com.dx.calendar.ACTION_FIRE_REMINDER" />
+                <action android:name="com.dx.calendar.ACTION_DISMISS_BURST" />
+                <action android:name="com.dx.calendar.ACTION_SNOOZE_REMINDER" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 小工具 1：vivo 風格月曆小工具 (可自由縮放) -->
+        <receiver
+            android:name=".widget.VivoMonthWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_vivo_month_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.dx.calendar.widget.ACTION_PREV_MONTH" />
+                <action android:name="com.dx.calendar.widget.ACTION_NEXT_MONTH" />
+                <action android:name="com.dx.calendar.widget.ACTION_RESET_TODAY" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_vivo_month_info" />
+        </receiver>
+
+        <!-- 小工具 2：Google 日曆風格月檢視小工具 (可自由縮放) -->
+        <receiver
+            android:name=".widget.GoogleMonthWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_google_month_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.dx.calendar.widget.ACTION_PREV_MONTH" />
+                <action android:name="com.dx.calendar.widget.ACTION_NEXT_MONTH" />
+                <action android:name="com.dx.calendar.widget.ACTION_RESET_TODAY" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_google_month_info" />
+        </receiver>
+
+        <!-- 小工具 3：Google 日曆風格時間表可捲動小工具 (可自由縮放) -->
+        <receiver
+            android:name=".widget.GoogleScheduleWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_google_schedule_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.dx.calendar.widget.ACTION_TOGGLE_TASK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_google_schedule_info" />
+        </receiver>
+
+        <!-- 小工具 4：vivo 風格待辦與例行事務可捲動小工具 (可自由縮放) -->
+        <receiver
+            android:name=".widget.VivoTasksWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_vivo_tasks_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_vivo_tasks_info" />
+        </receiver>
+
+        <service
+            android:name=".widget.ScheduleRemoteViewsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

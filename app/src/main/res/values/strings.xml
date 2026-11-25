@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DX日曆</string>
+    <string name="widget_vivo_month_label">vivo 月曆 (可自由縮放)</string>
+    <string name="widget_vivo_month_desc">vivo 風格農曆節氣與行程月曆，支援桌面直接翻月與任意縮放</string>
+    <string name="widget_google_month_label">Google 月檢視 (可自由縮放)</string>
+    <string name="widget_google_month_desc">Google 日曆滿版網格月檢視，含 Tasks 待辦顯示與自由縮放</string>
+    <string name="widget_google_schedule_label">Google 日曆時間表 (可捲動縮放)</string>
+    <string name="widget_google_schedule_desc">可上下捲動瀏覽近期行程與 Google Tasks 待辦清單</string>
+    <string name="widget_vivo_tasks_label">vivo 待辦與例行事務 (可捲動縮放)</string>
+    <string name="widget_vivo_tasks_desc">集中顯示待辦事項與例行事務，支援桌面打勾與自由縮放</string>
+</resources>
