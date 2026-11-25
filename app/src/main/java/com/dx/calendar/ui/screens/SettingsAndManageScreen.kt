@@ -1,16 +1,20 @@
 package com.dx.calendar.ui.screens
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,21 +22,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,6 +62,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,10 +73,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.os.Build
 import com.dx.calendar.alarm.LiveUpdateIslandStatus
 import com.dx.calendar.data.local.UserSettings
 import com.dx.calendar.data.model.BrandStyle
@@ -86,8 +99,23 @@ private val CATEGORY_COLOR_PALETTE = listOf(
     0xFF5C6BC0.toInt()
 )
 
+private enum class DxSettingsSection(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector
+) {
+    ACCOUNTS_AND_TASKS("帳號、Google Tasks 與日曆", "Google Tasks 同步、本機類型、系統日曆", Icons.Filled.AccountCircle),
+    APPEARANCE("外觀主題與底圖", "類 vivo / 類三星等 5 款風格與桌布", Icons.Filled.Palette),
+    ICON_AND_ISLAND("動態圖示與原子島", "1–31 日期圖示、Android 16 上島通知", Icons.Filled.NotificationsActive),
+    CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線與連段測試", Icons.Filled.Tune),
+    IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport),
+    ABOUT_UPDATE("關於 DX日曆與自動更新", "GitHub 專案連結、版本判讀與下載", Icons.Filled.SystemUpdate)
+}
+
 /**
- * 設定、五大品牌主題切換、日程與待辦事項管理、ICS/URL 匯入匯出頁面（仿 vivo 00:22~00:36 & 01:12 + 五大品牌主題中心）
+ * DX日曆自有原創設定中心（DX Studio Workspace 風格）：
+ * - 平板與摺疊機展開（寬度 >= 600dp）：呈現「左頁功能選擇導覽 + 右頁詳細設定」兩頁並排！
+ * - 手機與窄視窗：頂部膠囊分類跳轉 + 乾淨自有卡片排版。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -97,6 +125,7 @@ fun SettingsAndManageScreen(
     categories: List<CalendarCategoryEntity>,
     systemCalendars: List<SystemCalendarAccountInfo>,
     hasCalendarPermission: Boolean,
+    isSyncingTasks: Boolean,
     onClose: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onToggleAutoCheckUpdate: (Boolean) -> Unit,
@@ -110,6 +139,8 @@ fun SettingsAndManageScreen(
     onToggleShowLunar: (Boolean) -> Unit,
     onToggleShowWeekNum: (Boolean) -> Unit,
     onToggleGridLines: (Boolean) -> Unit,
+    onToggleShowCompletedTasks: (Boolean) -> Unit,
+    onSyncGoogleTasks: () -> Unit,
     onPickWallpaper: () -> Unit,
     onClearWallpaper: () -> Unit,
     onChangeWallpaperAlpha: (Float) -> Unit,
@@ -130,343 +161,278 @@ fun SettingsAndManageScreen(
     onCancelLiveUpdateIsland: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
+    var selectedSection by remember { mutableStateOf(DxSettingsSection.ACCOUNTS_AND_TASKS) }
     var showNewCatDialog by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
 
+    val taskCategory = remember(categories) { categories.find { it.isTaskCategory } }
+
     Surface(color = tokens.backgroundColor, modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 頂部標題列
+            // DX 原創頂部工作列（帶品牌徽章與版本標記）
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(tokens.surfaceCardColor)
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
             ) {
                 IconButton(onClick = onClose) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = tokens.primaryTextColor)
                 }
-                Text(
-                    text = "主題風格、日程管理與設定",
-                    color = tokens.primaryTextColor,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // 0. GitHub 專案連結與自動版本判讀 / 進度條下載更新中心 (置頂一目了然)
-                item {
-                    GitHubUpdateCard(
-                        autoCheckEnabled = settings.autoCheckUpdate,
-                        updateState = updateState,
-                        onOpenGitHubRepo = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
-                        onOpenGitHubReleases = { onOpenUrl(GitHubAutoUpdater.GITHUB_RELEASES_URL) },
-                        onToggleAutoCheck = onToggleAutoCheckUpdate,
-                        onCheckNow = onManualCheckUpdate,
-                        onStartDownload = onStartUpdateDownload,
-                        onCancelDownload = onCancelUpdateDownload,
-                        onInstallApk = onInstallDownloadedApk
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(tokens.accentColor)
+                ) {
+                    Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "DX 設定工作台",
+                        color = tokens.primaryTextColor,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "DX-Calendar v${updateState.currentVersion} · 自有雙欄設定架構",
+                        color = tokens.secondaryTextColor,
+                        fontSize = 11.sp
                     )
                 }
+            }
 
-                // 0.5 動態日期圖示 (1–31) 與 Android 16 原子島 / Live Updates 通知上島
-                item {
-                    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text(
-                                text = "動態日期圖示 (1–31) 與原子島通知上島",
-                                color = tokens.primaryTextColor,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            SettingSwitchRow(
-                                label = "桌面 App 圖示自動顯示今日日期 (1–31 日)",
-                                checked = settings.dynamicDayIconEnabled,
-                                onCheckedChange = onToggleDynamicDayIcon
-                            )
-                            Text(
-                                text = "每日 00:00 跨日與開啟 App 時自動切換為當日數字圖示（vivo 紅橘日曆樣式）；關閉則恢復預設靜態圖示。",
-                                color = tokens.secondaryTextColor,
-                                fontSize = 12.sp
-                            )
+            HorizontalDivider(color = tokens.gridLineColor)
 
-                            HorizontalDivider(color = tokens.gridLineColor)
+            // 響應式內容：平板與摺疊機 (>= 600dp) 強制兩頁並排；手機為頂部膠囊切換＋單欄內容
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val isTwoPane = maxWidth >= 600.dp
 
-                            SettingSwitchRow(
-                                label = "日程提醒上島 (Android 16 Live Updates / OriginOS 6 原子島)",
-                                checked = settings.liveUpdateIslandEnabled,
-                                onCheckedChange = onToggleLiveUpdateIsland
-                            )
-
-                            val statusText = when {
-                                liveUpdateStatus.isAndroid16OrHigher && liveUpdateStatus.canPostPromoted ->
-                                    "✓ Android 16+ 系統已授權 Live Updates 上島通知（台/陸版 OriginOS 6 通用）"
-                                liveUpdateStatus.isAndroid16OrHigher ->
-                                    "⚠ 尚未開啟系統「即時更新 / 上島通知」開關，請點擊下方按鈕前往開啟"
-                                else ->
-                                    "ℹ 目前系統為 Android ${Build.VERSION.RELEASE}（升級至 Android 16 / OriginOS 6 即自動以原生 Live Updates 上島，目前以相容持續進度通知呈現）"
+                if (isTwoPane) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        // 左頁：功能分類選擇清單
+                        LazyColumn(
+                            contentPadding = PaddingValues(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .weight(0.37f)
+                                .fillMaxHeight()
+                                .background(tokens.surfaceCardColor.copy(alpha = 0.45f))
+                        ) {
+                            item {
+                                Text(
+                                    text = "功能分類",
+                                    color = tokens.secondaryTextColor,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                                )
                             }
-                            val statusColor = when {
-                                liveUpdateStatus.isAndroid16OrHigher && liveUpdateStatus.canPostPromoted -> Color(0xFF00C853)
-                                liveUpdateStatus.isAndroid16OrHigher -> Color(0xFFFFB300)
-                                else -> tokens.secondaryTextColor
-                            }
-                            Text(text = statusText, color = statusColor, fontSize = 12.sp)
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                OutlinedButton(onClick = onOpenLiveUpdateSettings, modifier = Modifier.weight(1f)) {
-                                    Text("系統上島權限", fontSize = 12.sp)
-                                }
-                                Button(
-                                    onClick = onTestLiveUpdateIsland,
-                                    colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("立即測試上島", fontSize = 12.sp)
-                                }
-                            }
-                            OutlinedButton(
-                                onClick = onCancelLiveUpdateIsland,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("關閉測試上島通知", fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-
-                // 1. 五大品牌主題風格選擇器 (vivo 基底 + OPPO, 小米, Google, 三星)
-                item {
-                    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Palette, contentDescription = null, tint = tokens.accentColor)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("五大品牌主題風格 (以 vivo 為基底)", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            BrandStyle.entries.forEach { style ->
-                                val selected = settings.brandStyle == style
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(
-                                            if (selected) Color(style.primaryHex).copy(alpha = 0.16f)
-                                            else tokens.elevatedSurfaceColor.copy(alpha = 0.6f)
-                                        )
-                                        .border(
-                                            width = if (selected) 1.5.dp else 0.dp,
-                                            color = if (selected) Color(style.primaryHex) else Color.Transparent,
-                                            shape = RoundedCornerShape(14.dp)
-                                        )
-                                        .clickable { onSelectBrand(style) }
-                                        .padding(12.dp)
-                                ) {
-                                    Box(
+                            DxSettingsSection.entries.forEach { sec ->
+                                item {
+                                    val active = selectedSection == sec
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
                                         modifier = Modifier
-                                            .size(28.dp)
-                                            .background(Color(style.primaryHex), CircleShape)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(style.displayName, color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                        Text(style.subtitle, color = tokens.secondaryTextColor, fontSize = 11.sp)
-                                    }
-                                    if (selected) {
-                                        Icon(Icons.Filled.Check, contentDescription = "已選用", tint = Color(style.primaryHex))
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider(color = tokens.gridLineColor)
-
-                            Text("深淺外觀模式", color = tokens.secondaryTextColor, fontSize = 12.sp)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                DarkThemeMode.entries.forEach { mode ->
-                                    FilterChip(
-                                        selected = settings.darkThemeMode == mode,
-                                        onClick = { onSelectDarkMode(mode) },
-                                        label = { Text(mode.label, fontSize = 12.sp) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 2. 自訂月曆背景圖片（致敬截圖 1 背景圖層）與桌面小工具外觀
-                item {
-                    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Image, contentDescription = null, tint = tokens.accentColor)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("月曆自訂背景圖與桌面小工具風格", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(onClick = onPickWallpaper, modifier = Modifier.weight(1f)) {
-                                    Text("選擇月曆背景圖片")
-                                }
-                                if (settings.customWallpaperUri.isNotBlank()) {
-                                    OutlinedButton(onClick = onClearWallpaper) {
-                                        Text("移除背景")
-                                    }
-                                }
-                            }
-                            if (settings.customWallpaperUri.isNotBlank()) {
-                                Text("背景圖透明度：${(settings.wallpaperAlpha * 100).toInt()}%", color = tokens.secondaryTextColor, fontSize = 12.sp)
-                                Slider(
-                                    value = settings.wallpaperAlpha,
-                                    onValueChange = onChangeWallpaperAlpha,
-                                    valueRange = 0.08f..0.65f
-                                )
-                            }
-
-                            HorizontalDivider(color = tokens.gridLineColor)
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("桌面小工具採用深色毛玻璃底 (vivo 風格)", color = tokens.primaryTextColor, fontSize = 14.sp)
-                                Switch(
-                                    checked = settings.widgetDarkStyle,
-                                    onCheckedChange = { onChangeWidgetAppearance(it, settings.widgetOpacity) }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 3. 日曆檢視偏好設定（仿 vivo 設定 & Google 設定）
-                item {
-                    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("日曆檢視偏好", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-
-                            SettingSwitchRow("一週起始日設為週一 (關閉則為週日)", settings.startWeekOnMonday, onToggleStartMonday)
-                            SettingSwitchRow("顯示農曆、二十四節氣與台灣節慶", settings.showLunar, onToggleShowLunar)
-                            SettingSwitchRow("顯示全年週次編號", settings.showWeekNumber, onToggleShowWeekNum)
-                            SettingSwitchRow("顯示月曆格線", settings.showMonthGridLines, onToggleGridLines)
-
-                            HorizontalDivider(color = tokens.gridLineColor)
-                            OutlinedButton(
-                                onClick = onTestMultiCallAlarmDemo,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("測試「多重呼叫全螢幕鬧鐘提醒」立即預覽")
-                            }
-                        }
-                    }
-                }
-
-                // 4. 日程與待辦事項管理（仿 vivo 00:22 本機時間表類型 + 外部 Google 帳號日曆勾選）
-                item {
-                    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("本機時間表類型管理", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                TextButton(onClick = { showNewCatDialog = true }) {
-                                    Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Text("新增類型")
-                                }
-                            }
-
-                            categories.filter { !it.isPrivacyCategory }.forEach { cat ->
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onToggleCategoryVisible(cat) }
-                                        .padding(vertical = 4.dp)
-                                ) {
-                                    Checkbox(
-                                        checked = cat.isVisible,
-                                        onCheckedChange = { onToggleCategoryVisible(cat) }
-                                    )
-                                    Box(modifier = Modifier.size(12.dp).background(Color(cat.colorArgb), CircleShape))
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text("${cat.name} (${cat.accountName})", color = tokens.primaryTextColor, fontSize = 14.sp)
-                                }
-                            }
-
-                            HorizontalDivider(color = tokens.gridLineColor)
-                            Text("設備 Google / 系統日曆同步管理", color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            if (!hasCalendarPermission) {
-                                Text("授權日曆權限即可載入裝置上所有 Google 日曆與子日曆（學務處、家庭、節慶等）", color = tokens.secondaryTextColor, fontSize = 12.sp)
-                                Button(
-                                    onClick = onRequestCalendarPermission,
-                                    colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
-                                ) {
-                                    Text("授權讀取與同步系統日曆")
-                                }
-                            } else if (systemCalendars.isEmpty()) {
-                                Text("此裝置目前尚未登入系統 Google 日曆帳號", color = tokens.secondaryTextColor, fontSize = 12.sp)
-                            } else {
-                                systemCalendars.groupBy { it.accountName }.forEach { (acc, cals) ->
-                                    Text(acc, color = tokens.accentColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
-                                    cals.forEach { sc ->
-                                        val isVis = !settings.hiddenSystemCalIds.contains(sc.id.toString())
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { onToggleSystemCalendarVisible(sc.id, !isVis) }
-                                                .padding(vertical = 2.dp)
-                                        ) {
-                                            Checkbox(
-                                                checked = isVis,
-                                                onCheckedChange = { onToggleSystemCalendarVisible(sc.id, it) }
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(14.dp))
+                                            .background(
+                                                if (active) tokens.accentColor.copy(alpha = 0.16f)
+                                                else Color.Transparent
                                             )
-                                            Box(modifier = Modifier.size(10.dp).background(Color(sc.colorArgb), CircleShape))
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
+                                            .border(
+                                                width = if (active) 1.2.dp else 0.dp,
+                                                color = if (active) tokens.accentColor.copy(alpha = 0.7f) else Color.Transparent,
+                                                shape = RoundedCornerShape(14.dp)
+                                            )
+                                            .clickable { selectedSection = sec }
+                                            .padding(horizontal = 12.dp, vertical = 12.dp)
+                                    ) {
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(
+                                                    if (active) tokens.accentColor
+                                                    else tokens.elevatedSurfaceColor
+                                                )
+                                        ) {
+                                            Icon(
+                                                imageVector = sec.icon,
+                                                contentDescription = null,
+                                                tint = if (active) Color.White else tokens.secondaryTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = sec.title,
+                                                color = if (active) tokens.accentColor else tokens.primaryTextColor,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = sec.subtitle,
+                                                color = tokens.secondaryTextColor,
+                                                fontSize = 11.sp,
+                                                maxLines = 1
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                }
 
-                // 5. 匯入與匯出日程（仿 vivo 00:34 本機 ICS 匯入 / URL 訂閱連結匯入 / 匯出備份）
-                item {
-                    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("匯入與匯出日程 (ICS / URL)", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                OutlinedButton(onClick = onImportIcsFile, modifier = Modifier.weight(1f)) {
-                                    Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("匯入 ICS 檔案")
-                                }
-                                OutlinedButton(onClick = { showUrlImportDialog = true }, modifier = Modifier.weight(1f)) {
-                                    Icon(Icons.Filled.Link, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("URL 連結匯入")
+                        VerticalDivider(color = tokens.gridLineColor)
+
+                        // 右頁：所選分類的詳細設定頁
+                        LazyColumn(
+                            contentPadding = PaddingValues(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier
+                                .weight(0.63f)
+                                .fillMaxHeight()
+                        ) {
+                            item {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(selectedSection.icon, contentDescription = null, tint = tokens.accentColor, modifier = Modifier.size(22.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(selectedSection.title, color = tokens.primaryTextColor, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                        Text(selectedSection.subtitle, color = tokens.secondaryTextColor, fontSize = 12.sp)
+                                    }
                                 }
                             }
-                            OutlinedButton(onClick = onExportIcsShare, modifier = Modifier.fillMaxWidth()) {
-                                Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("匯出本機日程為標準 .ics 檔案分享")
+                            item {
+                                DxSettingsSectionContent(
+                                    section = selectedSection,
+                                    settings = settings,
+                                    updateState = updateState,
+                                    categories = categories,
+                                    taskCategory = taskCategory,
+                                    systemCalendars = systemCalendars,
+                                    hasCalendarPermission = hasCalendarPermission,
+                                    isSyncingTasks = isSyncingTasks,
+                                    liveUpdateStatus = liveUpdateStatus,
+                                    onOpenUrl = onOpenUrl,
+                                    onToggleAutoCheckUpdate = onToggleAutoCheckUpdate,
+                                    onManualCheckUpdate = onManualCheckUpdate,
+                                    onStartUpdateDownload = onStartUpdateDownload,
+                                    onCancelUpdateDownload = onCancelUpdateDownload,
+                                    onInstallDownloadedApk = onInstallDownloadedApk,
+                                    onSelectBrand = onSelectBrand,
+                                    onSelectDarkMode = onSelectDarkMode,
+                                    onToggleStartMonday = onToggleStartMonday,
+                                    onToggleShowLunar = onToggleShowLunar,
+                                    onToggleShowWeekNum = onToggleShowWeekNum,
+                                    onToggleGridLines = onToggleGridLines,
+                                    onToggleShowCompletedTasks = onToggleShowCompletedTasks,
+                                    onSyncGoogleTasks = onSyncGoogleTasks,
+                                    onPickWallpaper = onPickWallpaper,
+                                    onClearWallpaper = onClearWallpaper,
+                                    onChangeWallpaperAlpha = onChangeWallpaperAlpha,
+                                    onChangeWidgetAppearance = onChangeWidgetAppearance,
+                                    onToggleCategoryVisible = onToggleCategoryVisible,
+                                    onOpenNewCategoryDialog = { showNewCatDialog = true },
+                                    onRequestCalendarPermission = onRequestCalendarPermission,
+                                    onToggleSystemCalendarVisible = onToggleSystemCalendarVisible,
+                                    onImportIcsFile = onImportIcsFile,
+                                    onOpenUrlImportDialog = { showUrlImportDialog = true },
+                                    onExportIcsShare = onExportIcsShare,
+                                    onTestMultiCallAlarmDemo = onTestMultiCallAlarmDemo,
+                                    onToggleDynamicDayIcon = onToggleDynamicDayIcon,
+                                    onToggleLiveUpdateIsland = onToggleLiveUpdateIsland,
+                                    onOpenLiveUpdateSettings = onOpenLiveUpdateSettings,
+                                    onTestLiveUpdateIsland = onTestLiveUpdateIsland,
+                                    onCancelLiveUpdateIsland = onCancelLiveUpdateIsland
+                                )
                             }
+                            item { Spacer(modifier = Modifier.height(36.dp)) }
+                        }
+                    }
+                } else {
+                    // 手機單欄：頂部橫向分類選擇膠囊 + 當前分類詳情
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(tokens.surfaceCardColor.copy(alpha = 0.65f))
+                                .horizontalScroll(rememberScrollState())
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            DxSettingsSection.entries.forEach { sec ->
+                                val active = selectedSection == sec
+                                FilterChip(
+                                    selected = active,
+                                    onClick = { selectedSection = sec },
+                                    leadingIcon = {
+                                        Icon(sec.icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    },
+                                    label = { Text(sec.title, fontSize = 12.sp) }
+                                )
+                            }
+                        }
+
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            item {
+                                DxSettingsSectionContent(
+                                    section = selectedSection,
+                                    settings = settings,
+                                    updateState = updateState,
+                                    categories = categories,
+                                    taskCategory = taskCategory,
+                                    systemCalendars = systemCalendars,
+                                    hasCalendarPermission = hasCalendarPermission,
+                                    isSyncingTasks = isSyncingTasks,
+                                    liveUpdateStatus = liveUpdateStatus,
+                                    onOpenUrl = onOpenUrl,
+                                    onToggleAutoCheckUpdate = onToggleAutoCheckUpdate,
+                                    onManualCheckUpdate = onManualCheckUpdate,
+                                    onStartUpdateDownload = onStartUpdateDownload,
+                                    onCancelUpdateDownload = onCancelUpdateDownload,
+                                    onInstallDownloadedApk = onInstallDownloadedApk,
+                                    onSelectBrand = onSelectBrand,
+                                    onSelectDarkMode = onSelectDarkMode,
+                                    onToggleStartMonday = onToggleStartMonday,
+                                    onToggleShowLunar = onToggleShowLunar,
+                                    onToggleShowWeekNum = onToggleShowWeekNum,
+                                    onToggleGridLines = onToggleGridLines,
+                                    onToggleShowCompletedTasks = onToggleShowCompletedTasks,
+                                    onSyncGoogleTasks = onSyncGoogleTasks,
+                                    onPickWallpaper = onPickWallpaper,
+                                    onClearWallpaper = onClearWallpaper,
+                                    onChangeWallpaperAlpha = onChangeWallpaperAlpha,
+                                    onChangeWidgetAppearance = onChangeWidgetAppearance,
+                                    onToggleCategoryVisible = onToggleCategoryVisible,
+                                    onOpenNewCategoryDialog = { showNewCatDialog = true },
+                                    onRequestCalendarPermission = onRequestCalendarPermission,
+                                    onToggleSystemCalendarVisible = onToggleSystemCalendarVisible,
+                                    onImportIcsFile = onImportIcsFile,
+                                    onOpenUrlImportDialog = { showUrlImportDialog = true },
+                                    onExportIcsShare = onExportIcsShare,
+                                    onTestMultiCallAlarmDemo = onTestMultiCallAlarmDemo,
+                                    onToggleDynamicDayIcon = onToggleDynamicDayIcon,
+                                    onToggleLiveUpdateIsland = onToggleLiveUpdateIsland,
+                                    onOpenLiveUpdateSettings = onOpenLiveUpdateSettings,
+                                    onTestLiveUpdateIsland = onTestLiveUpdateIsland,
+                                    onCancelLiveUpdateIsland = onCancelLiveUpdateIsland
+                                )
+                            }
+                            item { Spacer(modifier = Modifier.height(40.dp)) }
                         }
                     }
                 }
-
-                item { Spacer(modifier = Modifier.height(40.dp)) }
             }
         }
     }
@@ -548,6 +514,401 @@ fun SettingsAndManageScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DxSettingsSectionContent(
+    section: DxSettingsSection,
+    settings: UserSettings,
+    updateState: AppUpdateUiState,
+    categories: List<CalendarCategoryEntity>,
+    taskCategory: CalendarCategoryEntity?,
+    systemCalendars: List<SystemCalendarAccountInfo>,
+    hasCalendarPermission: Boolean,
+    isSyncingTasks: Boolean,
+    liveUpdateStatus: LiveUpdateIslandStatus,
+    onOpenUrl: (String) -> Unit,
+    onToggleAutoCheckUpdate: (Boolean) -> Unit,
+    onManualCheckUpdate: () -> Unit,
+    onStartUpdateDownload: () -> Unit,
+    onCancelUpdateDownload: () -> Unit,
+    onInstallDownloadedApk: () -> Unit,
+    onSelectBrand: (BrandStyle) -> Unit,
+    onSelectDarkMode: (DarkThemeMode) -> Unit,
+    onToggleStartMonday: (Boolean) -> Unit,
+    onToggleShowLunar: (Boolean) -> Unit,
+    onToggleShowWeekNum: (Boolean) -> Unit,
+    onToggleGridLines: (Boolean) -> Unit,
+    onToggleShowCompletedTasks: (Boolean) -> Unit,
+    onSyncGoogleTasks: () -> Unit,
+    onPickWallpaper: () -> Unit,
+    onClearWallpaper: () -> Unit,
+    onChangeWallpaperAlpha: (Float) -> Unit,
+    onChangeWidgetAppearance: (Boolean, Float) -> Unit,
+    onToggleCategoryVisible: (CalendarCategoryEntity) -> Unit,
+    onOpenNewCategoryDialog: () -> Unit,
+    onRequestCalendarPermission: () -> Unit,
+    onToggleSystemCalendarVisible: (Long, Boolean) -> Unit,
+    onImportIcsFile: () -> Unit,
+    onOpenUrlImportDialog: () -> Unit,
+    onExportIcsShare: () -> Unit,
+    onTestMultiCallAlarmDemo: () -> Unit,
+    onToggleDynamicDayIcon: (Boolean) -> Unit,
+    onToggleLiveUpdateIsland: (Boolean) -> Unit,
+    onOpenLiveUpdateSettings: () -> Unit,
+    onTestLiveUpdateIsland: () -> Unit,
+    onCancelLiveUpdateIsland: () -> Unit
+) {
+    val tokens = LocalBrandTokens.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
+        when (section) {
+            DxSettingsSection.ACCOUNTS_AND_TASKS -> {
+                // 專屬 Google Tasks 整合與日曆顯示控制卡
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.TaskAlt, contentDescription = null, tint = Color(0xFFFFAB00))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Google Tasks 待辦與日曆整合", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            text = if (settings.googleAccountEmail.isNotBlank()) {
+                                "已連結帳號：${settings.googleAccountEmail}"
+                            } else {
+                                "尚未連結 Google 帳號，點擊下方按鈕即可連結並將 Google Tasks 顯示於月曆、時間表與桌面小工具。"
+                            },
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp
+                        )
+                        Button(
+                            onClick = onSyncGoogleTasks,
+                            enabled = !isSyncingTasks,
+                            colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isSyncingTasks) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("正在同步 Google Tasks...")
+                            } else {
+                                Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    if (settings.googleAccountEmail.isNotBlank()) "立即同步 Google Tasks"
+                                    else "連結 Google 帳號並啟用 Google Tasks"
+                                )
+                            }
+                        }
+
+                        if (taskCategory != null) {
+                            SettingSwitchRow(
+                                label = "於日曆月檢視與時間表顯示 Google Tasks",
+                                checked = taskCategory.isVisible,
+                                onCheckedChange = { onToggleCategoryVisible(taskCategory) }
+                            )
+                        }
+                        SettingSwitchRow(
+                            label = "於日曆中顯示已完成的待辦任務",
+                            checked = settings.showCompletedTasks,
+                            onCheckedChange = onToggleShowCompletedTasks
+                        )
+                    }
+                }
+
+                // 本機時間表類型 + 系統 Google 日曆帳號管理
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("本機日曆類型管理", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            TextButton(onClick = onOpenNewCategoryDialog) {
+                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Text("新增類型")
+                            }
+                        }
+
+                        categories.filter { !it.isPrivacyCategory }.forEach { cat ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onToggleCategoryVisible(cat) }
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Checkbox(
+                                    checked = cat.isVisible,
+                                    onCheckedChange = { onToggleCategoryVisible(cat) }
+                                )
+                                Box(modifier = Modifier.size(12.dp).background(Color(cat.colorArgb), CircleShape))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text("${cat.name} (${cat.accountName})", color = tokens.primaryTextColor, fontSize = 14.sp)
+                            }
+                        }
+
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        Text("設備 Google / 系統日曆雙向同步", color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        if (!hasCalendarPermission) {
+                            Text("授權日曆權限即可載入裝置上所有 Google 日曆與子日曆（學務處、家庭、節慶等）", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                            Button(
+                                onClick = onRequestCalendarPermission,
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
+                            ) {
+                                Text("授權讀取與同步系統日曆")
+                            }
+                        } else if (systemCalendars.isEmpty()) {
+                            Text("此裝置目前尚未登入系統 Google 日曆帳號", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                        } else {
+                            systemCalendars.groupBy { it.accountName }.forEach { (acc, cals) ->
+                                Text(acc, color = tokens.accentColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+                                cals.forEach { sc ->
+                                    val isVis = !settings.hiddenSystemCalIds.contains(sc.id.toString())
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onToggleSystemCalendarVisible(sc.id, !isVis) }
+                                            .padding(vertical = 2.dp)
+                                    ) {
+                                        Checkbox(
+                                            checked = isVis,
+                                            onCheckedChange = { onToggleSystemCalendarVisible(sc.id, it) }
+                                        )
+                                        Box(modifier = Modifier.size(10.dp).background(Color(sc.colorArgb), CircleShape))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            DxSettingsSection.APPEARANCE -> {
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Palette, contentDescription = null, tint = tokens.accentColor)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("五大類品牌視覺風格", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        BrandStyle.entries.forEach { style ->
+                            val selected = settings.brandStyle == style
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (selected) Color(style.primaryHex).copy(alpha = 0.16f)
+                                        else tokens.elevatedSurfaceColor.copy(alpha = 0.6f)
+                                    )
+                                    .border(
+                                        width = if (selected) 1.5.dp else 0.dp,
+                                        color = if (selected) Color(style.primaryHex) else Color.Transparent,
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable { onSelectBrand(style) }
+                                    .padding(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .background(Color(style.primaryHex), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(style.displayName, color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                    Text(style.subtitle, color = tokens.secondaryTextColor, fontSize = 11.sp)
+                                }
+                                if (selected) {
+                                    Icon(Icons.Filled.Check, contentDescription = "已選用", tint = Color(style.primaryHex))
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        Text("深淺外觀模式", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            DarkThemeMode.entries.forEach { mode ->
+                                FilterChip(
+                                    selected = settings.darkThemeMode == mode,
+                                    onClick = { onSelectDarkMode(mode) },
+                                    label = { Text(mode.label, fontSize = 12.sp) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Image, contentDescription = null, tint = tokens.accentColor)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("月曆自訂背景圖與小工具外觀", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = onPickWallpaper, modifier = Modifier.weight(1f)) {
+                                Text("選擇月曆背景圖片")
+                            }
+                            if (settings.customWallpaperUri.isNotBlank()) {
+                                OutlinedButton(onClick = onClearWallpaper) {
+                                    Text("移除背景")
+                                }
+                            }
+                        }
+                        if (settings.customWallpaperUri.isNotBlank()) {
+                            Text("背景圖透明度：${(settings.wallpaperAlpha * 100).toInt()}%", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                            Slider(
+                                value = settings.wallpaperAlpha,
+                                onValueChange = onChangeWallpaperAlpha,
+                                valueRange = 0.08f..0.65f
+                            )
+                        }
+
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        SettingSwitchRow(
+                            label = "桌面小工具採用深色毛玻璃底色",
+                            checked = settings.widgetDarkStyle,
+                            onCheckedChange = { onChangeWidgetAppearance(it, settings.widgetOpacity) }
+                        )
+                    }
+                }
+            }
+
+            DxSettingsSection.ICON_AND_ISLAND -> {
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "動態日期圖示 (1–31) 與原子島通知上島",
+                            color = tokens.primaryTextColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        SettingSwitchRow(
+                            label = "桌面 App 圖示自動顯示今日日期 (1–31 日)",
+                            checked = settings.dynamicDayIconEnabled,
+                            onCheckedChange = onToggleDynamicDayIcon
+                        )
+                        Text(
+                            text = "每日 00:00 跨日與開啟 App 時自動切換為當日數字圖示；關閉則恢復預設靜態圖示。",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp
+                        )
+
+                        HorizontalDivider(color = tokens.gridLineColor)
+
+                        SettingSwitchRow(
+                            label = "日程提醒上島 (Android 16 Live Updates / OriginOS 6 原子島)",
+                            checked = settings.liveUpdateIslandEnabled,
+                            onCheckedChange = onToggleLiveUpdateIsland
+                        )
+
+                        val statusText = when {
+                            liveUpdateStatus.isAndroid16OrHigher && liveUpdateStatus.canPostPromoted ->
+                                "✓ Android 16+ 系統已授權 Live Updates 上島通知（台/陸版 OriginOS 6 通用）"
+                            liveUpdateStatus.isAndroid16OrHigher ->
+                                "⚠ 尚未開啟系統「即時更新 / 上島通知」開關，請點擊下方按鈕前往開啟"
+                            else ->
+                                "ℹ 目前系統為 Android ${Build.VERSION.RELEASE}（升級至 Android 16 / OriginOS 6 即自動以原生 Live Updates 上島，目前以相容持續進度通知呈現）"
+                        }
+                        val statusColor = when {
+                            liveUpdateStatus.isAndroid16OrHigher && liveUpdateStatus.canPostPromoted -> Color(0xFF00C853)
+                            liveUpdateStatus.isAndroid16OrHigher -> Color(0xFFFFB300)
+                            else -> tokens.secondaryTextColor
+                        }
+                        Text(text = statusText, color = statusColor, fontSize = 12.sp)
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(onClick = onOpenLiveUpdateSettings, modifier = Modifier.weight(1f)) {
+                                Text("系統上島權限", fontSize = 12.sp)
+                            }
+                            Button(
+                                onClick = onTestLiveUpdateIsland,
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("立即測試上島", fontSize = 12.sp)
+                            }
+                        }
+                        OutlinedButton(
+                            onClick = onCancelLiveUpdateIsland,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("關閉測試上島通知", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
+            DxSettingsSection.CALENDAR_PREFS -> {
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("日曆檢視偏好", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                        SettingSwitchRow("一週起始日設為週一 (關閉則為週日)", settings.startWeekOnMonday, onToggleStartMonday)
+                        SettingSwitchRow("顯示農曆、二十四節氣與台灣節慶", settings.showLunar, onToggleShowLunar)
+                        SettingSwitchRow("顯示全年週次編號", settings.showWeekNumber, onToggleShowWeekNum)
+                        SettingSwitchRow("顯示月曆格線", settings.showMonthGridLines, onToggleGridLines)
+
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        OutlinedButton(
+                            onClick = onTestMultiCallAlarmDemo,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("測試「多重呼叫全螢幕鬧鐘提醒」立即預覽")
+                        }
+                    }
+                }
+            }
+
+            DxSettingsSection.IMPORT_EXPORT -> {
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("匯入與匯出日程 (ICS / URL)", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(onClick = onImportIcsFile, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("匯入 ICS 檔案")
+                            }
+                            OutlinedButton(onClick = onOpenUrlImportDialog, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Filled.Link, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("URL 連結匯入")
+                            }
+                        }
+                        OutlinedButton(onClick = onExportIcsShare, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("匯出本機日程為標準 .ics 檔案分享")
+                        }
+                    }
+                }
+            }
+
+            DxSettingsSection.ABOUT_UPDATE -> {
+                GitHubUpdateCard(
+                    autoCheckEnabled = settings.autoCheckUpdate,
+                    updateState = updateState,
+                    onOpenGitHubRepo = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
+                    onOpenGitHubReleases = { onOpenUrl(GitHubAutoUpdater.GITHUB_RELEASES_URL) },
+                    onToggleAutoCheck = onToggleAutoCheckUpdate,
+                    onCheckNow = onManualCheckUpdate,
+                    onStartDownload = onStartUpdateDownload,
+                    onCancelDownload = onCancelUpdateDownload,
+                    onInstallApk = onInstallDownloadedApk
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun GitHubUpdateCard(
     autoCheckEnabled: Boolean,
@@ -588,10 +949,9 @@ private fun GitHubUpdateCard(
                 }
             }
 
-            // GitHub 儲存庫首頁與 Releases 快速連結按鈕
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = onOpenGitHubRepo, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("GitHub 儲存庫", fontSize = 13.sp)
                 }
@@ -610,7 +970,6 @@ private fun GitHubUpdateCard(
                 onCheckedChange = onToggleAutoCheck
             )
 
-            // 版本判讀狀態與下載進度條區域
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

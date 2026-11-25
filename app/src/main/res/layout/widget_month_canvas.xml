@@ -15,7 +15,7 @@
 
         <TextView
             android:id="@+id/btn_widget_prev"
-            android:layout_width="28dp"
+            android:layout_width="26dp"
             android:layout_height="28dp"
             android:gravity="center"
             android:text="‹"
@@ -27,15 +27,15 @@
             android:id="@+id/widget_month_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="6dp"
+            android:paddingHorizontal="4dp"
             android:text="2026/11"
             android:textColor="#FFF5F5F7"
-            android:textSize="16sp"
+            android:textSize="15sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/btn_widget_next"
-            android:layout_width="28dp"
+            android:layout_width="26dp"
             android:layout_height="28dp"
             android:gravity="center"
             android:text="›"
@@ -49,18 +49,34 @@
             android:layout_weight="1" />
 
         <TextView
-            android:id="@+id/btn_widget_today"
-            android:layout_width="28dp"
-            android:layout_height="26dp"
+            android:id="@+id/btn_widget_mode"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:layout_marginEnd="4dp"
+            android:background="#26FFFFFF"
             android:gravity="center"
-            android:text="今"
+            android:paddingHorizontal="7dp"
+            android:text="單週"
+            android:textColor="#FFD8D8E0"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btn_widget_today"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:layout_marginEnd="4dp"
+            android:background="#2BFF5238"
+            android:gravity="center"
+            android:paddingHorizontal="8dp"
+            android:text="now"
             android:textColor="#FFFF5238"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/btn_widget_add"
-            android:layout_width="30dp"
+            android:layout_width="28dp"
             android:layout_height="28dp"
             android:gravity="center"
             android:text="＋"
@@ -74,6 +90,6 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:contentDescription="月曆視圖"
+        android:contentDescription="月曆與單週視圖"
         android:scaleType="fitXY" />
 </LinearLayout>

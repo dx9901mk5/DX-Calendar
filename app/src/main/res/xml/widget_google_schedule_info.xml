@@ -2,6 +2,8 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_google_schedule_desc"
     android:initialLayout="@layout/widget_scrollable_list"
+    android:previewImage="@drawable/widget_preview_google_schedule"
+    android:previewLayout="@layout/widget_preview_google_schedule"
     android:minWidth="180dp"
     android:minHeight="180dp"
     android:minResizeWidth="110dp"

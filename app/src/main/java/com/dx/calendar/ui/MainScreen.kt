@@ -177,6 +177,7 @@ fun DXCalendarRootApp(
                 categories = categories,
                 systemCalendars = systemCalendars,
                 hasCalendarPermission = hasCalendarPermission,
+                isSyncingTasks = isSyncingTasks,
                 onClose = { viewModel.openSettings(false) },
                 onOpenUrl = { url ->
                     runCatching {
@@ -194,6 +195,8 @@ fun DXCalendarRootApp(
                 onToggleShowLunar = { viewModel.setShowLunar(it) },
                 onToggleShowWeekNum = { viewModel.setShowWeekNum(it) },
                 onToggleGridLines = { viewModel.setShowGridLines(it) },
+                onToggleShowCompletedTasks = { viewModel.setShowCompletedTasks(it) },
+                onSyncGoogleTasks = onLaunchGoogleAccountPicker,
                 onPickWallpaper = onPickWallpaperImage,
                 onClearWallpaper = { viewModel.setWallpaper("", settings.wallpaperAlpha) },
                 onChangeWallpaperAlpha = { viewModel.setWallpaper(settings.customWallpaperUri, it) },
@@ -1087,7 +1090,7 @@ private fun VivoFloatingCapsuleBar(
                     .border(1.dp, tokens.accentColor, CircleShape)
                     .clickable { onJumpToday() }
             ) {
-                Text("今", color = tokens.accentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text("now", color = tokens.accentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

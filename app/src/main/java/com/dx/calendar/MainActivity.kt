@@ -159,6 +159,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleWidgetIntent(intent: Intent?) {
+        val openEpochDay = intent?.getLongExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY, Long.MIN_VALUE) ?: Long.MIN_VALUE
+        if (openEpochDay != Long.MIN_VALUE) {
+            intent?.removeExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY)
+            viewModel.selectDate(java.time.LocalDate.ofEpochDay(openEpochDay))
+            viewModel.setMainSection(com.dx.calendar.data.model.MainSection.CALENDAR)
+        }
         if (intent?.getBooleanExtra(WidgetRefreshHelper.EXTRA_QUICK_ADD, false) == true) {
             intent.removeExtra(WidgetRefreshHelper.EXTRA_QUICK_ADD)
             viewModel.openNewEditor()

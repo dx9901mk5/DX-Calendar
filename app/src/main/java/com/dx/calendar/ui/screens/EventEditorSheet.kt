@@ -365,8 +365,9 @@ fun EventEditorScreen(
                             .padding(horizontal = 16.dp, vertical = 15.dp)
                     ) {
                         Text("日曆 / 類型", color = tokens.primaryTextColor, fontSize = 15.sp)
-                        val currentCat = categories.find { it.id == categoryId }
-                        val sysCal = writableSystemCalendars.find { it.id == selectedSystemCalId }
+                        val taskCat = categories.find { it.isTaskCategory }
+                        val currentCat = if (entryMode == 1 && taskCat != null) taskCat else categories.find { it.id == categoryId }
+                        val sysCal = if (entryMode == 1) null else writableSystemCalendars.find { it.id == selectedSystemCalId }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
@@ -910,8 +911,13 @@ fun EventEditorScreen(
             title = { Text("選擇日曆類型或同步帳號") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("DX 本機日曆類型", fontSize = 12.sp, color = tokens.secondaryTextColor)
-                    categories.filter { !it.isTaskCategory }.forEach { cat ->
+                    Text("DX 本機日曆與 Google Tasks", fontSize = 12.sp, color = tokens.secondaryTextColor)
+                    categories.forEach { cat ->
+                        val isSelectedCat = if (cat.isTaskCategory) {
+                            entryMode == 1
+                        } else {
+                            entryMode != 1 && selectedSystemCalId == null && categoryId == cat.id
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -919,7 +925,12 @@ fun EventEditorScreen(
                                 .clickable {
                                     categoryId = cat.id
                                     selectedSystemCalId = null
-                                    if (cat.isPrivacyCategory) isPrivacy = true
+                                    if (cat.isTaskCategory) {
+                                        entryMode = 1
+                                    } else {
+                                        if (entryMode == 1) entryMode = 0
+                                        if (cat.isPrivacyCategory) isPrivacy = true
+                                    }
                                     showCategoryDialog = false
                                 }
                                 .padding(vertical = 10.dp)
@@ -927,7 +938,7 @@ fun EventEditorScreen(
                             Box(modifier = Modifier.size(12.dp).background(Color(cat.colorArgb), CircleShape))
                             Spacer(modifier = Modifier.width(10.dp))
                             Text("${cat.name} (${cat.accountName})", modifier = Modifier.weight(1f))
-                            if (selectedSystemCalId == null && categoryId == cat.id) {
+                            if (isSelectedCat) {
                                 Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
                             }
                         }

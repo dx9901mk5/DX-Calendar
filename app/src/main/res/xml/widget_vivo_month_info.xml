@@ -2,6 +2,8 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_vivo_month_desc"
     android:initialLayout="@layout/widget_month_canvas"
+    android:previewImage="@drawable/widget_preview_vivo_month"
+    android:previewLayout="@layout/widget_preview_vivo_month"
     android:minWidth="250dp"
     android:minHeight="250dp"
     android:minResizeWidth="110dp"
