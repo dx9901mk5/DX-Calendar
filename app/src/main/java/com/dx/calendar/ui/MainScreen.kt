@@ -3,6 +3,7 @@ package com.dx.calendar.ui
 import android.app.DatePickerDialog
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -148,8 +149,9 @@ fun DXCalendarRootApp(
     ) {
         val tokens = LocalBrandTokens.current
 
-        // 全畫面覆蓋：活動/待辦/例行編輯器
+        // 全畫面覆蓋：活動/待辦/例行編輯器（系統返回鍵優先關閉編輯器回到日曆！）
         if (editorState.isOpen) {
+            BackHandler { viewModel.closeEditor() }
             EventEditorScreen(
                 initialDate = editorState.initialDate,
                 editingEvent = editorState.editingEvent,
@@ -164,13 +166,17 @@ fun DXCalendarRootApp(
                 parseIntList = { viewModel.repo.parseIntList(it) },
                 parseDateList = { viewModel.repo.parseDateStrings(it) },
                 onCancel = { viewModel.closeEditor() },
-                onSave = { payload -> viewModel.saveFromEditor(payload) }
+                onSave = { payload -> viewModel.saveFromEditor(payload) },
+                onDelete = if (editorState.editingEvent != null || editorState.editingTask != null) {
+                    { viewModel.deleteEditingItem() }
+                } else null
             )
             return@DXCalendarTheme
         }
 
-        // 全畫面覆蓋：主題與日程設定頁
+        // 全畫面覆蓋：DX 設定工作台（系統返回鍵優先返回上一頁日曆，不退出 App！）
         if (isSettingsOpen) {
+            BackHandler { viewModel.openSettings(false) }
             SettingsAndManageScreen(
                 settings = settings,
                 updateState = updateState,
@@ -221,6 +227,19 @@ fun DXCalendarRootApp(
                 onCancelLiveUpdateIsland = { viewModel.cancelLiveUpdateIslandDemo() }
             )
             return@DXCalendarTheme
+        }
+
+        // 主畫面階層式返回鍵邏輯：詳情面板 → 返回日曆分頁 → 返回月檢視 → 最後才退出 App
+        BackHandler(
+            enabled = focusedItem != null ||
+                mainSection != MainSection.CALENDAR ||
+                viewMode != CalendarViewMode.MONTH
+        ) {
+            when {
+                focusedItem != null -> viewModel.setFocusedItem(null)
+                mainSection != MainSection.CALENDAR -> viewModel.setMainSection(MainSection.CALENDAR)
+                viewMode != CalendarViewMode.MONTH -> viewModel.setViewMode(CalendarViewMode.MONTH)
+            }
         }
 
         val itemsByDate = remember(rangeItems) { rangeItems.groupBy { it.date } }

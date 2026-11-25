@@ -15,8 +15,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -27,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -153,7 +157,8 @@ fun EventEditorScreen(
     parseIntList: (String) -> List<Int>,
     parseDateList: (String) -> List<LocalDate>,
     onCancel: () -> Unit,
-    onSave: (EditorSavePayload) -> Unit
+    onSave: (EditorSavePayload) -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
     val context = LocalContext.current
@@ -267,10 +272,18 @@ fun EventEditorScreen(
     var showMultiReminderDialog by remember { mutableStateOf(false) }
     var showRecurrenceDialog by remember { mutableStateOf(false) }
     var showExtraDatesDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    val isEditingExisting = editingEvent != null || editingTask != null
 
     Surface(color = tokens.backgroundColor, modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // 頂部導覽列（仿截圖 2：←  新的活動  保存）
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .imePadding()
+        ) {
+            // 頂部導覽列（←  編輯項目  [刪除]  保存，避開系統狀態列）
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -283,47 +296,58 @@ fun EventEditorScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = tokens.primaryTextColor)
                 }
                 Text(
-                    text = if (editingEvent != null || editingTask != null) "編輯項目" else "新的活動 / 提醒",
+                    text = if (isEditingExisting) "編輯項目" else "新的活動 / 提醒",
                     color = tokens.primaryTextColor,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-                TextButton(
-                    onClick = {
-                        val finalTitle = title.trim().ifBlank { "未命名提醒" }
-                        onSave(
-                            EditorSavePayload(
-                                isTaskMode = entryMode == 1,
-                                editingEventId = editingEvent?.id,
-                                editingTaskId = editingTask?.id,
-                                categoryId = categoryId,
-                                writeToSystemCalendarId = if (isPrivacy) null else selectedSystemCalId,
-                                title = finalTitle,
-                                isAllDay = isAllDay,
-                                startDate = startDate,
-                                startTime = startTime,
-                                endDate = if (endDate.isBefore(startDate)) startDate else endDate,
-                                endTime = endTime,
-                                extraDates = extraDates.toList(),
-                                recurrenceType = recurrence,
-                                reminderMinutes = selectedReminders.toList(),
-                                enableMultiCall = enableMultiCall,
-                                multiCallCount = multiCallCount,
-                                multiCallIntervalMinutes = multiCallInterval,
-                                useAlarmStream = useAlarmStream,
-                                syncSystemAlarm = syncSystemAlarm,
-                                isRoutine = isRoutine || entryMode == 2,
-                                showInMonthGrid = showInMonthGrid,
-                                showInAgendaAndWidget = showInAgendaAndWidget,
-                                isPrivacy = isPrivacy,
-                                location = location.trim(),
-                                url = url.trim(),
-                                notes = notes.trim()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isEditingExisting && onDelete != null) {
+                        IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.Delete,
+                                contentDescription = "刪除項目",
+                                tint = Color(0xFFFF5252)
                             )
-                        )
+                        }
                     }
-                ) {
-                    Text("保存", color = tokens.accentColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    TextButton(
+                        onClick = {
+                            val finalTitle = title.trim().ifBlank { "未命名提醒" }
+                            onSave(
+                                EditorSavePayload(
+                                    isTaskMode = entryMode == 1,
+                                    editingEventId = editingEvent?.id,
+                                    editingTaskId = editingTask?.id,
+                                    categoryId = categoryId,
+                                    writeToSystemCalendarId = if (isPrivacy) null else selectedSystemCalId,
+                                    title = finalTitle,
+                                    isAllDay = isAllDay,
+                                    startDate = startDate,
+                                    startTime = startTime,
+                                    endDate = if (endDate.isBefore(startDate)) startDate else endDate,
+                                    endTime = endTime,
+                                    extraDates = extraDates.toList(),
+                                    recurrenceType = recurrence,
+                                    reminderMinutes = selectedReminders.toList(),
+                                    enableMultiCall = enableMultiCall,
+                                    multiCallCount = multiCallCount,
+                                    multiCallIntervalMinutes = multiCallInterval,
+                                    useAlarmStream = useAlarmStream,
+                                    syncSystemAlarm = syncSystemAlarm,
+                                    isRoutine = isRoutine || entryMode == 2,
+                                    showInMonthGrid = showInMonthGrid,
+                                    showInAgendaAndWidget = showInAgendaAndWidget,
+                                    isPrivacy = isPrivacy,
+                                    location = location.trim(),
+                                    url = url.trim(),
+                                    notes = notes.trim()
+                                )
+                            )
+                        }
+                    ) {
+                        Text("保存", color = tokens.accentColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -776,9 +800,39 @@ fun EventEditorScreen(
                     }
                 }
 
+                if (isEditingExisting && onDelete != null) {
+                    OutlinedButton(
+                        onClick = { showDeleteConfirmDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = null, tint = Color(0xFFFF5252), modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("刪除此項目", color = Color(0xFFFF5252), fontWeight = FontWeight.Bold)
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
+    }
+
+    if (showDeleteConfirmDialog && onDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("確認刪除此項目？") },
+            text = { Text("刪除後將同時取消關聯的多重呼叫提醒，且無法復原。") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete()
+                    }
+                ) { Text("確認刪除", color = Color(0xFFFF5252), fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("取消") }
+            }
+        )
     }
 
     // === 截圖 3：提醒「可多選。」對話框 ===

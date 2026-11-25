@@ -21,6 +21,11 @@ All notable changes to **DX-Calendar** are documented in this file.
 - **🎨 主題與小工具名稱正名為「類品牌風格」**：
   - 五大主題改名為 **類 vivo 風格、類 OPPO 風格、類小米風格、類 Google 風格、類三星風格**，小工具名稱同步調整。
 
+### 🐛 問題修復 / Fixed
+- **修復編輯頁與設定頁吃進系統通知列**：為 `EventEditorScreen` 與 `SettingsAndManageScreen` 補齊 `statusBarsPadding()`、`navigationBarsPadding()` 與鍵盤 `imePadding()`，標題列不再與狀態列重疊。
+- **編輯項目頁新增刪除鍵**：編輯既有活動／待辦／例行項目時，頂部標題列與底部皆提供紅色 **「刪除」** 按鈕（含確認對話框），刪除後同步取消關聯鬧鐘並刷新小工具。
+- **重構全 App 階層式系統返回鍵邏輯 (`BackHandler`)**：於編輯頁、設定頁、詳情面板、待辦／例行／隱私分頁與非月檢視按下系統返回鍵時，依序逐層退回上一頁看日曆，不再誤退出 App。
+
 ---
 
 ## [v1.2.0] - 2026-11-25 (`versionCode = 3`)

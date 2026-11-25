@@ -346,6 +346,24 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         _editorState.value = EditorLaunchState(isOpen = false)
     }
 
+    fun deleteEditingItem() {
+        val state = _editorState.value
+        val ev = state.editingEvent
+        val tk = state.editingTask
+        viewModelScope.launch {
+            if (ev != null) {
+                repo.dao.deleteEvent(ev)
+                toast("已刪除活動")
+            } else if (tk != null) {
+                repo.dao.deleteTaskById(tk.id)
+                toast("已刪除待辦事項")
+            }
+            _focusedItem.value = null
+            _editorState.value = EditorLaunchState(isOpen = false)
+            WidgetRefreshHelper.refreshAllWidgets(getApplication())
+        }
+    }
+
     fun saveFromEditor(payload: EditorSavePayload) {
         viewModelScope.launch {
             val app = getApplication<Application>()
