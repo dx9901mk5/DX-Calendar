@@ -237,6 +237,10 @@ fun MonthGridView(
     onToggleTaskQuick: (UnifiedCalendarItem) -> Unit
 ) {
     val tokens = LocalBrandTokens.current
+    val currentOnSwipePrev by androidx.compose.runtime.rememberUpdatedState(onSwipePrevMonth)
+    val currentOnSwipeNext by androidx.compose.runtime.rememberUpdatedState(onSwipeNextMonth)
+    val currentOnVerticalDragDelta by androidx.compose.runtime.rememberUpdatedState(onVerticalDragDelta)
+    val currentOnVerticalDragEnd by androidx.compose.runtime.rememberUpdatedState(onVerticalDragEnd)
     var dragAccumX by remember { mutableFloatStateOf(0f) }
     var dragAccumY by remember { mutableFloatStateOf(0f) }
     var lockedAxis by remember { mutableStateOf(0) } // 0=未定, 1=水平翻月, 2=垂直展開/收合時間表
@@ -261,7 +265,7 @@ fun MonthGridView(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer { translationX = animatedDragX }
-            .pointerInput(yearMonth, onVerticalDragDelta != null) {
+            .pointerInput(yearMonth) {
                 detectDragGestures(
                     onDragStart = {
                         dragAccumX = 0f
@@ -271,10 +275,10 @@ fun MonthGridView(
                     },
                     onDragEnd = {
                         if (lockedAxis == 1) {
-                            if (dragAccumX > 80f) onSwipePrevMonth()
-                            else if (dragAccumX < -80f) onSwipeNextMonth()
+                            if (dragAccumX > 80f) currentOnSwipePrev()
+                            else if (dragAccumX < -80f) currentOnSwipeNext()
                         } else if (lockedAxis == 2) {
-                            onVerticalDragEnd?.invoke()
+                            currentOnVerticalDragEnd?.invoke()
                         }
                         dragAccumX = 0f
                         dragAccumY = 0f
@@ -282,26 +286,28 @@ fun MonthGridView(
                         isHorizontalDragging = false
                     },
                     onDragCancel = {
-                        if (lockedAxis == 2) onVerticalDragEnd?.invoke()
+                        if (lockedAxis == 2) currentOnVerticalDragEnd?.invoke()
                         dragAccumX = 0f
                         dragAccumY = 0f
                         lockedAxis = 0
                         isHorizontalDragging = false
                     },
-                    onDrag = { _, dragAmount ->
+                    onDrag = { change, dragAmount ->
                         dragAccumX += dragAmount.x
                         dragAccumY += dragAmount.y
                         if (lockedAxis == 0) {
                             val absX = kotlin.math.abs(dragAccumX)
                             val absY = kotlin.math.abs(dragAccumY)
-                            if (absX > 14f || absY > 14f) {
-                                lockedAxis = if (onVerticalDragDelta != null && absY > absX * 1.15f) 2 else 1
+                            if (absX > 10f || absY > 10f) {
+                                lockedAxis = if (currentOnVerticalDragDelta != null && absY > absX * 1.05f) 2 else 1
                             }
                         }
                         if (lockedAxis == 1) {
+                            change.consume()
                             isHorizontalDragging = true
                         } else if (lockedAxis == 2) {
-                            onVerticalDragDelta?.invoke(dragAmount.y)
+                            change.consume()
+                            currentOnVerticalDragDelta?.invoke(dragAmount.y)
                         }
                     }
                 )

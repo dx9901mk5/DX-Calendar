@@ -5,6 +5,15 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.9.4] - 2026-11-26 (`versionCode = 21`)
+
+### 🐛 關鍵修復 / Fixed
+- **🎬 修復三星日曆 0:19 後「上滑壓縮滿版月曆 ⇄ 彩條月曆＋下方時間表」手勢失效問題**：
+  - 根因定位：`MonthGridView` 的 `pointerInput` 閉包未套用 `rememberUpdatedState`，導致垂直拖曳過程中每次都讀到舊的 `isDraggingSheet == false` 狀態而反覆歸零；且拖曳中未 1:1 即時跟手更新 `progress`。
+  - 全面改以 `rememberUpdatedState` 承接手勢回呼、拖曳當下 1:1 即時跟手壓縮月曆並將行程晶片平滑轉換為彩色細條、鬆手後以 Q 彈彈簧吸附定位；摺疊機／平板雙欄模式上滑月曆亦連動開啟 24h 浮動時間軸卡片。
+
+---
+
 ## [v1.9.3] - 2026-11-26 (`versionCode = 20`)
 
 ### ✨ 全新動畫、天氣、金色圖示與摺疊機體驗全面升級 / Added & Improved

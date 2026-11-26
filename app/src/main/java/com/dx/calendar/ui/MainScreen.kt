@@ -418,6 +418,11 @@ fun DXCalendarRootApp(
                                             onSelectItem = { viewModel.setFocusedItem(it) },
                                             onSwipePrevMonth = { viewModel.shiftMonth(-1) },
                                             onSwipeNextMonth = { viewModel.shiftMonth(1) },
+                                            onVerticalDragDelta = { deltaY ->
+                                                if (deltaY < -18f && floatingTimelinePopupDate == null) {
+                                                    floatingTimelinePopupDate = selectedDate
+                                                }
+                                            },
                                             onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) }
                                         )
                                     }
@@ -477,8 +482,10 @@ fun DXCalendarRootApp(
                                 } else {
                                     fallbackTotalH
                                 }
-                                val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 420.dp
-                                val progress = if (canSplitVertically) animatedSheetProgress.coerceIn(0f, 1f) else 0f
+                                val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 360.dp
+                                val progress = if (canSplitVertically) {
+                                    (if (isDraggingSheet) sheetDragFraction else animatedSheetProgress).coerceIn(0f, 1f)
+                                } else 0f
                                 // 月曆從 100% 滿版平滑壓縮至 44%（同時日期下方的行程標籤淡出轉為彩色細條），下方時間表由 0% 平滑滑升至 56%！
                                 val calendarHeight = (totalH * (1f - 0.56f * progress)).coerceIn(1.dp, totalH)
                                 val sheetHeight = (totalH - calendarHeight).coerceAtLeast(0.dp)
