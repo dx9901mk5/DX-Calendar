@@ -5,6 +5,22 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.8.1] - 2026-11-26 (`versionCode = 12`)
+
+### 🛠️ 穩定性修復與多視窗強化 / Fixed & Improved
+- **🛡️ 全面排查並修復手機、平板與摺疊分割畫面閃退原因**：
+  - **修復時間表重複 Key 閃退**：`CalendarRepository` 展開多日活動與系統日曆實例後自動 `distinctBy { it.uniqueKey }`，且 `AgendaScheduleListView` 採索引複合 Key，徹底消除 `LazyColumn` 重複 Key 閃退。
+  - **修復摺疊／分割畫面切換觸發任務終止閃退**：`MainActivity.onStop()` 處於多視窗／分割畫面（`isInMultiWindowMode`）或視窗關閉期間不再切換 `<activity-alias>` 動態圖示，避免 Android 14–16 系統強制終止分割任務。
+  - **修復摺疊展開與分割線拖曳過渡幀異常**：強化 `AdaptiveLayoutSpec` 對 `NaN`/`Infinity`/`0dp` 約束防呆、`BoxWithConstraints` 高度安全裁切，跨斷點時自動重置月曆拖曳手勢狀態；所有分享與系統日期／時間選擇器皆加上 `runCatching` 防護。
+- **📐 手機、平板與摺疊機左右／上下分割視窗精準對應**：
+  - 修正 360–419dp 主流手機不再誤判為小視窗，並修復底部懸浮膠囊列在窄螢幕裁切 `now` 按鈕的問題。
+  - 摺疊機左右分割（`< 370dp`）自動緊湊頂欄圖示與年檢視改為 2 欄；摺疊機／平板上下分割（高 `< 480dp`）啟用單行頂欄與 46dp 精簡底欄，並限制浮動 24h 時間軸卡片最大寬度（`460dp`）避免大螢幕過度拉寬。
+- **🎛️ 頂欄精簡與隱私入口收斂至設定最底**：
+  - 移除主畫面頂欄的「眼睛（透視隱藏例行事務）」按鈕，改移至「設定 → 日曆檢視偏好」中開關。
+  - 預設隱藏 `⋮` 選單中的「雙指紋鎖開啟隱私日曆」與底部導覽列「隱私」分頁；改於「設定」最底部新增 **「隱私日曆設定」** 區塊，開啟後才顯示隱私日曆入口。
+
+---
+
 ## [v1.8.0] - 2026-11-26 (`versionCode = 11`)
 
 ### ✨ 新增功能 / Added

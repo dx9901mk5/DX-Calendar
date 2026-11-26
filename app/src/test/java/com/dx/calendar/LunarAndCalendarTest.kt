@@ -202,4 +202,54 @@ class LunarAndCalendarTest {
         // 指定已連結帳號時，精準對應其主行事曆
         assertEquals(30L, SystemCalendarBridge.pickDefaultGoogleCalendar(cals, "work@company.com")?.id)
     }
+
+    @Test
+    fun adaptiveLayoutSpecHandlesPhoneTabletFoldableSplitAndTransientBounds() {
+        // 主流手機 360x780：正確歸類為 PHONE_COMPACT（不再誤判為 MINI_FLOATING），年檢視 2 欄防擠壓
+        val phone360 = com.dx.calendar.ui.adaptive.computeAdaptiveLayoutSpec(
+            androidx.compose.ui.unit.Dp(360f),
+            androidx.compose.ui.unit.Dp(780f)
+        )
+        assertEquals(com.dx.calendar.ui.adaptive.WindowFormFactor.PHONE_COMPACT, phone360.formFactor)
+        assertFalse(phone360.showDualPane)
+        assertTrue(phone360.isNarrowSplit)
+        assertEquals(2, phone360.yearGridColumns)
+
+        // 摺疊機上下分割 720x380：保留左右雙欄、單行頂欄省高度、自動隱藏月曆農曆副標
+        val foldableTopBottom = com.dx.calendar.ui.adaptive.computeAdaptiveLayoutSpec(
+            androidx.compose.ui.unit.Dp(720f),
+            androidx.compose.ui.unit.Dp(380f)
+        )
+        assertEquals(com.dx.calendar.ui.adaptive.WindowFormFactor.MINI_FLOATING, foldableTopBottom.formFactor)
+        assertTrue(foldableTopBottom.showDualPane)
+        assertFalse(foldableTopBottom.compactTopBar)
+        assertTrue(foldableTopBottom.isShortSplit)
+        assertTrue(foldableTopBottom.hideLunarInMonthCell)
+
+        // 8吋平板 / 摺疊機展開全螢幕 760x840：雙欄 57/43
+        val foldableUnfolded = com.dx.calendar.ui.adaptive.computeAdaptiveLayoutSpec(
+            androidx.compose.ui.unit.Dp(760f),
+            androidx.compose.ui.unit.Dp(840f)
+        )
+        assertEquals(com.dx.calendar.ui.adaptive.WindowFormFactor.TABLET_8_DUAL_PANE, foldableUnfolded.formFactor)
+        assertTrue(foldableUnfolded.showDualPane)
+        assertEquals(3, foldableUnfolded.yearGridColumns)
+
+        // 10吋平板 / Pixelbook 1200x800：三欄（含常駐分類側欄）與 4 欄年檢視
+        val tablet10 = com.dx.calendar.ui.adaptive.computeAdaptiveLayoutSpec(
+            androidx.compose.ui.unit.Dp(1200f),
+            androidx.compose.ui.unit.Dp(800f)
+        )
+        assertEquals(com.dx.calendar.ui.adaptive.WindowFormFactor.TABLET_10_PIXELBOOK, tablet10.formFactor)
+        assertTrue(tablet10.showPermanentCategoryRail)
+        assertEquals(4, tablet10.yearGridColumns)
+
+        // 過渡幀極端值（NaN / Infinity / 0dp）安全不崩潰且權重永遠為正
+        val nanSpec = com.dx.calendar.ui.adaptive.computeAdaptiveLayoutSpec(
+            androidx.compose.ui.unit.Dp(Float.NaN),
+            androidx.compose.ui.unit.Dp(Float.POSITIVE_INFINITY)
+        )
+        assertTrue(nanSpec.leftPaneWeight > 0f)
+        assertTrue(nanSpec.widthDp.value >= 240f && nanSpec.heightDp.value >= 240f)
+    }
 }

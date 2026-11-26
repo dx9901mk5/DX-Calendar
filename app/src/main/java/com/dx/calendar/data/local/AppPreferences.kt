@@ -32,6 +32,7 @@ data class UserSettings(
     val customWallpaperUri: String = "",
     val wallpaperAlpha: Float = 0.28f,
     val showMonthGridLines: Boolean = true,
+    val privacyFeatureEnabled: Boolean = false,
     val requireDualFingerprint: Boolean = true,
     val privacyPinHash: String = "",
     val googleAccountEmail: String = "",
@@ -63,6 +64,7 @@ class AppPreferences(context: Context) {
         private val KEY_WALLPAPER_URI = stringPreferencesKey("wallpaper_uri")
         private val KEY_WALLPAPER_ALPHA = floatPreferencesKey("wallpaper_alpha")
         private val KEY_SHOW_GRID_LINES = booleanPreferencesKey("show_grid_lines")
+        private val KEY_PRIVACY_FEATURE_ENABLED = booleanPreferencesKey("privacy_feature_enabled")
         private val KEY_DUAL_FINGERPRINT = booleanPreferencesKey("require_dual_fingerprint")
         private val KEY_PRIVACY_PIN_HASH = stringPreferencesKey("privacy_pin_hash")
         private val KEY_GOOGLE_EMAIL = stringPreferencesKey("google_account_email")
@@ -105,6 +107,7 @@ class AppPreferences(context: Context) {
                 customWallpaperUri = prefs[KEY_WALLPAPER_URI] ?: "",
                 wallpaperAlpha = prefs[KEY_WALLPAPER_ALPHA] ?: 0.28f,
                 showMonthGridLines = prefs[KEY_SHOW_GRID_LINES] ?: true,
+                privacyFeatureEnabled = prefs[KEY_PRIVACY_FEATURE_ENABLED] ?: false,
                 requireDualFingerprint = prefs[KEY_DUAL_FINGERPRINT] ?: true,
                 privacyPinHash = prefs[KEY_PRIVACY_PIN_HASH] ?: "",
                 googleAccountEmail = prefs[KEY_GOOGLE_EMAIL] ?: "",
@@ -150,6 +153,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setRoutineMedicationFeatureEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_ROUTINE_MED_FEATURE_ENABLED] = enabled }
+    }
+
+    suspend fun setPrivacyFeatureEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_PRIVACY_FEATURE_ENABLED] = enabled }
     }
 
     suspend fun isLegacyMedicationDemoCleaned(): Boolean {

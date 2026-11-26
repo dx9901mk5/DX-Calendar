@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -21,11 +22,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -109,7 +112,7 @@ fun YearGridView(
         }
 
         LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
+            columns = GridCells.Fixed(columns.coerceAtLeast(1)),
             contentPadding = PaddingValues(bottom = 88.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -219,6 +222,7 @@ fun MonthGridView(
     settings: UserSettings,
     maxEventsPerCell: Int,
     compactSheetProgress: Float = 0f,
+    hideLunarForCompactHeight: Boolean = false,
     onSelectDate: (LocalDate) -> Unit,
     onTapAlreadySelectedDate: ((LocalDate) -> Unit)? = null,
     onSwipePrevMonth: () -> Unit,
@@ -372,11 +376,11 @@ fun MonthGridView(
                             isInMonth = isInMonth,
                             isToday = isToday,
                             isSelected = isSelected,
-                            showLunar = settings.showLunar,
+                            showLunar = settings.showLunar && !hideLunarForCompactHeight,
                             lunarShort = lunar.shortDisplay,
                             isHoliday = lunar.isTaiwanHoliday || lunar.solarTerm != null,
                             showGridLine = settings.showMonthGridLines,
-                            compactSheetProgress = compactSheetProgress,
+                            compactSheetProgress = compactSheetProgress.coerceIn(0f, 1f),
                             items = visibleCellItems,
                             maxVisible = maxEventsPerCell,
                             onClick = {
@@ -882,7 +886,7 @@ fun AgendaScheduleListView(
                 )
             }
 
-            items(dayItems, key = { it.uniqueKey }) { item ->
+            itemsIndexed(dayItems, key = { idx, item -> "${item.uniqueKey}_$idx" }) { _, item ->
                 val isSelected = selectedItem?.uniqueKey == item.uniqueKey
                 Surface(
                     color = if (isSelected) tokens.selectedCellFill else tokens.surfaceCardColor,
@@ -1013,7 +1017,7 @@ fun SamsungDayTimelinePopupCard(
     val hourHeight = 52.dp
     val scrollState = rememberScrollState(initial = initialHour * 140)
 
-    Box(
+    BoxWithConstraints(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .fillMaxSize()
@@ -1023,15 +1027,20 @@ fun SamsungDayTimelinePopupCard(
                 indication = null,
                 onClick = onDismiss
             )
-            .padding(horizontal = 18.dp, vertical = 44.dp)
+            .padding(
+                horizontal = 16.dp,
+                vertical = if (/* short split */ false) 12.dp else 24.dp
+            )
     ) {
+        val isShortWindow = maxHeight < 480.dp
         Surface(
             color = tokens.surfaceCardColor,
             shape = RoundedCornerShape(26.dp),
             tonalElevation = 8.dp,
             modifier = Modifier
+                .widthIn(max = 460.dp)
                 .fillMaxWidth()
-                .fillMaxHeight(0.76f)
+                .fillMaxHeight(if (isShortWindow) 0.92f else 0.78f)
                 .border(1.dp, tokens.gridLineColor, RoundedCornerShape(26.dp))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },

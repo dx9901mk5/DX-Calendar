@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Sync
@@ -114,8 +115,9 @@ private enum class DxSettingsSection(
     APPEARANCE("外觀主題與底圖", "金白明亮預設、金色灰黑暗色預設與跟隨系統", Icons.Filled.Palette),
     ACCOUNTS_AND_TASKS("行事曆與 Google Tasks", "行事曆顯示開關、本機類型與 Tasks 自動同步", Icons.Filled.AccountCircle),
     ICON_AND_ISLAND("原子島與動態圖示", "日曆通知上原子島、1–31 日期圖示", Icons.Filled.NotificationsActive),
-    CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線與連段測試", Icons.Filled.Tune),
-    IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport)
+    CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線、透視例行與連段測試", Icons.Filled.Tune),
+    IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport),
+    PRIVACY("隱私日曆設定", "預設隱藏入口；於此啟用後才顯示雙指紋隱私日曆", Icons.Filled.Lock)
 }
 
 /**
@@ -145,7 +147,11 @@ fun SettingsAndManageScreen(
     onToggleShowLunar: (Boolean) -> Unit,
     onToggleShowWeekNum: (Boolean) -> Unit,
     onToggleGridLines: (Boolean) -> Unit,
+    onTogglePeekHiddenInMonth: (Boolean) -> Unit,
     onToggleRoutineMedicationFeature: (Boolean) -> Unit,
+    onTogglePrivacyFeature: (Boolean) -> Unit,
+    onToggleRequireDualFingerprint: (Boolean) -> Unit,
+    onOpenPrivacyVault: () -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
     onSyncGoogleTasks: () -> Unit,
     onPickWallpaper: () -> Unit,
@@ -177,78 +183,97 @@ fun SettingsAndManageScreen(
     val taskCategory = remember(categories) { categories.find { it.isTaskCategory } }
 
     Surface(color = tokens.backgroundColor, modifier = Modifier.fillMaxSize()) {
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // DX 原創頂部工作列（帶品牌徽章與版本標記）
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(tokens.surfaceCardColor)
-                    .padding(horizontal = 10.dp, vertical = 10.dp)
-            ) {
-                IconButton(onClick = onClose) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = tokens.primaryTextColor)
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(
-                    contentAlignment = Alignment.Center,
+            val isNarrowHeader = maxWidth < 380.dp
+            val isTwoPane = maxWidth >= 640.dp && maxHeight >= 400.dp
+
+            Column(modifier = Modifier.fillMaxSize()) {
+                // DX 原創頂部工作列（帶品牌徽章與版本標記，窄分割畫面自動精簡不擠壓）
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .size(30.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(tokens.accentColor)
+                        .fillMaxWidth()
+                        .background(tokens.surfaceCardColor)
+                        .padding(horizontal = if (isNarrowHeader) 6.dp else 10.dp, vertical = 8.dp)
                 ) {
-                    Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                }
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "DX 設定工作台",
-                        color = tokens.primaryTextColor,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "v${updateState.currentVersion} · 跟隨系統金白／金色灰黑主題",
-                        color = tokens.secondaryTextColor,
-                        fontSize = 11.sp
-                    )
-                }
-                if (!BuildConfig.IS_PLAY_BUILD) {
-                    TextButton(
-                        onClick = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(15.dp), tint = tokens.accentColor)
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text("GitHub", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.accentColor)
+                    IconButton(onClick = onClose, modifier = Modifier.size(if (isNarrowHeader) 36.dp else 44.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = tokens.primaryTextColor)
                     }
-                    Button(
-                        onClick = {
-                            selectedSection = DxSettingsSection.ABOUT_UPDATE
-                            uiScope.launch { phoneListState.animateScrollToItem(0) }
-                            onManualCheckUpdate()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Text("檢查更新", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    if (!isNarrowHeader) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(tokens.accentColor)
+                        ) {
+                            Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "DX 設定工作台",
+                            color = tokens.primaryTextColor,
+                            fontSize = if (isNarrowHeader) 16.sp else 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                        if (!isNarrowHeader) {
+                            Text(
+                                text = "v${updateState.currentVersion} · 跟隨系統金白／金色灰黑主題",
+                                color = tokens.secondaryTextColor,
+                                fontSize = 11.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    if (!BuildConfig.IS_PLAY_BUILD) {
+                        if (isNarrowHeader) {
+                            IconButton(
+                                onClick = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "GitHub", modifier = Modifier.size(18.dp), tint = tokens.accentColor)
+                            }
+                        } else {
+                            TextButton(
+                                onClick = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(15.dp), tint = tokens.accentColor)
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text("GitHub", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.accentColor)
+                            }
+                        }
+                        Button(
+                            onClick = {
+                                selectedSection = DxSettingsSection.ABOUT_UPDATE
+                                if (!isTwoPane) {
+                                    uiScope.launch { runCatching { phoneListState.animateScrollToItem(0) } }
+                                }
+                                onManualCheckUpdate()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                            contentPadding = PaddingValues(horizontal = if (isNarrowHeader) 8.dp else 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("檢查更新", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
-            }
 
-            HorizontalDivider(color = tokens.gridLineColor)
+                HorizontalDivider(color = tokens.gridLineColor)
 
-            // 響應式內容：平板與摺疊機 (>= 600dp) 強制兩頁並排；手機為頂部膠囊切換＋單欄內容
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val isTwoPane = maxWidth >= 600.dp
-
-                if (isTwoPane) {
+                // 響應式內容：平板與摺疊機 (>= 640dp 且高度足夠) 兩頁並排；手機與分割畫面採上下垂直單頁捲動
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (isTwoPane) {
                     Row(modifier = Modifier.fillMaxSize()) {
                         // 左頁：功能分類選擇清單
                         LazyColumn(
@@ -368,7 +393,11 @@ fun SettingsAndManageScreen(
                                     onToggleShowLunar = onToggleShowLunar,
                                     onToggleShowWeekNum = onToggleShowWeekNum,
                                     onToggleGridLines = onToggleGridLines,
+                                    onTogglePeekHiddenInMonth = onTogglePeekHiddenInMonth,
                                     onToggleRoutineMedicationFeature = onToggleRoutineMedicationFeature,
+                                    onTogglePrivacyFeature = onTogglePrivacyFeature,
+                                    onToggleRequireDualFingerprint = onToggleRequireDualFingerprint,
+                                    onOpenPrivacyVault = onOpenPrivacyVault,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
                                     onPickWallpaper = onPickWallpaper,
@@ -440,7 +469,11 @@ fun SettingsAndManageScreen(
                                     onToggleShowLunar = onToggleShowLunar,
                                     onToggleShowWeekNum = onToggleShowWeekNum,
                                     onToggleGridLines = onToggleGridLines,
+                                    onTogglePeekHiddenInMonth = onTogglePeekHiddenInMonth,
                                     onToggleRoutineMedicationFeature = onToggleRoutineMedicationFeature,
+                                    onTogglePrivacyFeature = onTogglePrivacyFeature,
+                                    onToggleRequireDualFingerprint = onToggleRequireDualFingerprint,
+                                    onOpenPrivacyVault = onOpenPrivacyVault,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
                                     onPickWallpaper = onPickWallpaper,
@@ -465,6 +498,7 @@ fun SettingsAndManageScreen(
                         }
                         item { Spacer(modifier = Modifier.height(40.dp)) }
                     }
+                }
                 }
             }
         }
@@ -571,7 +605,11 @@ private fun DxSettingsSectionContent(
     onToggleShowLunar: (Boolean) -> Unit,
     onToggleShowWeekNum: (Boolean) -> Unit,
     onToggleGridLines: (Boolean) -> Unit,
+    onTogglePeekHiddenInMonth: (Boolean) -> Unit,
     onToggleRoutineMedicationFeature: (Boolean) -> Unit,
+    onTogglePrivacyFeature: (Boolean) -> Unit,
+    onToggleRequireDualFingerprint: (Boolean) -> Unit,
+    onOpenPrivacyVault: () -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
     onSyncGoogleTasks: () -> Unit,
     onPickWallpaper: () -> Unit,
@@ -913,6 +951,7 @@ private fun DxSettingsSectionContent(
                         SettingSwitchRow("顯示農曆、二十四節氣與台灣節慶", settings.showLunar, onToggleShowLunar)
                         SettingSwitchRow("顯示全年週次編號", settings.showWeekNumber, onToggleShowWeekNum)
                         SettingSwitchRow("顯示月曆格線", settings.showMonthGridLines, onToggleGridLines)
+                        SettingSwitchRow("在月曆暫時透視隱藏例行事務", settings.peekHiddenInMonth, onTogglePeekHiddenInMonth)
 
                         HorizontalDivider(color = tokens.gridLineColor)
                         SettingSwitchRow(
@@ -957,6 +996,41 @@ private fun DxSettingsSectionContent(
                             Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("匯出本機日程為標準 .ics 檔案分享")
+                        }
+                    }
+                }
+            }
+
+            DxSettingsSection.PRIVACY -> {
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("隱私日曆設定", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "預設隱藏主畫面與選單中的隱私日曆入口，保護隱私不留痕跡；開啟下方開關後才會顯示隱私入口。",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp
+                        )
+                        SettingSwitchRow(
+                            label = "啟用隱私日曆功能（開啟後顯示入口）",
+                            checked = settings.privacyFeatureEnabled,
+                            onCheckedChange = onTogglePrivacyFeature
+                        )
+                        if (settings.privacyFeatureEnabled) {
+                            HorizontalDivider(color = tokens.gridLineColor)
+                            SettingSwitchRow(
+                                label = "解鎖時需要連續雙指紋驗證",
+                                checked = settings.requireDualFingerprint,
+                                onCheckedChange = onToggleRequireDualFingerprint
+                            )
+                            Button(
+                                onClick = onOpenPrivacyVault,
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("前往開啟隱私日曆", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

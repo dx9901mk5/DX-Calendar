@@ -573,15 +573,17 @@ fun EventEditorScreen(
                                     color = tokens.primaryTextColor,
                                     fontSize = 14.sp,
                                     modifier = Modifier.clickable {
-                                        DatePickerDialog(
-                                            context,
-                                            { _, y, m, d ->
-                                                val picked = LocalDate.of(y, m + 1, d)
-                                                startDate = picked
-                                                if (endDate.isBefore(picked)) endDate = picked
-                                            },
-                                            startDate.year, startDate.monthValue - 1, startDate.dayOfMonth
-                                        ).show()
+                                        runCatching {
+                                            DatePickerDialog(
+                                                context,
+                                                { _, y, m, d ->
+                                                    val picked = LocalDate.of(y, m + 1, d)
+                                                    startDate = picked
+                                                    if (endDate.isBefore(picked)) endDate = picked
+                                                },
+                                                startDate.year, startDate.monthValue - 1, startDate.dayOfMonth
+                                            ).show()
+                                        }
                                     }
                                 )
                                 if (!isAllDay) {
@@ -591,14 +593,16 @@ fun EventEditorScreen(
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.clickable {
-                                            TimePickerDialog(
-                                                context,
-                                                { _, h, min ->
-                                                    startTime = LocalTime.of(h, min)
-                                                    endTime = startTime.plusHours(1)
-                                                },
-                                                startTime.hour, startTime.minute, true
-                                            ).show()
+                                            runCatching {
+                                                TimePickerDialog(
+                                                    context,
+                                                    { _, h, min ->
+                                                        startTime = LocalTime.of(h, min)
+                                                        endTime = startTime.plusHours(1)
+                                                    },
+                                                    startTime.hour, startTime.minute, true
+                                                ).show()
+                                            }
                                         }
                                     )
                                 }
@@ -619,11 +623,13 @@ fun EventEditorScreen(
                                         color = tokens.primaryTextColor,
                                         fontSize = 14.sp,
                                         modifier = Modifier.clickable {
-                                            DatePickerDialog(
-                                                context,
-                                                { _, y, m, d -> endDate = LocalDate.of(y, m + 1, d) },
-                                                endDate.year, endDate.monthValue - 1, endDate.dayOfMonth
-                                            ).show()
+                                            runCatching {
+                                                DatePickerDialog(
+                                                    context,
+                                                    { _, y, m, d -> endDate = LocalDate.of(y, m + 1, d) },
+                                                    endDate.year, endDate.monthValue - 1, endDate.dayOfMonth
+                                                ).show()
+                                            }
                                         }
                                     )
                                     if (!isAllDay) {
@@ -633,11 +639,13 @@ fun EventEditorScreen(
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold,
                                             modifier = Modifier.clickable {
-                                                TimePickerDialog(
-                                                    context,
-                                                    { _, h, min -> endTime = LocalTime.of(h, min) },
-                                                    endTime.hour, endTime.minute, true
-                                                ).show()
+                                                runCatching {
+                                                    TimePickerDialog(
+                                                        context,
+                                                        { _, h, min -> endTime = LocalTime.of(h, min) },
+                                                        endTime.hour, endTime.minute, true
+                                                    ).show()
+                                                }
                                             }
                                         )
                                     }

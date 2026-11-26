@@ -354,7 +354,7 @@ class CalendarRepository(private val context: Context) {
             }
         }
 
-        items.sortedWith(
+        items.distinctBy { it.uniqueKey }.sortedWith(
             compareBy<UnifiedCalendarItem> { it.date }
                 .thenByDescending { it.isAllDay && !it.isTask }
                 .thenBy { it.startMillis }

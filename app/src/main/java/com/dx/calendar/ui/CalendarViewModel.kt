@@ -815,6 +815,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     fun setShowGridLines(v: Boolean) = viewModelScope.launch { repo.prefs.setShowMonthGridLines(v) }
     fun setWallpaper(uri: String, alpha: Float) = viewModelScope.launch { repo.prefs.setWallpaper(uri, alpha) }
     fun setRequireDualFingerprint(v: Boolean) = viewModelScope.launch { repo.prefs.setRequireDualFingerprint(v) }
+    fun setPrivacyFeatureEnabled(v: Boolean) = viewModelScope.launch {
+        repo.prefs.setPrivacyFeatureEnabled(v)
+        if (!v) {
+            setPrivacyUnlocked(false)
+            if (_mainSection.value == MainSection.PRIVACY) {
+                _mainSection.value = MainSection.CALENDAR
+            }
+        }
+    }
     fun setPrivacyPin(pin: String) = viewModelScope.launch {
         repo.prefs.setPrivacyPin(pin)
         toast("已儲存隱私 PIN 碼")

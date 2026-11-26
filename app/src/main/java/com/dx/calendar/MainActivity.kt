@@ -271,7 +271,10 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
         if (!isChangingConfigurations) {
             viewModel.setPrivacyUnlocked(false)
-            viewModel.syncDynamicAppIconNow()
+            // 多視窗／分割畫面或摺疊視窗切換期間不變更 <activity-alias>，避免系統 ActivityTaskManager 強制終止分割任務閃退
+            if (!isInMultiWindowMode && !isFinishing && !isDestroyed) {
+                viewModel.syncDynamicAppIconNow()
+            }
         }
     }
 }

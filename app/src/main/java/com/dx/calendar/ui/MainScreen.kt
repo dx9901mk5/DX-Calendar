@@ -17,6 +17,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -70,6 +71,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -219,7 +221,15 @@ fun DXCalendarRootApp(
                 onToggleShowLunar = { viewModel.setShowLunar(it) },
                 onToggleShowWeekNum = { viewModel.setShowWeekNum(it) },
                 onToggleGridLines = { viewModel.setShowGridLines(it) },
+                onTogglePeekHiddenInMonth = { viewModel.setPeekHiddenInMonth(it) },
                 onToggleRoutineMedicationFeature = { viewModel.setRoutineMedicationFeatureEnabled(it) },
+                onTogglePrivacyFeature = { viewModel.setPrivacyFeatureEnabled(it) },
+                onToggleRequireDualFingerprint = { viewModel.setRequireDualFingerprint(it) },
+                onOpenPrivacyVault = {
+                    viewModel.openSettings(false)
+                    viewModel.setMainSection(MainSection.PRIVACY)
+                    if (!isPrivacyUnlocked) onTriggerDualBiometric()
+                },
                 onToggleShowCompletedTasks = { viewModel.setShowCompletedTasks(it) },
                 onSyncGoogleTasks = onLaunchGoogleAccountPicker,
                 onPickWallpaper = onPickWallpaperImage,
@@ -234,7 +244,9 @@ fun DXCalendarRootApp(
                 onImportIcsUrl = { viewModel.importIcsFromUrl(it) },
                 onExportIcsShare = {
                     viewModel.buildShareIcsIntent()?.let {
-                        context.startActivity(Intent.createChooser(it, "匯出分享 DX日曆 (.ics)"))
+                        runCatching {
+                            context.startActivity(Intent.createChooser(it, "匯出分享 DX日曆 (.ics)"))
+                        }
                     }
                 },
                 onTestMultiCallAlarmDemo = { MultiCallAlarmScheduler.triggerImmediateDemoAlarm(context) },
@@ -306,15 +318,24 @@ fun DXCalendarRootApp(
         ) {
             val spec = computeAdaptiveLayoutSpec(maxWidth, maxHeight)
 
+            // 摺疊機展開/收合、分割視窗跨斷點或離開月檢視時，自動重置拖曳旗標，防止手勢狀態卡死
+            LaunchedEffect(spec.showDualPane, viewMode) {
+                isDraggingSheet = false
+                if (spec.showDualPane || viewMode != CalendarViewMode.MONTH) {
+                    sheetDragFraction = 0f
+                }
+            }
+
             Column(modifier = Modifier.fillMaxSize()) {
-                // 頂部自適應工具列（仿 vivo 年份雙色標題 + 年/月/週/日/時間表 分段切換 + 透視例行按鈕 + 搜尋與設定）
+                // 頂部自適應工具列（精簡移除眼睛透視鈕；隱私入口僅於設定最底開啟後才顯示）
                 AdaptiveTopHeaderBar(
                     year = currentYm.year,
                     month = currentYm.monthValue,
                     viewMode = viewMode,
                     mainSection = mainSection,
                     compact = spec.compactTopBar,
-                    peekHiddenInMonth = settings.peekHiddenInMonth,
+                    narrow = spec.isNarrowSplit,
+                    privacyFeatureEnabled = settings.privacyFeatureEnabled,
                     isPrivacyUnlocked = isPrivacyUnlocked,
                     onPrevPeriod = {
                         if (viewMode == CalendarViewMode.YEAR) viewModel.shiftYear(-1)
@@ -325,7 +346,6 @@ fun DXCalendarRootApp(
                         else viewModel.shiftMonth(1)
                     },
                     onSelectViewMode = { viewModel.setViewMode(it) },
-                    onTogglePeekHidden = { viewModel.setPeekHiddenInMonth(!settings.peekHiddenInMonth) },
                     onOpenSearch = { showSearchDialog = true },
                     onOpenSettings = { viewModel.openSettings(true) },
                     onJumpToDate = {
@@ -432,7 +452,8 @@ fun DXCalendarRootApp(
                                             focusedItem = focusedItem,
                                             settings = settings,
                                             maxEventsInCell = spec.maxEventsInMonthCell,
-                                            yearColumns = if (spec.formFactor == WindowFormFactor.TABLET_10_PIXELBOOK) 4 else 3,
+                                            yearColumns = spec.yearGridColumns,
+                                            hideLunarForCompactHeight = spec.hideLunarInMonthCell,
                                             onSelectMonthFromYear = { ym ->
                                                 viewModel.selectDate(ym.atDay(1))
                                                 viewModel.setViewMode(CalendarViewMode.MONTH)
@@ -460,11 +481,13 @@ fun DXCalendarRootApp(
                                             onEditItem = { viewModel.openEditForUnifiedItem(it) },
                                             onDeleteItem = { viewModel.deleteUnifiedItem(it) },
                                             onShareItem = { item ->
-                                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                    type = "text/plain"
-                                                    putExtra(Intent.EXTRA_TEXT, "【${item.title}】\n日期：${item.date}\n地點：${item.location}\n${item.notes}")
+                                                runCatching {
+                                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                        type = "text/plain"
+                                                        putExtra(Intent.EXTRA_TEXT, "【${item.title}】\n日期：${item.date}\n地點：${item.location}\n${item.notes}")
+                                                    }
+                                                    context.startActivity(Intent.createChooser(shareIntent, "分享行程"))
                                                 }
-                                                context.startActivity(Intent.createChooser(shareIntent, "分享行程"))
                                             },
                                             onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
                                             onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) }
@@ -491,11 +514,12 @@ fun DXCalendarRootApp(
                                 )
 
                                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                                    val totalH = maxHeight
+                                    val rawTotalH = if (maxHeight.value.isFinite()) maxHeight.value else 480f
+                                    val totalH = rawTotalH.coerceAtLeast(1f).dp
                                     val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 420.dp
-                                    val progress = if (canSplitVertically) animatedSheetProgress else 0f
+                                    val progress = if (canSplitVertically) animatedSheetProgress.coerceIn(0f, 1f) else 0f
                                     // 月曆從 100% 滿版平滑壓縮至 44%（同時日期下方的行程標籤淡出轉為彩色細條），下方時間表由 0% 平滑滑升至 56%！
-                                    val calendarHeight = totalH * (1f - 0.56f * progress)
+                                    val calendarHeight = (totalH * (1f - 0.56f * progress)).coerceIn(1.dp, totalH)
                                     val sheetHeight = (totalH - calendarHeight).coerceAtLeast(0.dp)
 
                                     Column(modifier = Modifier.fillMaxSize()) {
@@ -514,8 +538,9 @@ fun DXCalendarRootApp(
                                                 focusedItem = focusedItem,
                                                 settings = settings,
                                                 maxEventsInCell = spec.maxEventsInMonthCell,
-                                                yearColumns = 3,
+                                                yearColumns = spec.yearGridColumns,
                                                 compactSheetProgress = progress,
+                                                hideLunarForCompactHeight = spec.hideLunarInMonthCell,
                                                 onSelectMonthFromYear = { ym ->
                                                     viewModel.selectDate(ym.atDay(1))
                                                     viewModel.setViewMode(CalendarViewMode.MONTH)
@@ -634,14 +659,16 @@ fun DXCalendarRootApp(
                         }
                     }
 
-                    // vivo / OPPO 懸浮毛玻璃雙膠囊導覽列（完美還原示範影片底部設計！）
-                    if (tokens.useFloatingOriginCapsule && spec.heightDp >= 420.dp) {
+                    // 懸浮毛玻璃雙膠囊導覽列（寬度自適應，避免窄手機／摺疊分割裁切 now 按鈕；隱私入口僅於設定開啟後顯示）
+                    if (tokens.useFloatingOriginCapsule && !spec.isShortSplit) {
                         VivoFloatingCapsuleBar(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
-                                .padding(bottom = 12.dp, start = 12.dp, end = 12.dp),
+                                .padding(bottom = 12.dp, start = 10.dp, end = 10.dp),
                             currentSection = mainSection,
                             isNotToday = selectedDate != today,
+                            narrow = spec.isNarrowSplit,
+                            showPrivacyTab = settings.privacyFeatureEnabled,
                             isPrivacyUnlocked = isPrivacyUnlocked,
                             onSelectSection = { sec ->
                                 viewModel.setMainSection(sec)
@@ -662,10 +689,11 @@ fun DXCalendarRootApp(
                     }
                 }
 
-                // Google / 小米 / 三星 或超扁小視窗：經典底部導覽列 + 右側快速 + 按鈕（對應截圖 1 標註 3）
-                if (!tokens.useFloatingOriginCapsule || spec.heightDp < 420.dp) {
+                // 經典底部導覽列 或 橫扁上下分割視窗（使用 48dp 極簡低高度底欄，保留月曆可視高度）
+                if (!tokens.useFloatingOriginCapsule || spec.isShortSplit) {
                     ClassicBottomBar(
                         currentSection = mainSection,
+                        compactHeight = spec.isShortSplit,
                         onSelectSection = { sec ->
                             viewModel.setMainSection(sec)
                             if (sec == MainSection.PRIVACY && !isPrivacyUnlocked) {
@@ -947,12 +975,12 @@ private fun AdaptiveTopHeaderBar(
     viewMode: CalendarViewMode,
     mainSection: MainSection,
     compact: Boolean,
-    peekHiddenInMonth: Boolean,
+    narrow: Boolean,
+    privacyFeatureEnabled: Boolean,
     isPrivacyUnlocked: Boolean,
     onPrevPeriod: () -> Unit,
     onNextPeriod: () -> Unit,
     onSelectViewMode: (CalendarViewMode) -> Unit,
-    onTogglePeekHidden: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
     onJumpToDate: () -> Unit,
@@ -961,15 +989,16 @@ private fun AdaptiveTopHeaderBar(
 ) {
     val tokens = LocalBrandTokens.current
     var showOverflow by remember { mutableStateOf(false) }
+    val iconBtnSize = if (narrow) 36.dp else 44.dp
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = if (narrow) 6.dp else 10.dp, vertical = 5.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // 年月標題（vivo 特色雙色年份：20白 + 26紅橘 / 11）
+            // 年月標題（雙色年份）
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPrevPeriod, modifier = Modifier.size(28.dp)) {
+                IconButton(onClick = onPrevPeriod, modifier = Modifier.size(if (narrow) 24.dp else 28.dp)) {
                     Icon(Icons.Filled.ChevronLeft, contentDescription = "上一期", tint = tokens.secondaryTextColor)
                 }
                 val titleAnnotated = buildAnnotatedString {
@@ -990,42 +1019,38 @@ private fun AdaptiveTopHeaderBar(
                 }
                 Text(
                     text = titleAnnotated,
-                    fontSize = if (compact) 20.sp else 24.sp,
+                    fontSize = when {
+                        narrow -> 18.sp
+                        compact -> 20.sp
+                        else -> 24.sp
+                    },
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
                     modifier = Modifier.clickable { onJumpToDate() }
                 )
-                IconButton(onClick = onNextPeriod, modifier = Modifier.size(28.dp)) {
+                IconButton(onClick = onNextPeriod, modifier = Modifier.size(if (narrow) 24.dp else 28.dp)) {
                     Icon(Icons.Filled.ChevronRight, contentDescription = "下一期", tint = tokens.secondaryTextColor)
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 大螢幕直接於同行顯示「年 / 月 / 週 / 日 / 時間表」分段膠囊（仿 vivo 平板頂欄）
+            // 大螢幕或橫扁寬分割視窗直接於同行顯示「年 / 月 / 週 / 日 / 時間表」分段膠囊
             if (!compact && mainSection == MainSection.CALENDAR) {
                 ViewModeSegmentedPill(current = viewMode, onSelect = onSelectViewMode)
                 Spacer(modifier = Modifier.weight(1f))
             }
 
-            // 一鍵「暫時透視月曆隱藏例行事務」眼睛按鈕
-            IconButton(onClick = onTogglePeekHidden) {
-                Icon(
-                    imageVector = if (peekHiddenInMonth) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                    contentDescription = "透視例行事務",
-                    tint = if (peekHiddenInMonth) tokens.accentColor else tokens.secondaryTextColor
-                )
-            }
-
-            IconButton(onClick = onOpenSearch) {
+            IconButton(onClick = onOpenSearch, modifier = Modifier.size(iconBtnSize)) {
                 Icon(Icons.Filled.Search, contentDescription = "搜尋", tint = tokens.primaryTextColor)
             }
 
-            IconButton(onClick = onOpenSettings) {
+            IconButton(onClick = onOpenSettings, modifier = Modifier.size(iconBtnSize)) {
                 Icon(Icons.Filled.Settings, contentDescription = "主題與設定", tint = tokens.primaryTextColor)
             }
 
             Box {
-                IconButton(onClick = { showOverflow = true }) {
+                IconButton(onClick = { showOverflow = true }, modifier = Modifier.size(iconBtnSize)) {
                     Icon(Icons.Filled.MoreVert, contentDescription = "更多功能", tint = tokens.primaryTextColor)
                 }
                 DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
@@ -1039,13 +1064,15 @@ private fun AdaptiveTopHeaderBar(
                         leadingIcon = { Icon(Icons.Filled.Explore, contentDescription = null) },
                         onClick = { showOverflow = false; onOpenAlmanacDiscovery() }
                     )
-                    DropdownMenuItem(
-                        text = { Text(if (isPrivacyUnlocked) "進入隱私日曆 (已解鎖)" else "雙指紋鎖開啟隱私日曆") },
-                        leadingIcon = {
-                            Icon(if (isPrivacyUnlocked) Icons.Filled.LockOpen else Icons.Filled.Lock, contentDescription = null)
-                        },
-                        onClick = { showOverflow = false; onQuickPrivacyAccess() }
-                    )
+                    if (privacyFeatureEnabled) {
+                        DropdownMenuItem(
+                            text = { Text(if (isPrivacyUnlocked) "進入隱私日曆 (已解鎖)" else "雙指紋鎖開啟隱私日曆") },
+                            leadingIcon = {
+                                Icon(if (isPrivacyUnlocked) Icons.Filled.LockOpen else Icons.Filled.Lock, contentDescription = null)
+                            },
+                            onClick = { showOverflow = false; onQuickPrivacyAccess() }
+                        )
+                    }
                 }
             }
         }
@@ -1068,6 +1095,7 @@ private fun ViewModeSegmentedPill(
     val tokens = LocalBrandTokens.current
     Row(
         modifier = Modifier
+            .horizontalScroll(rememberScrollState())
             .clip(RoundedCornerShape(18.dp))
             .background(tokens.surfaceCardColor)
             .padding(3.dp),
@@ -1107,6 +1135,7 @@ private fun CalendarPrimaryViewport(
     maxEventsInCell: Int,
     yearColumns: Int,
     compactSheetProgress: Float = 0f,
+    hideLunarForCompactHeight: Boolean = false,
     onSelectMonthFromYear: (java.time.YearMonth) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     onTapAlreadySelectedDate: ((LocalDate) -> Unit)? = null,
@@ -1134,6 +1163,7 @@ private fun CalendarPrimaryViewport(
             settings = settings,
             maxEventsPerCell = maxEventsInCell,
             compactSheetProgress = compactSheetProgress,
+            hideLunarForCompactHeight = hideLunarForCompactHeight,
             onSelectDate = onSelectDate,
             onTapAlreadySelectedDate = onTapAlreadySelectedDate,
             onSwipePrevMonth = onSwipePrevMonth,
@@ -1177,18 +1207,21 @@ private fun VivoFloatingCapsuleBar(
     modifier: Modifier,
     currentSection: MainSection,
     isNotToday: Boolean,
+    narrow: Boolean,
+    showPrivacyTab: Boolean,
     isPrivacyUnlocked: Boolean,
     onSelectSection: (MainSection) -> Unit,
     onJumpToday: () -> Unit,
     onQuickAdd: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
+    val tabHPad = if (narrow) 8.dp else if (showPrivacyTab) 10.dp else 13.dp
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = modifier
+        horizontalArrangement = Arrangement.spacedBy(if (narrow) 6.dp else 10.dp),
+        modifier = modifier.horizontalScroll(rememberScrollState())
     ) {
-        // 左側毛玻璃懸浮主膠囊：日曆 / 待辦 / 例行中心 / 隱私日曆
+        // 左側毛玻璃懸浮主膠囊：日曆 / 待辦 / 例行中心（隱私僅於設定開啟後顯示）
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -1196,14 +1229,16 @@ private fun VivoFloatingCapsuleBar(
                 .clip(RoundedCornerShape(30.dp))
                 .background(tokens.floatingPillColor)
                 .border(0.8.dp, tokens.gridLineColor, RoundedCornerShape(30.dp))
-                .padding(horizontal = 6.dp, vertical = 5.dp)
+                .padding(horizontal = if (narrow) 4.dp else 6.dp, vertical = 5.dp)
         ) {
-            val tabs = listOf(
-                Triple(MainSection.CALENDAR, "日曆", Icons.Filled.CalendarMonth),
-                Triple(MainSection.TASKS, "待辦事項", Icons.Filled.CheckCircleOutline),
-                Triple(MainSection.ROUTINES, "例行中心", Icons.Filled.Repeat),
-                Triple(MainSection.PRIVACY, "隱私", if (isPrivacyUnlocked) Icons.Filled.LockOpen else Icons.Filled.Lock)
-            )
+            val tabs = buildList {
+                add(Triple(MainSection.CALENDAR, "日曆", Icons.Filled.CalendarMonth))
+                add(Triple(MainSection.TASKS, "待辦事項", Icons.Filled.CheckCircleOutline))
+                add(Triple(MainSection.ROUTINES, "例行中心", Icons.Filled.Repeat))
+                if (showPrivacyTab) {
+                    add(Triple(MainSection.PRIVACY, "隱私", if (isPrivacyUnlocked) Icons.Filled.LockOpen else Icons.Filled.Lock))
+                }
+            }
             tabs.forEach { (sec, label, icon) ->
                 val selected = currentSection == sec
                 Column(
@@ -1212,50 +1247,51 @@ private fun VivoFloatingCapsuleBar(
                         .clip(RoundedCornerShape(22.dp))
                         .background(if (selected) tokens.elevatedSurfaceColor else Color.Transparent)
                         .clickable { onSelectSection(sec) }
-                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                        .padding(horizontal = tabHPad, vertical = 5.dp)
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = label,
                         tint = if (selected) tokens.accentColor else tokens.secondaryTextColor,
-                        modifier = Modifier.size(19.dp)
+                        modifier = Modifier.size(if (narrow) 17.dp else 19.dp)
                     )
                     Text(
                         text = label,
                         color = if (selected) tokens.accentColor else tokens.secondaryTextColor,
-                        fontSize = 10.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                        fontSize = if (narrow) 9.sp else 10.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        maxLines = 1
                     )
                 }
             }
         }
 
-        // 右側圓形「+」快速新增按鈕（仿 vivo 紅橘色圓鈕 + 截圖 1 右下角 + 圈選！）
+        // 右側圓形「+」快速新增按鈕
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(50.dp)
+                .size(if (narrow) 44.dp else 50.dp)
                 .shadow(8.dp, CircleShape)
                 .clip(CircleShape)
                 .background(tokens.accentColor)
                 .clickable { onQuickAdd() }
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "新增行程", tint = Color.White, modifier = Modifier.size(26.dp))
+            Icon(Icons.Filled.Add, contentDescription = "新增行程", tint = Color.White, modifier = Modifier.size(if (narrow) 22.dp else 26.dp))
         }
 
-        // 當不在今天時，浮現「今」圓形快捷返回鈕（完全還原 vivo 00:08 底部設計！）
+        // 當不在今天時，浮現「now」圓形快捷返回鈕
         if (isNotToday) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(if (narrow) 42.dp else 46.dp)
                     .shadow(6.dp, CircleShape)
                     .clip(CircleShape)
                     .background(tokens.floatingPillColor)
                     .border(1.dp, tokens.accentColor, CircleShape)
                     .clickable { onJumpToday() }
             ) {
-                Text("now", color = tokens.accentColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("now", color = tokens.accentColor, fontSize = if (narrow) 11.sp else 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1264,11 +1300,46 @@ private fun VivoFloatingCapsuleBar(
 @Composable
 private fun ClassicBottomBar(
     currentSection: MainSection,
+    compactHeight: Boolean = false,
     onSelectSection: (MainSection) -> Unit,
     onJumpToday: () -> Unit,
     onQuickAdd: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
+    if (compactHeight) {
+        // 橫扁上下分割視窗專用 46dp 精簡底欄，避免 80dp NavigationBar 吃光月曆高度
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(46.dp)
+                .background(tokens.surfaceCardColor)
+                .padding(horizontal = 8.dp)
+        ) {
+            TextButton(onClick = onJumpToday) { Text("今天", fontSize = 12.sp, color = tokens.accentColor) }
+            TextButton(onClick = { onSelectSection(MainSection.CALENDAR) }) {
+                Text("日曆", fontSize = 12.sp, fontWeight = if (currentSection == MainSection.CALENDAR) FontWeight.Bold else FontWeight.Normal)
+            }
+            TextButton(onClick = { onSelectSection(MainSection.TASKS) }) {
+                Text("待辦", fontSize = 12.sp, fontWeight = if (currentSection == MainSection.TASKS) FontWeight.Bold else FontWeight.Normal)
+            }
+            TextButton(onClick = { onSelectSection(MainSection.ROUTINES) }) {
+                Text("例行", fontSize = 12.sp, fontWeight = if (currentSection == MainSection.ROUTINES) FontWeight.Bold else FontWeight.Normal)
+            }
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(tokens.accentColor)
+                    .clickable { onQuickAdd() }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "新增", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+        }
+        return
+    }
     NavigationBar(containerColor = tokens.surfaceCardColor, tonalElevation = 4.dp) {
         NavigationBarItem(
             selected = false,
@@ -1326,22 +1397,28 @@ private fun PermanentCategorySideRail(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text("時間表與 Tasks 篩選", color = tokens.secondaryTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        categories.forEach { cat ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onToggleCategory(cat) }
-                    .padding(vertical = 2.dp)
-            ) {
-                Checkbox(checked = cat.isVisible, onCheckedChange = { onToggleCategory(cat) })
-                Box(modifier = Modifier.size(10.dp).background(Color(cat.colorArgb), CircleShape))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(cat.name, color = tokens.primaryTextColor, fontSize = 13.sp, maxLines = 1)
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            categories.forEach { cat ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onToggleCategory(cat) }
+                        .padding(vertical = 2.dp)
+                ) {
+                    Checkbox(checked = cat.isVisible, onCheckedChange = { onToggleCategory(cat) })
+                    Box(modifier = Modifier.size(10.dp).background(Color(cat.colorArgb), CircleShape))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(cat.name, color = tokens.primaryTextColor, fontSize = 13.sp, maxLines = 1)
+                }
             }
         }
-        Spacer(modifier = Modifier.weight(1f))
         TextButton(onClick = onOpenManage, modifier = Modifier.fillMaxWidth()) {
             Text("管理帳號與匯入 →", fontSize = 12.sp)
         }
