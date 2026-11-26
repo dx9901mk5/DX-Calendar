@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DX日曆 (DX-Calendar) — 智慧月曆與跨裝置伴侶</title>
+  <style>
+    :root { --bg:#111216; --card:#1b1d24; --text:#f5f5f7; --sub:#a6a6b2; --gold:#d9a83e; --line:rgba(217,168,62,.22); }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:"Segoe UI","Microsoft JhengHei",system-ui,sans-serif; line-height:1.7; padding:32px 18px; }
+    .wrap { max-width:860px; margin:0 auto; }
+    .hero { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:30px; display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+    .logo { width:84px; height:84px; border-radius:20px; border:1px solid var(--line); }
+    h1 { font-size:28px; color:var(--gold); }
+    .sub { color:var(--sub); font-size:15px; margin-top:4px; }
+    .cta { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+    .btn { display:inline-block; text-decoration:none; padding:10px 18px; border-radius:12px; font-weight:700; font-size:14px; }
+    .btn-gold { background:var(--gold); color:#111216; }
+    .btn-out { border:1px solid var(--line); color:var(--text); }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:24px; margin-top:18px; }
+    h2 { font-size:19px; color:var(--gold); margin-bottom:10px; }
+    ul { padding-left:20px; color:var(--text); }
+    li { margin-bottom:6px; }
+    footer { text-align:center; color:var(--sub); font-size:13px; margin-top:26px; }
+    footer a { color:var(--gold); text-decoration:none; margin:0 8px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <img src="logo.png" alt="DX-Calendar Logo" class="logo" />
+      <div style="flex:1;min-width:240px;">
+        <h1>DX日曆 (DX-Calendar)</h1>
+        <p class="sub">全尺寸奢華金主題 Android 智慧日曆 ＋ Chrome 跨系統伴侶插件<br/>Adaptive Gold-Themed Smart Calendar for Android &amp; Chrome Extension</p>
+        <div class="cta">
+          <a class="btn btn-gold" href="https://github.com/dx9901mk5/DX-Calendar/releases/latest">下載最新 APK / Chrome 插件</a>
+          <a class="btn btn-out" href="https://github.com/dx9901mk5/DX-Calendar">GitHub 儲存庫</a>
+          <a class="btn btn-out" href="privacy.html">隱私權政策 / Privacy Policy</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>核心特色 / Key Features</h2>
+      <ul>
+        <li><strong>奢華金白／金色黑底雙主題與 1–31 動態日期圖示</strong> — 自動跟隨系統深淺模式與午夜跨日刷新。</li>
+        <li><strong>100% 離線自然語言與語音快速建行程</strong> — 免外接 AI 費用、零延遲解析時間、重複與提醒。</li>
+        <li><strong>5 款高解析透明含天氣桌面小工具</strong> — DX 月曆 (60fps 展開週＋now)、DX 時間表 (now)、下一行程 (4×1)、倒數日 (2×2)、單週 7 天天氣 (4×2)。</li>
+        <li><strong>Google 行事曆與 Google Tasks 整合</strong> — 即時同步呈現您的 Google 行事曆與 Google Tasks 待辦事項於月曆、時間軸與桌面小工具。</li>
+        <li><strong>農曆初一十五與聯絡人生日算歲數</strong> — 支援 1900–2100 農曆節氣、農曆每月／初一十五／農曆每年重複與聯絡人生日自動匯入。</li>
+        <li><strong>輪班範本連點排班、雙時區時間軸、番茄鐘、協作留言與雙指紋隱私日曆</strong> — 採 Android Keystore AES-256-GCM 硬體加密與無損 Google 雲端硬碟跨裝置備份。</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Google API 使用說明 / Google User Data Transparency</h2>
+      <p style="color:var(--sub);font-size:14px;">
+        DX日曆僅於使用者主動連結 Google 帳號並明確授權後，透過 Google Tasks API 讀取並同步顯示您的 Google Tasks 任務至本機日曆與桌面小工具，並於您勾選任務完成時同步更新任務完成狀態。所有資料僅儲存於您的本機裝置，開發者不架設任何中繼伺服器，亦不蒐集、販售或向第三方分享任何個人資料。詳見 <a href="privacy.html" style="color:var(--gold);">隱私權政策 (Privacy Policy)</a>。
+      </p>
+    </section>
+
+    <footer>
+      © 2026 dx9901mk5 · DX-Calendar ·
+      <a href="privacy.html">隱私權政策 / Privacy Policy</a> ·
+      <a href="terms.html">服務條款 / Terms of Service</a> ·
+      <a href="mailto:dx9901mk5@gmail.com">聯絡開發者</a>
+    </footer>
+  </div>
+</body>
+</html>
