@@ -18,7 +18,6 @@ import android.widget.RemoteViewsService
 import com.dx.calendar.MainActivity
 import com.dx.calendar.R
 import com.dx.calendar.data.local.AppDatabase
-import com.dx.calendar.data.local.AppPreferences
 import com.dx.calendar.data.repository.CalendarRepository
 import com.dx.calendar.data.repository.UnifiedCalendarItem
 import com.dx.calendar.util.LunarCalendarEngine
@@ -31,6 +30,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 object WidgetRefreshHelper {
     const val ACTION_PREV_MONTH = "com.dx.calendar.widget.ACTION_PREV_MONTH"
@@ -79,30 +79,77 @@ object WidgetRefreshHelper {
             .edit().putInt("week_offset_$appWidgetId", offset).apply()
     }
 
+    /**
+     * 儲存單顆桌面小工具專屬的深淺色與透明度設定 (0.0f 全透明 ~ 1.0f 實心)
+     */
+    fun setPerWidgetAppearance(context: Context, appWidgetId: Int, isDark: Boolean, opacity: Float) {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) return
+        context.getSharedPreferences(PREF_WIDGET_STATE, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("has_custom_style_$appWidgetId", true)
+            .putBoolean("custom_dark_$appWidgetId", isDark)
+            .putFloat("custom_opacity_$appWidgetId", opacity.coerceIn(0f, 1f))
+            .apply()
+    }
+
+    /**
+     * 當使用者選擇「套用至全部小工具」或於 App 設定頁調整全域小工具外觀時，清除個別覆寫使全部同步
+     */
+    fun clearAllPerWidgetAppearanceOverrides(context: Context) {
+        val sp = context.getSharedPreferences(PREF_WIDGET_STATE, Context.MODE_PRIVATE)
+        val keysToRemove = sp.all.keys.filter {
+            it.startsWith("has_custom_style_") || it.startsWith("custom_dark_") || it.startsWith("custom_opacity_")
+        }
+        if (keysToRemove.isNotEmpty()) {
+            val editor = sp.edit()
+            keysToRemove.forEach { editor.remove(it) }
+            editor.apply()
+        }
+    }
+
+    fun getEffectiveWidgetAppearance(
+        context: Context,
+        appWidgetId: Int,
+        globalDark: Boolean,
+        globalOpacity: Float
+    ): Pair<Boolean, Float> {
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            return globalDark to globalOpacity.coerceIn(0f, 1f)
+        }
+        val sp = context.getSharedPreferences(PREF_WIDGET_STATE, Context.MODE_PRIVATE)
+        return if (sp.getBoolean("has_custom_style_$appWidgetId", false)) {
+            val d = sp.getBoolean("custom_dark_$appWidgetId", globalDark)
+            val o = sp.getFloat("custom_opacity_$appWidgetId", globalOpacity).coerceIn(0f, 1f)
+            d to o
+        } else {
+            globalDark to globalOpacity.coerceIn(0f, 1f)
+        }
+    }
+
     fun refreshAllWidgets(context: Context) {
         val appContext = context.applicationContext
         val mgr = AppWidgetManager.getInstance(appContext)
 
-        // 1. 刷新 vivo 月曆小工具
+        // 1. 刷新類 vivo 月曆小工具
         val vivoMonthIds = mgr.getAppWidgetIds(ComponentName(appContext, VivoMonthWidgetProvider::class.java))
         if (vivoMonthIds.isNotEmpty()) {
             VivoMonthWidgetProvider.updateWidgets(appContext, mgr, vivoMonthIds)
         }
 
-        // 2. 刷新 Google 月檢視小工具
+        // 2. 刷新類 Google 月檢視小工具
         val googleMonthIds = mgr.getAppWidgetIds(ComponentName(appContext, GoogleMonthWidgetProvider::class.java))
         if (googleMonthIds.isNotEmpty()) {
             GoogleMonthWidgetProvider.updateWidgets(appContext, mgr, googleMonthIds)
         }
 
-        // 3. 刷新 Google 日曆時間表可捲動小工具
+        // 3. 刷新類 Google 日曆時間表可捲動小工具
         val googleSchedIds = mgr.getAppWidgetIds(ComponentName(appContext, GoogleScheduleWidgetProvider::class.java))
         if (googleSchedIds.isNotEmpty()) {
             GoogleScheduleWidgetProvider.updateWidgets(appContext, mgr, googleSchedIds)
             mgr.notifyAppWidgetViewDataChanged(googleSchedIds, R.id.widget_list_view)
         }
 
-        // 4. 刷新 vivo 待辦與例行事項可捲動小工具
+        // 4. 刷新類 vivo 待辦與例行事項可捲動小工具
         val vivoTaskIds = mgr.getAppWidgetIds(ComponentName(appContext, VivoTasksWidgetProvider::class.java))
         if (vivoTaskIds.isNotEmpty()) {
             VivoTasksWidgetProvider.updateWidgets(appContext, mgr, vivoTaskIds)
@@ -112,8 +159,8 @@ object WidgetRefreshHelper {
 }
 
 /**
- * 1. vivo 風格基底「月曆小工具」
- * 支援桌面自由縮放、直接在桌面上點擊 `<` `>` 切換前後月份、點「今」回當月、點 `+` 快速新增、顯示農曆與彩色日程膠囊！
+ * 1. 類 vivo 風格基底「月曆小工具」
+ * 支援桌面自由縮放、0%~100% 自由透明度、點擊 `⚙` 設定透明度、點擊 `<` `>` 切換前後月份、單週展開、`now` 快捷鍵！
  */
 class VivoMonthWidgetProvider : AppWidgetProvider() {
 
@@ -177,6 +224,9 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                 val checkIns = repo.dao.getRoutineCheckInsOnce()
 
                 for (id in ids) {
+                    val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
+                        context, id, settings.widgetDarkStyle, settings.widgetOpacity
+                    )
                     val weekMode = WidgetRefreshHelper.isWeekMode(context, id)
                     val offset = WidgetRefreshHelper.getMonthOffset(context, id)
                     val weekOffset = WidgetRefreshHelper.getWeekOffset(context, id)
@@ -204,7 +254,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                             items = items,
                             startMonday = settings.startWeekOnMonday,
                             showLunar = settings.showLunar,
-                            darkStyle = settings.widgetDarkStyle,
+                            darkStyle = darkStyle,
                             accentArgb = settings.brandStyle.primaryHex.toInt()
                         )
                     } else {
@@ -216,33 +266,25 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                             items = items,
                             startMonday = settings.startWeekOnMonday,
                             showLunar = settings.showLunar,
-                            darkStyle = settings.widgetDarkStyle,
+                            darkStyle = darkStyle,
                             accentArgb = settings.brandStyle.primaryHex.toInt(),
                             googleGridStyle = false
                         )
                     }
 
                     val views = RemoteViews(context.packageName, R.layout.widget_month_canvas)
-                    views.setInt(
-                        R.id.widget_root,
-                        "setBackgroundResource",
-                        if (settings.widgetDarkStyle) R.drawable.bg_widget_dark else R.drawable.bg_widget_light
-                    )
+                    applyMonthContainerThemeAndOpacity(views, darkStyle, opacity)
+
                     views.setTextViewText(
                         R.id.widget_month_title,
                         if (weekMode) "%d/%02d · 週".format(ym.year, ym.monthValue)
                         else "%d/%02d".format(ym.year, ym.monthValue)
-                    )
-                    views.setTextColor(
-                        R.id.widget_month_title,
-                        if (settings.widgetDarkStyle) 0xFFF5F5F7.toInt() else 0xFF161618.toInt()
                     )
                     views.setViewVisibility(R.id.btn_widget_mode, android.view.View.VISIBLE)
                     views.setTextViewText(R.id.btn_widget_mode, if (weekMode) "月曆" else "單週")
                     views.setTextViewText(R.id.btn_widget_today, "now")
                     views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
 
-                    // 綁定桌面直接翻月/翻週、展開單週、now 回到當週當日與快速新增按鈕
                     views.setOnClickPendingIntent(
                         R.id.btn_widget_prev,
                         buildBroadcastPi(context, VivoMonthWidgetProvider::class.java, WidgetRefreshHelper.ACTION_PREV_MONTH, id, 1)
@@ -263,7 +305,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                         7
                     )
                     views.setOnClickPendingIntent(R.id.btn_widget_mode, toggleWeekPi)
-                    // 桌面整個月曆／單週 7 天每一格皆可直接點擊跳至當日呈現；單週展開下半部點擊回切月檢視，標題列開啟主程式
+
                     if (weekMode) {
                         views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.GONE)
                         views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.VISIBLE)
@@ -274,6 +316,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                         views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
                         bindMonthTapCells(context, views, id, ym, settings.startWeekOnMonday)
                     }
+                    views.setOnClickPendingIntent(R.id.btn_widget_config, buildWidgetConfigPi(context, id, 8))
                     views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(context, id * 10 + 4, quickAdd = true))
                     views.setOnClickPendingIntent(R.id.widget_month_title, buildMainAppPi(context, id * 10 + 6, quickAdd = false))
 
@@ -285,7 +328,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
 }
 
 /**
- * 2. Google 日曆風格「月檢視」小工具（滿版網格 + Tasks 圓圈 + 自由縮放）
+ * 2. 類 Google 日曆風格「月檢視」小工具（滿版網格 + Tasks 圓圈 + 自由縮放 + 自由透明度）
  */
 class GoogleMonthWidgetProvider : AppWidgetProvider() {
 
@@ -335,6 +378,9 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                 val checkIns = repo.dao.getRoutineCheckInsOnce()
 
                 for (id in ids) {
+                    val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
+                        context, id, settings.widgetDarkStyle, settings.widgetOpacity
+                    )
                     val offset = WidgetRefreshHelper.getMonthOffset(context, id)
                     val ym = YearMonth.now().plusMonths(offset.toLong())
                     val items = repo.buildItemsForRange(
@@ -354,22 +400,15 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                         items = items,
                         startMonday = settings.startWeekOnMonday,
                         showLunar = settings.showLunar,
-                        darkStyle = settings.widgetDarkStyle,
-                        accentArgb = 0xFF8AB4F8.toInt(),
+                        darkStyle = darkStyle,
+                        accentArgb = if (darkStyle) 0xFF8AB4F8.toInt() else 0xFF1A73E8.toInt(),
                         googleGridStyle = true
                     )
 
                     val views = RemoteViews(context.packageName, R.layout.widget_month_canvas)
-                    views.setInt(
-                        R.id.widget_root,
-                        "setBackgroundResource",
-                        if (settings.widgetDarkStyle) R.drawable.bg_widget_dark else R.drawable.bg_widget_light
-                    )
+                    applyMonthContainerThemeAndOpacity(views, darkStyle, opacity)
+
                     views.setTextViewText(R.id.widget_month_title, "%d年%d月".format(ym.year, ym.monthValue))
-                    views.setTextColor(
-                        R.id.widget_month_title,
-                        if (settings.widgetDarkStyle) 0xFFE3E3E3.toInt() else 0xFF1F1F1F.toInt()
-                    )
                     views.setViewVisibility(R.id.btn_widget_mode, android.view.View.GONE)
                     views.setTextViewText(R.id.btn_widget_today, "now")
                     views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
@@ -386,6 +425,7 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                         R.id.btn_widget_today,
                         buildBroadcastPi(context, GoogleMonthWidgetProvider::class.java, WidgetRefreshHelper.ACTION_RESET_TODAY, id, 13)
                     )
+                    views.setOnClickPendingIntent(R.id.btn_widget_config, buildWidgetConfigPi(context, id, 18))
                     views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(context, id * 10 + 14, quickAdd = true))
                     views.setOnClickPendingIntent(R.id.widget_month_title, buildMainAppPi(context, id * 10 + 16, quickAdd = false))
                     views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
@@ -400,7 +440,7 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
 }
 
 /**
- * 3. Google 日曆風格「日曆時間表」可上下捲動小工具（完美還原示範影片 01:38 右上角可捲動彩色膠囊 + Google Tasks 小工具）
+ * 3. 類 Google 日曆風格「日曆時間表」可上下捲動小工具（支援 0%~100% 自由透明度與 `⚙` 設定鈕）
  */
 class GoogleScheduleWidgetProvider : AppWidgetProvider() {
 
@@ -438,7 +478,6 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
                     }
                 }
             } else {
-                // 時間表點擊任意活動或待辦，立即開啟 DX日曆 並定位至該日期詳情！
                 val openIntent = Intent(context, MainActivity::class.java).apply {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     if (epochDay != Long.MIN_VALUE) {
@@ -452,49 +491,56 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
 
     companion object {
         fun updateWidgets(context: Context, mgr: AppWidgetManager, ids: IntArray) {
-            val today = LocalDate.now()
-            val dowNames = arrayOf("週一", "週二", "週三", "週四", "週五", "週六", "週日")
-            val header = "${today.dayOfMonth} ${dowNames[today.dayOfWeek.value - 1]}"
+            CoroutineScope(Dispatchers.IO).launch {
+                val repo = CalendarRepository(context)
+                val settings = repo.prefs.getSettingsOnce()
+                val today = LocalDate.now()
+                val dowNames = arrayOf("週一", "週二", "週三", "週四", "週五", "週六", "週日")
+                val header = "${today.dayOfMonth} ${dowNames[today.dayOfWeek.value - 1]}"
 
-            for (id in ids) {
-                val views = RemoteViews(context.packageName, R.layout.widget_scrollable_list)
-                views.setTextViewText(R.id.widget_list_header_title, header)
-                // 移除「時間表」三個字，保持頂欄極簡清爽
-                views.setTextViewText(R.id.widget_list_badge, "")
-                views.setViewVisibility(R.id.widget_list_badge, android.view.View.INVISIBLE)
+                for (id in ids) {
+                    val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
+                        context, id, settings.widgetDarkStyle, settings.widgetOpacity
+                    )
+                    val views = RemoteViews(context.packageName, R.layout.widget_scrollable_list)
+                    applyListContainerThemeAndOpacity(views, darkStyle, opacity)
 
-                val svcIntent = Intent(context, ScheduleRemoteViewsService::class.java).apply {
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-                    putExtra("mode", "SCHEDULE")
-                    data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                    views.setTextViewText(R.id.widget_list_header_title, header)
+                    views.setTextViewText(R.id.widget_list_badge, "")
+                    views.setViewVisibility(R.id.widget_list_badge, android.view.View.INVISIBLE)
+
+                    val svcIntent = Intent(context, ScheduleRemoteViewsService::class.java).apply {
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                        putExtra("mode", "SCHEDULE")
+                        data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                    }
+                    views.setRemoteAdapter(R.id.widget_list_view, svcIntent)
+                    views.setEmptyView(R.id.widget_list_view, R.id.widget_empty_text)
+
+                    views.setOnClickPendingIntent(R.id.btn_widget_list_config, buildWidgetConfigPi(context, id, 28))
+                    views.setOnClickPendingIntent(R.id.btn_widget_list_add, buildMainAppPi(context, id * 10 + 21, quickAdd = true))
+                    views.setOnClickPendingIntent(R.id.widget_list_header_title, buildMainAppPi(context, id * 10 + 22, quickAdd = false))
+
+                    val clickTemplate = Intent(context, MainActivity::class.java).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    }
+                    val templatePi = PendingIntent.getActivity(
+                        context,
+                        id * 10 + 23,
+                        clickTemplate,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                    )
+                    views.setPendingIntentTemplate(R.id.widget_list_view, templatePi)
+
+                    mgr.updateAppWidget(id, views)
                 }
-                views.setRemoteAdapter(R.id.widget_list_view, svcIntent)
-                views.setEmptyView(R.id.widget_list_view, R.id.widget_empty_text)
-
-                views.setOnClickPendingIntent(R.id.btn_widget_list_add, buildMainAppPi(context, id * 10 + 21, quickAdd = true))
-                views.setOnClickPendingIntent(R.id.widget_list_header_title, buildMainAppPi(context, id * 10 + 22, quickAdd = false))
-
-                // 關鍵修復：直接使用 PendingIntent.getActivity 作為模板，即使 App 被從背景滑掉（冷啟動）
-                // 也不會遭 Android 12–16 背景啟動限制 (BAL) 攔截，點擊事件立即直接呈現該事件詳情！
-                val clickTemplate = Intent(context, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
-                val templatePi = PendingIntent.getActivity(
-                    context,
-                    id * 10 + 23,
-                    clickTemplate,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
-                )
-                views.setPendingIntentTemplate(R.id.widget_list_view, templatePi)
-
-                mgr.updateAppWidget(id, views)
             }
         }
     }
 }
 
 /**
- * 4. vivo 風格「待辦事項與例行中心」可捲動小工具（還原影片 02:26 待辦數徽章 + 桌面直接打勾完成）
+ * 4. 類 vivo 風格「待辦事項與例行中心」可捲動小工具（支援 0%~100% 自由透明度與 `⚙` 設定鈕）
  */
 class VivoTasksWidgetProvider : AppWidgetProvider() {
 
@@ -515,12 +561,19 @@ class VivoTasksWidgetProvider : AppWidgetProvider() {
     companion object {
         fun updateWidgets(context: Context, mgr: AppWidgetManager, ids: IntArray) {
             CoroutineScope(Dispatchers.IO).launch {
-                val dao = AppDatabase.getInstance(context).calendarDao()
-                val pendingCount = dao.getAllTasksOnce().count { !it.isCompleted && !it.isPrivacy }
+                val repo = CalendarRepository(context)
+                val settings = repo.prefs.getSettingsOnce()
+                val pendingCount = repo.dao.getAllTasksOnce().count { !it.isCompleted && !it.isPrivacy }
 
                 for (id in ids) {
+                    val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
+                        context, id, settings.widgetDarkStyle, settings.widgetOpacity
+                    )
                     val views = RemoteViews(context.packageName, R.layout.widget_scrollable_list)
+                    applyListContainerThemeAndOpacity(views, darkStyle, opacity)
+
                     views.setTextViewText(R.id.widget_list_header_title, "待辦與例行")
+                    views.setViewVisibility(R.id.widget_list_badge, android.view.View.VISIBLE)
                     views.setTextViewText(R.id.widget_list_badge, "$pendingCount 項待辦")
 
                     val svcIntent = Intent(context, ScheduleRemoteViewsService::class.java).apply {
@@ -531,6 +584,7 @@ class VivoTasksWidgetProvider : AppWidgetProvider() {
                     views.setRemoteAdapter(R.id.widget_list_view, svcIntent)
                     views.setEmptyView(R.id.widget_list_view, R.id.widget_empty_text)
 
+                    views.setOnClickPendingIntent(R.id.btn_widget_list_config, buildWidgetConfigPi(context, id, 38))
                     views.setOnClickPendingIntent(R.id.btn_widget_list_add, buildMainAppPi(context, id * 10 + 31, quickAdd = true))
                     views.setOnClickPendingIntent(R.id.widget_list_header_title, buildMainAppPi(context, id * 10 + 32, quickAdd = false))
 
@@ -555,16 +609,20 @@ class VivoTasksWidgetProvider : AppWidgetProvider() {
 class ScheduleRemoteViewsService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
         val mode = intent.getStringExtra("mode") ?: "SCHEDULE"
-        return ScheduleRemoteViewsFactory(applicationContext, mode)
+        val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        return ScheduleRemoteViewsFactory(applicationContext, mode, widgetId)
     }
 }
 
 private class ScheduleRemoteViewsFactory(
     private val context: Context,
-    private val mode: String
+    private val mode: String,
+    private val appWidgetId: Int
 ) : RemoteViewsService.RemoteViewsFactory {
 
     private var rows: List<UnifiedCalendarItem> = emptyList()
+    private var darkStyle: Boolean = true
+    private var opacity: Float = 0.85f
     private val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
 
     override fun onCreate() {}
@@ -573,6 +631,12 @@ private class ScheduleRemoteViewsFactory(
         runBlocking(Dispatchers.IO) {
             val repo = CalendarRepository(context)
             val settings = repo.prefs.getSettingsOnce()
+            val eff = WidgetRefreshHelper.getEffectiveWidgetAppearance(
+                context, appWidgetId, settings.widgetDarkStyle, settings.widgetOpacity
+            )
+            darkStyle = eff.first
+            opacity = eff.second
+
             val cats = repo.dao.getCategoriesOnce()
             val events = repo.dao.getAllEventsOnce()
             val tasks = repo.dao.getAllTasksOnce()
@@ -606,9 +670,22 @@ private class ScheduleRemoteViewsFactory(
         val showDateHeader = position == 0 || rows[position - 1].date != item.date
 
         val rv = RemoteViews(context.packageName, R.layout.widget_item_row)
+        val headerColor = if (darkStyle) 0xFFB0B0BC.toInt() else 0xFF4A4A54.toInt()
+        val titleColor = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF16161A.toInt()
+        val subColor = if (darkStyle) 0xFFB5B5BE.toInt() else 0xFF5A5A66.toInt()
+
+        // 子列卡片底色透明度隨小工具整體透明度平滑縮放（全透明 0% 時仍保留極淡 10% 微襯底或隨之通透）
+        val cardAlpha = (opacity * (if (darkStyle) 42f else 22f)).roundToInt().coerceIn(0, 80)
+        rv.setImageViewResource(
+            R.id.row_card_bg,
+            if (darkStyle) R.drawable.bg_widget_row_dark_solid else R.drawable.bg_widget_row_light_solid
+        )
+        rv.setInt(R.id.row_card_bg, "setImageAlpha", cardAlpha)
+
         if (showDateHeader) {
             val lunar = LunarCalendarEngine.getLunarInfo(item.date)
             rv.setViewVisibility(R.id.row_date_header, android.view.View.VISIBLE)
+            rv.setTextColor(R.id.row_date_header, headerColor)
             rv.setTextViewText(
                 R.id.row_date_header,
                 "${item.date.monthValue}月${item.date.dayOfMonth}日 ${dowNames[item.date.dayOfWeek.value - 1]} · ${lunar.shortDisplay}"
@@ -622,6 +699,7 @@ private class ScheduleRemoteViewsFactory(
             item.isTask -> "○ "
             else -> ""
         }
+        rv.setTextColor(R.id.row_item_title, titleColor)
         rv.setTextViewText(R.id.row_item_title, prefix + item.title)
 
         val timeLabel = if (item.isAllDay) {
@@ -631,6 +709,7 @@ private class ScheduleRemoteViewsFactory(
             val e = Instant.ofEpochMilli(item.endMillis).atZone(zone).toLocalTime().format(timeFmt)
             if (item.isTask) s else "$s - $e"
         }
+        rv.setTextColor(R.id.row_item_time, subColor)
         rv.setTextViewText(R.id.row_item_time, timeLabel)
         rv.setInt(R.id.row_color_bar, "setBackgroundColor", item.colorArgb)
 
@@ -652,6 +731,55 @@ private class ScheduleRemoteViewsFactory(
     override fun getViewTypeCount(): Int = 1
     override fun getItemId(position: Int): Long = position.toLong()
     override fun hasStableIds(): Boolean = false
+}
+
+private fun applyMonthContainerThemeAndOpacity(views: RemoteViews, darkStyle: Boolean, opacity: Float) {
+    val alpha255 = (opacity.coerceIn(0f, 1f) * 255f).roundToInt().coerceIn(0, 255)
+    views.setImageViewResource(
+        R.id.widget_bg_layer,
+        if (darkStyle) R.drawable.bg_widget_dark_solid else R.drawable.bg_widget_light_solid
+    )
+    views.setInt(R.id.widget_bg_layer, "setImageAlpha", alpha255)
+
+    val titleColor = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF161618.toInt()
+    val iconMutedColor = if (darkStyle) 0xFFA8A8B4.toInt() else 0xFF5A5A66.toInt()
+    val modeChipTextColor = if (darkStyle) 0xFFD8D8E0.toInt() else 0xFF282830.toInt()
+
+    views.setTextColor(R.id.widget_month_title, titleColor)
+    views.setTextColor(R.id.btn_widget_prev, iconMutedColor)
+    views.setTextColor(R.id.btn_widget_next, iconMutedColor)
+    views.setTextColor(R.id.btn_widget_config, iconMutedColor)
+    views.setTextColor(R.id.btn_widget_mode, modeChipTextColor)
+}
+
+private fun applyListContainerThemeAndOpacity(views: RemoteViews, darkStyle: Boolean, opacity: Float) {
+    val alpha255 = (opacity.coerceIn(0f, 1f) * 255f).roundToInt().coerceIn(0, 255)
+    views.setImageViewResource(
+        R.id.widget_bg_layer,
+        if (darkStyle) R.drawable.bg_widget_dark_solid else R.drawable.bg_widget_light_solid
+    )
+    views.setInt(R.id.widget_bg_layer, "setImageAlpha", alpha255)
+
+    val titleColor = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF161618.toInt()
+    val iconMutedColor = if (darkStyle) 0xFFA8A8B4.toInt() else 0xFF5A5A66.toInt()
+    val emptyColor = if (darkStyle) 0xFF8E8E96.toInt() else 0xFF64646E.toInt()
+
+    views.setTextColor(R.id.widget_list_header_title, titleColor)
+    views.setTextColor(R.id.btn_widget_list_config, iconMutedColor)
+    views.setTextColor(R.id.widget_empty_text, emptyColor)
+}
+
+private fun buildWidgetConfigPi(context: Context, widgetId: Int, reqOffset: Int): PendingIntent {
+    val intent = Intent(context, WidgetConfigActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+    }
+    return PendingIntent.getActivity(
+        context,
+        widgetId * 100 + reqOffset,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
 }
 
 /**
@@ -679,8 +807,8 @@ private object MonthCanvasRenderer {
         val canvas = Canvas(bmp)
 
         val primaryText = if (darkStyle) 0xFFF2F2F7.toInt() else 0xFF18181B.toInt()
-        val secondaryText = if (darkStyle) 0xFF9898A0.toInt() else 0xFF686870.toInt()
-        val gridLineColor = if (darkStyle) 0x26FFFFFF else 0x1F000000
+        val secondaryText = if (darkStyle) 0xFF9898A0.toInt() else 0xFF5C5C66.toInt()
+        val gridLineColor = if (darkStyle) 0x26FFFFFF else 0x22000000
 
         val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = secondaryText
@@ -794,10 +922,6 @@ private object MonthCanvasRenderer {
         return bmp
     }
 
-    /**
-     * 類 vivo 桌面小工具「展開單週模式」畫布渲染器：
-     * 上半部呈現當週 7 天日期＋農曆列（標記今日），下半部展開顯示本週詳細行程與待辦清單！
-     */
     fun renderWeekExpandedBitmap(
         context: Context,
         anchorDate: LocalDate,
@@ -817,9 +941,9 @@ private object MonthCanvasRenderer {
         val canvas = Canvas(bmp)
 
         val primaryText = if (darkStyle) 0xFFF2F2F7.toInt() else 0xFF18181B.toInt()
-        val secondaryText = if (darkStyle) 0xFF9898A0.toInt() else 0xFF686870.toInt()
-        val cardBg = if (darkStyle) 0x22FFFFFF else 0x12000000
-        val dividerColor = if (darkStyle) 0x26FFFFFF else 0x1F000000
+        val secondaryText = if (darkStyle) 0xFF9898A0.toInt() else 0xFF5C5C66.toInt()
+        val cardBg = if (darkStyle) 0x22FFFFFF else 0x14000000
+        val dividerColor = if (darkStyle) 0x26FFFFFF else 0x22000000
 
         val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = secondaryText
@@ -892,12 +1016,10 @@ private object MonthCanvasRenderer {
             }
         }
 
-        // 分隔線
         val listTop = headerH + stripH + 6f * density
         fillPaint.color = dividerColor
         canvas.drawRect(0f, listTop - 3f * density, wPx.toFloat(), listTop - 2f * density, fillPaint)
 
-        // 本週詳細行程展開清單
         val weekItems = items
             .filter { !it.date.isBefore(weekStart) && !it.date.isAfter(weekEnd) }
             .sortedWith(compareBy<UnifiedCalendarItem> { it.date }.thenBy { it.startMillis })

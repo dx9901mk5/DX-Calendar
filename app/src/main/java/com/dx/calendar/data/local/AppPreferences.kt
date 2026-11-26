@@ -172,7 +172,7 @@ class AppPreferences(private val context: Context) {
     suspend fun setWidgetAppearance(dark: Boolean, opacity: Float) {
         context.dataStore.edit {
             it[KEY_WIDGET_DARK] = dark
-            it[KEY_WIDGET_OPACITY] = opacity.coerceIn(0.2f, 1.0f)
+            it[KEY_WIDGET_OPACITY] = opacity.coerceIn(0.0f, 1.0f)
         }
     }
 

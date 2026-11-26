@@ -690,6 +690,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setWidgetAppearance(dark: Boolean, opacity: Float) = viewModelScope.launch {
         repo.prefs.setWidgetAppearance(dark, opacity)
+        WidgetRefreshHelper.clearAllPerWidgetAppearanceOverrides(getApplication())
         WidgetRefreshHelper.refreshAllWidgets(getApplication())
     }
 

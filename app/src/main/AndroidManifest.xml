@@ -512,6 +512,18 @@
             android:turnScreenOn="true"
             android:excludeFromRecents="true" />
 
+        <!-- 桌面小工具懸浮透明度與外觀設定視窗 (支援點擊小工具 ⚙ 或桌面長按重新設定) -->
+        <activity
+            android:name=".widget.WidgetConfigActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.DXCalendar.TranslucentDialog">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- 多重呼叫連段提醒與開機重排程 Receiver -->
         <receiver
             android:name=".alarm.ReminderBroadcastReceiver"

@@ -780,10 +780,37 @@ private fun DxSettingsSectionContent(
 
                         HorizontalDivider(color = tokens.gridLineColor)
                         SettingSwitchRow(
-                            label = "桌面小工具採用深色毛玻璃底色",
+                            label = "桌面小工具採用深色底白字模式（關閉為淺色底黑字）",
                             checked = settings.widgetDarkStyle,
                             onCheckedChange = { onChangeWidgetAppearance(it, settings.widgetOpacity) }
                         )
+                        val opaquePct = (settings.widgetOpacity * 100).toInt()
+                        Text(
+                            text = "桌面小工具背景不透明度：$opaquePct%（透明 ${100 - opaquePct}%，亦可直接點擊桌面小工具右上角 ⚙ 單獨調整）",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp
+                        )
+                        Slider(
+                            value = settings.widgetOpacity,
+                            onValueChange = { onChangeWidgetAppearance(settings.widgetDarkStyle, it) },
+                            valueRange = 0.0f..1.0f
+                        )
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(
+                                0f to "0% 全透明",
+                                0.25f to "25%",
+                                0.50f to "50%",
+                                0.75f to "75%",
+                                0.85f to "85%",
+                                1.0f to "100% 實心"
+                            ).forEach { (preset, label) ->
+                                FilterChip(
+                                    selected = kotlin.math.abs(settings.widgetOpacity - preset) < 0.02f,
+                                    onClick = { onChangeWidgetAppearance(settings.widgetDarkStyle, preset) },
+                                    label = { Text(label, fontSize = 11.sp) }
+                                )
+                            }
+                        }
                     }
                 }
             }
