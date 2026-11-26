@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.dx.calendar.BuildConfig
 import com.dx.calendar.alarm.MultiCallAlarmScheduler
 import com.dx.calendar.data.local.AppPreferences
 import com.dx.calendar.data.local.UserSettings
@@ -202,7 +203,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
             val initSettings = repo.prefs.settingsFlow.first()
-            if (initSettings.autoCheckUpdate) {
+            if (initSettings.autoCheckUpdate && !BuildConfig.IS_PLAY_BUILD) {
                 checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = true)
             }
         }
@@ -299,7 +300,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun openSettings(open: Boolean) {
         _isSettingsOpen.value = open
-        if (open && _updateState.value.phase != UpdatePhase.DOWNLOADING) {
+        if (open && !BuildConfig.IS_PLAY_BUILD && _updateState.value.phase != UpdatePhase.DOWNLOADING) {
             checkGitHubUpdate(
                 autoDownloadIfFound = settings.value.autoCheckUpdate,
                 showDialogIfOnMain = false

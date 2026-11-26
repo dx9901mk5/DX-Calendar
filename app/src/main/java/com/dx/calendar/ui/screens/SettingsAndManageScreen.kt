@@ -79,6 +79,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dx.calendar.BuildConfig
 import com.dx.calendar.alarm.LiveUpdateIslandStatus
 import com.dx.calendar.data.local.UserSettings
 import com.dx.calendar.data.model.BrandStyle
@@ -931,7 +932,13 @@ private fun DxSettingsSectionContent(
                     autoCheckEnabled = settings.autoCheckUpdate,
                     updateState = updateState,
                     onOpenGitHubRepo = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
-                    onOpenGitHubReleases = { onOpenUrl(GitHubAutoUpdater.GITHUB_RELEASES_URL) },
+                    onOpenGitHubReleases = {
+                        if (BuildConfig.IS_PLAY_BUILD) {
+                            onOpenUrl("https://play.google.com/store/apps/details?id=com.dx.calendar")
+                        } else {
+                            onOpenUrl(GitHubAutoUpdater.GITHUB_RELEASES_URL)
+                        }
+                    },
                     onToggleAutoCheck = onToggleAutoCheckUpdate,
                     onCheckNow = onManualCheckUpdate,
                     onStartDownload = onStartUpdateDownload,
@@ -992,8 +999,17 @@ private fun GitHubUpdateCard(
                 OutlinedButton(onClick = onOpenGitHubReleases, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Releases 頁面", fontSize = 13.sp)
+                    Text(if (BuildConfig.IS_PLAY_BUILD) "Google Play 商店" else "Releases 頁面", fontSize = 13.sp)
                 }
+            }
+
+            if (BuildConfig.IS_PLAY_BUILD) {
+                Text(
+                    text = "此版本為 Google Play 發行版，更新將由 Google Play 商店統一安全派送。",
+                    color = tokens.secondaryTextColor,
+                    fontSize = 12.sp
+                )
+                return@Column
             }
 
             HorizontalDivider(color = tokens.gridLineColor)
