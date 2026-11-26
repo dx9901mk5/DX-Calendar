@@ -73,31 +73,8 @@ abstract class AppDatabase : RoomDatabase() {
             )
             defaultCategories.forEach { dao.upsertCategory(it) }
 
-            // 建立一筆預設「每日吃藥提醒（不在月曆佔空間，集中於例行中心）」作為即開即用示範
-            val zone = ZoneId.systemDefault()
-            val today = LocalDate.now()
-            val startMed = today.atTime(LocalTime.of(8, 30)).atZone(zone).toInstant().toEpochMilli()
-            val endMed = today.atTime(LocalTime.of(8, 45)).atZone(zone).toInstant().toEpochMilli()
-            dao.upsertEvent(
-                CalendarEventEntity(
-                    categoryId = 7L,
-                    title = "每日維他命與保健吃藥提醒",
-                    notes = "此為例行事務示範：預設不在月曆格佔空間，可於「例行中心」集中檢視、打卡或隨時切換顯示。",
-                    startEpochMillis = startMed,
-                    endEpochMillis = endMed,
-                    recurrenceType = RecurrenceType.DAILY.name,
-                    isRoutine = true,
-                    showInMonthGrid = false,
-                    showInAgendaAndWidget = true,
-                    reminderMinutesJson = "[0, 5]",
-                    enableMultiCall = true,
-                    multiCallCount = 3,
-                    multiCallIntervalMinutes = 5
-                )
-            )
-
-            // 預設常用標題範本
-            listOf("吃藥提醒", "換防蚊液", "部門會議", "看診預約", "信用卡繳費", "出國旅遊").forEach {
+            // 不再自動新增任何預設吃藥或例行提醒項目，僅保留分類與常用標題歷史，讓使用者依需求自行開啟與新增
+            listOf("部門會議", "看診預約", "信用卡繳費", "出國旅遊").forEach {
                 dao.upsertTitleHistory(EventTitleHistoryEntity(title = it))
             }
         }

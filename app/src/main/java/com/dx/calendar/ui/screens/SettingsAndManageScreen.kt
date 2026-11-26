@@ -142,6 +142,7 @@ fun SettingsAndManageScreen(
     onToggleShowLunar: (Boolean) -> Unit,
     onToggleShowWeekNum: (Boolean) -> Unit,
     onToggleGridLines: (Boolean) -> Unit,
+    onToggleRoutineMedicationFeature: (Boolean) -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
     onSyncGoogleTasks: () -> Unit,
     onPickWallpaper: () -> Unit,
@@ -340,6 +341,7 @@ fun SettingsAndManageScreen(
                                     onToggleShowLunar = onToggleShowLunar,
                                     onToggleShowWeekNum = onToggleShowWeekNum,
                                     onToggleGridLines = onToggleGridLines,
+                                    onToggleRoutineMedicationFeature = onToggleRoutineMedicationFeature,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
                                     onPickWallpaper = onPickWallpaper,
@@ -416,6 +418,7 @@ fun SettingsAndManageScreen(
                                     onToggleShowLunar = onToggleShowLunar,
                                     onToggleShowWeekNum = onToggleShowWeekNum,
                                     onToggleGridLines = onToggleGridLines,
+                                    onToggleRoutineMedicationFeature = onToggleRoutineMedicationFeature,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
                                     onPickWallpaper = onPickWallpaper,
@@ -546,6 +549,7 @@ private fun DxSettingsSectionContent(
     onToggleShowLunar: (Boolean) -> Unit,
     onToggleShowWeekNum: (Boolean) -> Unit,
     onToggleGridLines: (Boolean) -> Unit,
+    onToggleRoutineMedicationFeature: (Boolean) -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
     onSyncGoogleTasks: () -> Unit,
     onPickWallpaper: () -> Unit,
@@ -890,6 +894,18 @@ private fun DxSettingsSectionContent(
                         SettingSwitchRow("顯示農曆、二十四節氣與台灣節慶", settings.showLunar, onToggleShowLunar)
                         SettingSwitchRow("顯示全年週次編號", settings.showWeekNumber, onToggleShowWeekNum)
                         SettingSwitchRow("顯示月曆格線", settings.showMonthGridLines, onToggleGridLines)
+
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        SettingSwitchRow(
+                            label = "啟用吃藥／例行提醒功能（預設關閉）",
+                            checked = settings.routineMedicationFeatureEnabled,
+                            onCheckedChange = onToggleRoutineMedicationFeature
+                        )
+                        Text(
+                            text = "預設關閉且不自動建立任何吃藥項目；開啟後可依需求於「例行中心」自行新增與管理提醒規則。",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp
+                        )
 
                         HorizontalDivider(color = tokens.gridLineColor)
                         OutlinedButton(

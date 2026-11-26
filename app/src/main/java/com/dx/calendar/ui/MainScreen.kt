@@ -201,6 +201,7 @@ fun DXCalendarRootApp(
                 onToggleShowLunar = { viewModel.setShowLunar(it) },
                 onToggleShowWeekNum = { viewModel.setShowWeekNum(it) },
                 onToggleGridLines = { viewModel.setShowGridLines(it) },
+                onToggleRoutineMedicationFeature = { viewModel.setRoutineMedicationFeatureEnabled(it) },
                 onToggleShowCompletedTasks = { viewModel.setShowCompletedTasks(it) },
                 onSyncGoogleTasks = onLaunchGoogleAccountPicker,
                 onPickWallpaper = onPickWallpaperImage,
@@ -344,7 +345,9 @@ fun DXCalendarRootApp(
                                 checkIns = checkIns,
                                 externalOverrides = externalOverrides,
                                 isPrivacyUnlocked = isPrivacyUnlocked,
+                                routineMedicationFeatureEnabled = settings.routineMedicationFeatureEnabled,
                                 routineDefaultHideFromMonth = settings.routineDefaultHideFromMonth,
+                                onToggleRoutineMedicationFeature = { viewModel.setRoutineMedicationFeatureEnabled(it) },
                                 onToggleDefaultRoutineHide = { viewModel.setRoutineDefaultHide(it) },
                                 onAddRoutineQuick = { viewModel.openNewEditor(presetRoutine = true) },
                                 onToggleTodayCheckIn = { type, id, done ->

@@ -24,6 +24,7 @@ data class UserSettings(
     val showWeekNumber: Boolean = false,
     val showCompletedTasks: Boolean = true,
     val peekHiddenInMonth: Boolean = false,
+    val routineMedicationFeatureEnabled: Boolean = false,
     val routineDefaultHideFromMonth: Boolean = true,
     val customWallpaperUri: String = "",
     val wallpaperAlpha: Float = 0.28f,
@@ -49,6 +50,8 @@ class AppPreferences(private val context: Context) {
         private val KEY_SHOW_WEEK_NUM = booleanPreferencesKey("show_week_num")
         private val KEY_SHOW_COMPLETED_TASKS = booleanPreferencesKey("show_completed_tasks")
         private val KEY_PEEK_HIDDEN = booleanPreferencesKey("peek_hidden_in_month")
+        private val KEY_ROUTINE_MED_FEATURE_ENABLED = booleanPreferencesKey("routine_med_feature_enabled")
+        private val KEY_LEGACY_MED_DEMO_CLEANED = booleanPreferencesKey("legacy_med_demo_cleaned_v1")
         private val KEY_ROUTINE_DEFAULT_HIDE = booleanPreferencesKey("routine_default_hide")
         private val KEY_WALLPAPER_URI = stringPreferencesKey("wallpaper_uri")
         private val KEY_WALLPAPER_ALPHA = floatPreferencesKey("wallpaper_alpha")
@@ -86,6 +89,7 @@ class AppPreferences(private val context: Context) {
             showWeekNumber = prefs[KEY_SHOW_WEEK_NUM] ?: false,
             showCompletedTasks = prefs[KEY_SHOW_COMPLETED_TASKS] ?: true,
             peekHiddenInMonth = prefs[KEY_PEEK_HIDDEN] ?: false,
+            routineMedicationFeatureEnabled = prefs[KEY_ROUTINE_MED_FEATURE_ENABLED] ?: false,
             routineDefaultHideFromMonth = prefs[KEY_ROUTINE_DEFAULT_HIDE] ?: true,
             customWallpaperUri = prefs[KEY_WALLPAPER_URI] ?: "",
             wallpaperAlpha = prefs[KEY_WALLPAPER_ALPHA] ?: 0.28f,
@@ -130,6 +134,18 @@ class AppPreferences(private val context: Context) {
 
     suspend fun setPeekHiddenInMonth(peek: Boolean) {
         context.dataStore.edit { it[KEY_PEEK_HIDDEN] = peek }
+    }
+
+    suspend fun setRoutineMedicationFeatureEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[KEY_ROUTINE_MED_FEATURE_ENABLED] = enabled }
+    }
+
+    suspend fun isLegacyMedicationDemoCleaned(): Boolean {
+        return context.dataStore.data.map { it[KEY_LEGACY_MED_DEMO_CLEANED] ?: false }.first()
+    }
+
+    suspend fun markLegacyMedicationDemoCleaned() {
+        context.dataStore.edit { it[KEY_LEGACY_MED_DEMO_CLEANED] = true }
     }
 
     suspend fun setRoutineDefaultHideFromMonth(hide: Boolean) {

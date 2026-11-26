@@ -119,14 +119,14 @@
                 android:contentDescription="月曆與單週視圖"
                 android:scaleType="fitXY" />
 
-            <!-- 6x7 透明點擊格層：對齊月曆每一格日期，點擊任一天直接跳至當日呈現 -->
+            <!-- 6x7 透明點擊格層：支援一般全月格點與類 vivo 手風琴單週展開（每列下方附權重 3 的展開區，與畫布 100% 像素對齊） -->
             <LinearLayout
                 android:id="@+id/widget_month_tap_grid"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:paddingTop="22dp">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+                <LinearLayout android:id="@+id/widget_row_0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_00" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_01" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_02" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -135,7 +135,9 @@
                     <TextView android:id="@+id/widget_cell_05" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_06" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+                <TextView android:id="@+id/widget_row_expand_0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+
+                <LinearLayout android:id="@+id/widget_row_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_07" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_08" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_09" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -144,7 +146,9 @@
                     <TextView android:id="@+id/widget_cell_12" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_13" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+                <TextView android:id="@+id/widget_row_expand_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+
+                <LinearLayout android:id="@+id/widget_row_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_14" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_15" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_16" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -153,7 +157,9 @@
                     <TextView android:id="@+id/widget_cell_19" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_20" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+                <TextView android:id="@+id/widget_row_expand_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+
+                <LinearLayout android:id="@+id/widget_row_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_21" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_22" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_23" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -162,7 +168,9 @@
                     <TextView android:id="@+id/widget_cell_26" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_27" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+                <TextView android:id="@+id/widget_row_expand_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+
+                <LinearLayout android:id="@+id/widget_row_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_28" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_29" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_30" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -171,7 +179,9 @@
                     <TextView android:id="@+id/widget_cell_33" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_34" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+                <TextView android:id="@+id/widget_row_expand_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+
+                <LinearLayout android:id="@+id/widget_row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_35" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_36" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_37" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -180,6 +190,7 @@
                     <TextView android:id="@+id/widget_cell_40" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_41" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
+                <TextView android:id="@+id/widget_row_expand_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
             </LinearLayout>
 
             <!-- 單週展開模式：上方 7 天透明點擊列，點擊任一天直接跳至當日呈現 -->

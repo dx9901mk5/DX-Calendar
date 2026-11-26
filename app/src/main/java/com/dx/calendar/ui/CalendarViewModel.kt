@@ -200,6 +200,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     init {
         refreshSystemCalendars()
         viewModelScope.launch {
+            cleanupLegacyMedicationDemoOnce()
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
             val initSettings = repo.prefs.settingsFlow.first()
@@ -207,6 +208,24 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = true)
             }
         }
+    }
+
+    /**
+     * 一次性清理舊版自動建立的「每日維他命與保健吃藥提醒」示範項目與其排程鬧鐘，
+     * 確保升級後不再誤響，且僅保留使用者自行開啟與新增的選項與規則。
+     */
+    private suspend fun cleanupLegacyMedicationDemoOnce() = withContext(Dispatchers.IO) {
+        if (repo.prefs.isLegacyMedicationDemoCleaned()) return@withContext
+        val app = getApplication<Application>()
+        val legacyDemos = repo.dao.getAllEventsOnce().filter { ev ->
+            ev.title == "每日維他命與保健吃藥提醒" &&
+                ev.notes.startsWith("此為例行事務示範")
+        }
+        legacyDemos.forEach { ev ->
+            MultiCallAlarmScheduler.cancelEventAlarms(app, ev)
+            repo.dao.deleteEventById(ev.id)
+        }
+        repo.prefs.markLegacyMedicationDemoCleaned()
     }
 
     fun refreshSystemCalendars() {
@@ -412,7 +431,11 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 val savedId = repo.dao.upsertTask(task)
                 val savedTask = task.copy(id = if (task.id == 0L) savedId else task.id)
-                MultiCallAlarmScheduler.scheduleForTask(app, savedTask)
+                if (!savedTask.isRoutine || settings.value.routineMedicationFeatureEnabled) {
+                    MultiCallAlarmScheduler.scheduleForTask(app, savedTask)
+                } else {
+                    MultiCallAlarmScheduler.cancelTaskAlarms(app, savedTask)
+                }
             } else {
                 val startMs = if (payload.isAllDay) {
                     payload.startDate.atStartOfDay(zone).toInstant().toEpochMilli()
@@ -467,7 +490,11 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     val newId = repo.dao.upsertEvent(event)
                     val savedEv = event.copy(id = if (event.id == 0L) newId else event.id)
-                    MultiCallAlarmScheduler.scheduleForEvent(app, savedEv)
+                    if (!savedEv.isRoutine || settings.value.routineMedicationFeatureEnabled) {
+                        MultiCallAlarmScheduler.scheduleForEvent(app, savedEv)
+                    } else {
+                        MultiCallAlarmScheduler.cancelEventAlarms(app, savedEv)
+                    }
                 }
             }
 
@@ -757,6 +784,16 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setAutoCheckUpdate(enabled: Boolean) = viewModelScope.launch {
         repo.prefs.setAutoCheckUpdate(enabled)
+    }
+
+    fun setRoutineMedicationFeatureEnabled(enabled: Boolean) = viewModelScope.launch {
+        repo.prefs.setRoutineMedicationFeatureEnabled(enabled)
+        MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
+        WidgetRefreshHelper.refreshAllWidgets(getApplication())
+        toast(
+            if (enabled) "已啟用吃藥／例行提醒功能，可自由新增與套用提醒規則"
+            else "已關閉吃藥／例行提醒功能（已停止相關例行鬧鐘排程）"
+        )
     }
 
     fun syncDynamicAppIconNow() = viewModelScope.launch(Dispatchers.IO) {

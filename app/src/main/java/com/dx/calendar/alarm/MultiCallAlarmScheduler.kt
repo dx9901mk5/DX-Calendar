@@ -48,19 +48,41 @@ object MultiCallAlarmScheduler {
 
     suspend fun rescheduleAllUpcomingReminders(context: Context) = withContext(Dispatchers.IO) {
         val dao = AppDatabase.getInstance(context).calendarDao()
+        val routineEnabled = com.dx.calendar.data.local.AppPreferences(context)
+            .getSettingsOnce().routineMedicationFeatureEnabled
         val now = System.currentTimeMillis()
         val events = dao.getAllEventsOnce()
         val tasks = dao.getAllTasksOnce()
 
         events.forEach { ev ->
-            if (!ev.isPaused) {
+            if (!ev.isPaused && (!ev.isRoutine || routineEnabled)) {
                 scheduleForEvent(context, ev, now)
+            } else if (ev.isRoutine && !routineEnabled) {
+                cancelEventAlarms(context, ev)
             }
         }
         tasks.forEach { tk ->
-            if (!tk.isPaused && !tk.isCompleted) {
+            if (!tk.isPaused && !tk.isCompleted && (!tk.isRoutine || routineEnabled)) {
                 scheduleForTask(context, tk, now)
+            } else if (tk.isRoutine && !routineEnabled) {
+                cancelTaskAlarms(context, tk)
             }
+        }
+    }
+
+    fun cancelEventAlarms(context: Context, event: CalendarEventEntity) {
+        val offsets = parseOffsets(event.reminderMinutesJson).ifEmpty { listOf(0, 5) }
+        val burstTotal = if (event.enableMultiCall) event.multiCallCount.coerceAtLeast(2) else 1
+        offsets.forEach { offsetMin ->
+            cancelRemainingBurstCalls(context, "EVENT", event.id, offsetMin, burstTotal)
+        }
+    }
+
+    fun cancelTaskAlarms(context: Context, task: TaskItemEntity) {
+        val offsets = parseOffsets(task.reminderMinutesJson).ifEmpty { listOf(0, 5) }
+        val burstTotal = if (task.enableMultiCall) task.multiCallCount.coerceAtLeast(2) else 1
+        offsets.forEach { offsetMin ->
+            cancelRemainingBurstCalls(context, "TASK", task.id, offsetMin, burstTotal)
         }
     }
 

@@ -37,8 +37,10 @@ object WidgetRefreshHelper {
     const val ACTION_NEXT_MONTH = "com.dx.calendar.widget.ACTION_NEXT_MONTH"
     const val ACTION_RESET_TODAY = "com.dx.calendar.widget.ACTION_RESET_TODAY"
     const val ACTION_TOGGLE_WEEK_MODE = "com.dx.calendar.widget.ACTION_TOGGLE_WEEK_MODE"
+    const val ACTION_TOGGLE_WEEK_ROW = "com.dx.calendar.widget.ACTION_TOGGLE_WEEK_ROW"
     const val ACTION_TOGGLE_TASK = "com.dx.calendar.widget.ACTION_TOGGLE_TASK"
     const val ACTION_CLICK_ITEM = "com.dx.calendar.widget.ACTION_CLICK_ITEM"
+    const val EXTRA_WEEK_ROW = "extra_widget_week_row"
     const val EXTRA_TASK_ID = "extra_widget_task_id"
     const val EXTRA_QUICK_ADD = "extra_open_quick_add"
     const val EXTRA_OPEN_EPOCH_DAY = "extra_widget_open_epoch_day"
@@ -77,6 +79,20 @@ object WidgetRefreshHelper {
     fun setWeekOffset(context: Context, appWidgetId: Int, offset: Int) {
         context.getSharedPreferences(PREF_WIDGET_STATE, Context.MODE_PRIVATE)
             .edit().putInt("week_offset_$appWidgetId", offset).apply()
+    }
+
+    /**
+     * 類 vivo 月曆小工具「點擊單週手風琴展開」狀態：
+     * -1 表示全月等高檢視；0..5 表示展開該週（放大顯示該週 7 天詳細行程卡片，其餘週折疊精簡）。
+     */
+    fun getExpandedWeekRow(context: Context, appWidgetId: Int): Int {
+        return context.getSharedPreferences(PREF_WIDGET_STATE, Context.MODE_PRIVATE)
+            .getInt("expanded_week_row_$appWidgetId", -1)
+    }
+
+    fun setExpandedWeekRow(context: Context, appWidgetId: Int, row: Int) {
+        context.getSharedPreferences(PREF_WIDGET_STATE, Context.MODE_PRIVATE)
+            .edit().putInt("expanded_week_row_$appWidgetId", row).apply()
     }
 
     /**
@@ -182,31 +198,60 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
         super.onReceive(context, intent)
         val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-            val inWeek = WidgetRefreshHelper.isWeekMode(context, widgetId)
+            val currentExpanded = WidgetRefreshHelper.getExpandedWeekRow(context, widgetId)
             when (intent.action) {
                 WidgetRefreshHelper.ACTION_PREV_MONTH -> {
-                    if (inWeek) {
-                        WidgetRefreshHelper.setWeekOffset(context, widgetId, WidgetRefreshHelper.getWeekOffset(context, widgetId) - 1)
-                    } else {
-                        WidgetRefreshHelper.setMonthOffset(context, widgetId, WidgetRefreshHelper.getMonthOffset(context, widgetId) - 1)
+                    val nextOffset = WidgetRefreshHelper.getMonthOffset(context, widgetId) - 1
+                    WidgetRefreshHelper.setMonthOffset(context, widgetId, nextOffset)
+                    if (currentExpanded >= 0) {
+                        val nextYm = YearMonth.now().plusMonths(nextOffset.toLong())
+                        WidgetRefreshHelper.setExpandedWeekRow(
+                            context,
+                            widgetId,
+                            if (nextYm == YearMonth.now()) -2 else 0
+                        )
                     }
                     updateWidgets(context, AppWidgetManager.getInstance(context), intArrayOf(widgetId))
                 }
                 WidgetRefreshHelper.ACTION_NEXT_MONTH -> {
-                    if (inWeek) {
-                        WidgetRefreshHelper.setWeekOffset(context, widgetId, WidgetRefreshHelper.getWeekOffset(context, widgetId) + 1)
-                    } else {
-                        WidgetRefreshHelper.setMonthOffset(context, widgetId, WidgetRefreshHelper.getMonthOffset(context, widgetId) + 1)
+                    val nextOffset = WidgetRefreshHelper.getMonthOffset(context, widgetId) + 1
+                    WidgetRefreshHelper.setMonthOffset(context, widgetId, nextOffset)
+                    if (currentExpanded >= 0) {
+                        val nextYm = YearMonth.now().plusMonths(nextOffset.toLong())
+                        WidgetRefreshHelper.setExpandedWeekRow(
+                            context,
+                            widgetId,
+                            if (nextYm == YearMonth.now()) -2 else 0
+                        )
                     }
                     updateWidgets(context, AppWidgetManager.getInstance(context), intArrayOf(widgetId))
                 }
                 WidgetRefreshHelper.ACTION_RESET_TODAY -> {
                     WidgetRefreshHelper.setMonthOffset(context, widgetId, 0)
                     WidgetRefreshHelper.setWeekOffset(context, widgetId, 0)
+                    if (currentExpanded >= 0) {
+                        WidgetRefreshHelper.setExpandedWeekRow(context, widgetId, -2)
+                    }
                     updateWidgets(context, AppWidgetManager.getInstance(context), intArrayOf(widgetId))
                 }
+                WidgetRefreshHelper.ACTION_TOGGLE_WEEK_ROW -> {
+                    val tappedRow = intent.getIntExtra(WidgetRefreshHelper.EXTRA_WEEK_ROW, -1)
+                    if (tappedRow in 0..5) {
+                        // 點擊未展開的週 → 展開該週；再點一次已展開的週 → 收合切回全月等高月曆！
+                        val nextRow = if (currentExpanded == tappedRow) -1 else tappedRow
+                        WidgetRefreshHelper.setExpandedWeekRow(context, widgetId, nextRow)
+                        updateWidgets(context, AppWidgetManager.getInstance(context), intArrayOf(widgetId))
+                    }
+                }
                 WidgetRefreshHelper.ACTION_TOGGLE_WEEK_MODE -> {
-                    WidgetRefreshHelper.setWeekMode(context, widgetId, !inWeek)
+                    val offset = WidgetRefreshHelper.getMonthOffset(context, widgetId)
+                    val ym = YearMonth.now().plusMonths(offset.toLong())
+                    val nextRow = if (currentExpanded >= 0) {
+                        -1
+                    } else {
+                        if (ym == YearMonth.now()) -2 else 0
+                    }
+                    WidgetRefreshHelper.setExpandedWeekRow(context, widgetId, nextRow)
                     updateWidgets(context, AppWidgetManager.getInstance(context), intArrayOf(widgetId))
                 }
             }
@@ -214,6 +259,23 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        private fun computeNumWeeks(ym: YearMonth, startMonday: Boolean): Int {
+            val firstOfMonth = ym.atDay(1)
+            val shift = if (startMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
+            return ((shift + ym.lengthOfMonth() + 6) / 7).coerceIn(5, 6)
+        }
+
+        private fun computeTodayWeekRow(ym: YearMonth, startMonday: Boolean): Int {
+            val firstOfMonth = ym.atDay(1)
+            val shift = if (startMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
+            val today = LocalDate.now()
+            return if (YearMonth.from(today) == ym) {
+                ((shift + today.dayOfMonth - 1) / 7).coerceIn(0, 5)
+            } else {
+                0
+            }
+        }
+
         fun updateWidgets(context: Context, mgr: AppWidgetManager, ids: IntArray) {
             CoroutineScope(Dispatchers.IO).launch {
                 val repo = CalendarRepository(context)
@@ -227,14 +289,21 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                     val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
                         context, id, settings.widgetDarkStyle, settings.widgetOpacity
                     )
-                    val weekMode = WidgetRefreshHelper.isWeekMode(context, id)
                     val offset = WidgetRefreshHelper.getMonthOffset(context, id)
-                    val weekOffset = WidgetRefreshHelper.getWeekOffset(context, id)
-                    val today = LocalDate.now()
-                    val anchorDate = today.plusWeeks(weekOffset.toLong())
-                    val ym = if (weekMode) YearMonth.from(anchorDate) else YearMonth.now().plusMonths(offset.toLong())
-                    val gridStart = if (weekMode) anchorDate.minusDays(7) else ym.atDay(1).minusDays(7)
-                    val gridEnd = if (weekMode) anchorDate.plusDays(14) else ym.atEndOfMonth().plusDays(14)
+                    val ym = YearMonth.now().plusMonths(offset.toLong())
+                    val numWeeks = computeNumWeeks(ym, settings.startWeekOnMonday)
+                    val rawExpanded = WidgetRefreshHelper.getExpandedWeekRow(context, id)
+                    val expandedRow = when {
+                        rawExpanded == -2 -> {
+                            val autoRow = computeTodayWeekRow(ym, settings.startWeekOnMonday).coerceIn(0, numWeeks - 1)
+                            WidgetRefreshHelper.setExpandedWeekRow(context, id, autoRow)
+                            autoRow
+                        }
+                        rawExpanded in 0 until numWeeks -> rawExpanded
+                        else -> -1
+                    }
+                    val gridStart = ym.atDay(1).minusDays(7)
+                    val gridEnd = ym.atEndOfMonth().plusDays(14)
 
                     // 隱私日曆在桌面小工具永遠為 false 鎖定保護！
                     val items = repo.buildItemsForRange(
@@ -245,43 +314,31 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                     val minW = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250).coerceAtLeast(140)
                     val minH = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 250).coerceAtLeast(140)
 
-                    val bmp = if (weekMode) {
-                        MonthCanvasRenderer.renderWeekExpandedBitmap(
-                            context = context,
-                            anchorDate = anchorDate,
-                            widthDp = minW,
-                            heightDp = (minH - 42).coerceAtLeast(100),
-                            items = items,
-                            startMonday = settings.startWeekOnMonday,
-                            showLunar = settings.showLunar,
-                            darkStyle = darkStyle,
-                            accentArgb = settings.brandStyle.primaryHex.toInt()
-                        )
-                    } else {
-                        MonthCanvasRenderer.renderMonthBitmap(
-                            context = context,
-                            yearMonth = ym,
-                            widthDp = minW,
-                            heightDp = (minH - 42).coerceAtLeast(100),
-                            items = items,
-                            startMonday = settings.startWeekOnMonday,
-                            showLunar = settings.showLunar,
-                            darkStyle = darkStyle,
-                            accentArgb = settings.brandStyle.primaryHex.toInt(),
-                            googleGridStyle = false
-                        )
-                    }
+                    val bmp = MonthCanvasRenderer.renderMonthBitmap(
+                        context = context,
+                        yearMonth = ym,
+                        widthDp = minW,
+                        heightDp = (minH - 42).coerceAtLeast(100),
+                        items = items,
+                        startMonday = settings.startWeekOnMonday,
+                        showLunar = settings.showLunar,
+                        darkStyle = darkStyle,
+                        accentArgb = settings.brandStyle.primaryHex.toInt(),
+                        googleGridStyle = false,
+                        numWeeks = numWeeks,
+                        expandedWeekRow = expandedRow
+                    )
 
                     val views = RemoteViews(context.packageName, R.layout.widget_month_canvas)
                     applyMonthContainerThemeAndOpacity(views, darkStyle, opacity)
 
                     views.setTextViewText(
                         R.id.widget_month_title,
-                        if (weekMode) "%d/%02d · 週".format(ym.year, ym.monthValue)
+                        if (expandedRow >= 0) "%d/%02d · 第%d週".format(ym.year, ym.monthValue, expandedRow + 1)
                         else "%d/%02d".format(ym.year, ym.monthValue)
                     )
                     views.setViewVisibility(R.id.btn_widget_mode, android.view.View.VISIBLE)
-                    views.setTextViewText(R.id.btn_widget_mode, if (weekMode) "月曆" else "單週")
+                    views.setTextViewText(R.id.btn_widget_mode, if (expandedRow >= 0) "全月" else "單週")
                     views.setTextViewText(R.id.btn_widget_today, "now")
                     views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
 
@@ -306,16 +363,10 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                     )
                     views.setOnClickPendingIntent(R.id.btn_widget_mode, toggleWeekPi)
 
-                    if (weekMode) {
-                        views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.GONE)
-                        views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.VISIBLE)
-                        bindWeekTapCells(context, views, id, anchorDate, settings.startWeekOnMonday)
-                        views.setOnClickPendingIntent(R.id.widget_canvas_img, toggleWeekPi)
-                    } else {
-                        views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
-                        views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
-                        bindMonthTapCells(context, views, id, ym, settings.startWeekOnMonday)
-                    }
+                    views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
+                    views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
+                    bindVivoAccordionWeekTapRows(context, views, id, numWeeks, expandedRow)
+
                     views.setOnClickPendingIntent(R.id.btn_widget_config, buildWidgetConfigPi(context, id, 8))
                     views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(context, id * 10 + 4, quickAdd = true))
                     views.setOnClickPendingIntent(R.id.widget_month_title, buildMainAppPi(context, id * 10 + 6, quickAdd = false))
@@ -797,7 +848,9 @@ private object MonthCanvasRenderer {
         showLunar: Boolean,
         darkStyle: Boolean,
         accentArgb: Int,
-        googleGridStyle: Boolean
+        googleGridStyle: Boolean,
+        numWeeks: Int = 6,
+        expandedWeekRow: Int = -1
     ): Bitmap {
         val density = context.resources.displayMetrics.density.coerceAtMost(2.5f)
         val wPx = (widthDp * density).toInt().coerceIn(240, 1800)
@@ -809,6 +862,8 @@ private object MonthCanvasRenderer {
         val primaryText = if (darkStyle) 0xFFF2F2F7.toInt() else 0xFF18181B.toInt()
         val secondaryText = if (darkStyle) 0xFF9898A0.toInt() else 0xFF5C5C66.toInt()
         val gridLineColor = if (darkStyle) 0x26FFFFFF else 0x22000000
+        val expandedBandBg = if (darkStyle) 0x16FFFFFF else 0x0C000000
+        val expandedBorderColor = if (darkStyle) 0x30FFFFFF else 0x20000000
 
         val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = secondaryText
@@ -829,6 +884,11 @@ private object MonthCanvasRenderer {
             color = primaryText
             textSize = 8.2f * density
         }
+        val cardTitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF141418.toInt()
+            textSize = 8.5f * density
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = gridLineColor
             strokeWidth = 1f
@@ -847,25 +907,50 @@ private object MonthCanvasRenderer {
         }
 
         val gridTop = headerH + 2f * density
-        val rowH = (hPx - gridTop) / 6f
+        val gridH = (hPx - gridTop).coerceAtLeast(60f)
+        val safeWeeks = numWeeks.coerceIn(5, 6)
+        val hasExpanded = expandedWeekRow in 0 until safeWeeks
+        val totalWeight = if (hasExpanded) safeWeeks + 3f else safeWeeks.toFloat()
+        val unitH = gridH / totalWeight
+
         val firstOfMonth = yearMonth.atDay(1)
         val shift = if (startMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
         val startDate = firstOfMonth.minusDays(shift.toLong())
         val today = LocalDate.now()
         val byDate = items.groupBy { it.date }
 
-        val maxChips = when {
-            rowH >= 74f * density -> 3
-            rowH >= 54f * density -> 2
-            rowH >= 38f * density -> 1
-            else -> 0
-        }
+        var curTop = gridTop
+        for (r in 0 until safeWeeks) {
+            val isExpandedRow = hasExpanded && r == expandedWeekRow
+            val rowH = if (isExpandedRow) unitH * 4f else unitH
+            val cellTop = curTop
+            curTop += rowH
 
-        for (r in 0..5) {
-            val cellTop = gridTop + r * rowH
             if (googleGridStyle) {
                 canvas.drawLine(0f, cellTop, wPx.toFloat(), cellTop, linePaint)
+            } else if (isExpandedRow) {
+                // 類 vivo 展開單週的柔和底色強調帶與上下細隔線
+                chipPaint.color = expandedBandBg
+                canvas.drawRoundRect(
+                    RectF(1f * density, cellTop + 1f * density, wPx - 1f * density, cellTop + rowH - 1f * density),
+                    10f * density,
+                    10f * density,
+                    chipPaint
+                )
+                linePaint.color = expandedBorderColor
+                canvas.drawLine(4f * density, cellTop + 1f * density, wPx - 4f * density, cellTop + 1f * density, linePaint)
+                canvas.drawLine(4f * density, cellTop + rowH - 1f * density, wPx - 4f * density, cellTop + rowH - 1f * density, linePaint)
+                linePaint.color = gridLineColor
             }
+
+            val maxChips = when {
+                hasExpanded && !isExpandedRow -> 0
+                rowH >= 74f * density -> 3
+                rowH >= 54f * density -> 2
+                rowH >= 38f * density -> 1
+                else -> 0
+            }
+
             for (c in 0..6) {
                 val cellLeft = c * colW
                 if (googleGridStyle && r == 0 && c > 0) {
@@ -877,49 +962,169 @@ private object MonthCanvasRenderer {
                 val alphaFactor = if (inMonth) 255 else 95
 
                 val cx = cellLeft + colW / 2f
-                val dayBaseline = cellTop + 14.5f * density
+                val dayBaseline = cellTop + (if (hasExpanded && !isExpandedRow) 13.5f else 14.5f) * density
+                val lunar = if (showLunar) LunarCalendarEngine.getLunarInfo(d) else null
 
                 if (isToday) {
-                    chipPaint.color = accentArgb
-                    canvas.drawRoundRect(
-                        RectF(cellLeft + 3f * density, cellTop + 2f * density, cellLeft + colW - 3f * density, cellTop + rowH - 2f * density),
-                        8f * density,
-                        8f * density,
-                        Paint(Paint.ANTI_ALIAS_FLAG).apply { color = (accentArgb and 0x00FFFFFF) or 0x2E000000 }
-                    )
+                    if (!googleGridStyle) {
+                        // 類 vivo 橘紅實心圓角今日標記方塊
+                        val pillW = (colW - 6f * density).coerceAtMost(32f * density)
+                        val pillH = if (showLunar) 26f * density else 18f * density
+                        chipPaint.color = accentArgb
+                        canvas.drawRoundRect(
+                            RectF(cx - pillW / 2f, cellTop + 2f * density, cx + pillW / 2f, cellTop + 2f * density + pillH),
+                            7f * density,
+                            7f * density,
+                            chipPaint
+                        )
+                    } else {
+                        canvas.drawRoundRect(
+                            RectF(cellLeft + 3f * density, cellTop + 2f * density, cellLeft + colW - 3f * density, cellTop + rowH - 2f * density),
+                            8f * density,
+                            8f * density,
+                            Paint(Paint.ANTI_ALIAS_FLAG).apply { color = (accentArgb and 0x00FFFFFF) or 0x2E000000 }
+                        )
+                    }
                 }
 
-                dayPaint.color = if (isToday) accentArgb else primaryText
-                dayPaint.alpha = alphaFactor
+                dayPaint.color = when {
+                    isToday && !googleGridStyle -> 0xFFFFFFFF.toInt()
+                    isToday -> accentArgb
+                    else -> primaryText
+                }
+                dayPaint.alpha = if (isToday) 255 else alphaFactor
                 canvas.drawText(d.dayOfMonth.toString(), cx, dayBaseline, dayPaint)
 
-                var chipStartY = dayBaseline + 3f * density
-                if (showLunar && rowH >= 30f * density) {
-                    val lunar = LunarCalendarEngine.getLunarInfo(d)
-                    lunarPaint.color = if (lunar.isTaiwanHoliday || lunar.solarTerm != null) accentArgb else secondaryText
-                    lunarPaint.alpha = alphaFactor
-                    val lunarBaseline = dayBaseline + 9.5f * density
+                var contentStartY = dayBaseline + 3f * density
+                if (showLunar && lunar != null && rowH >= 24f * density) {
+                    lunarPaint.color = when {
+                        isToday && !googleGridStyle -> 0xFFEFEFEF.toInt()
+                        lunar.isTaiwanHoliday || lunar.solarTerm != null -> accentArgb
+                        else -> secondaryText
+                    }
+                    lunarPaint.alpha = if (isToday) 255 else alphaFactor
+                    val lunarBaseline = dayBaseline + 9.2f * density
                     canvas.drawText(lunar.shortDisplay.take(4), cx, lunarBaseline, lunarPaint)
-                    chipStartY = lunarBaseline + 3f * density
+                    contentStartY = lunarBaseline + 3.5f * density
                 }
 
                 val dayEvents = byDate[d] ?: emptyList()
-                val chipH = 10.5f * density
-                dayEvents.take(maxChips).forEachIndexed { idx, ev ->
-                    val top = chipStartY + idx * (chipH + 1.5f * density)
-                    if (top + chipH <= cellTop + rowH) {
-                        chipPaint.color = (ev.colorArgb and 0x00FFFFFF) or 0x55000000
-                        val rect = RectF(cellLeft + 2f * density, top, cellLeft + colW - 2f * density, top + chipH)
-                        canvas.drawRoundRect(rect, 3f * density, 3f * density, chipPaint)
+
+                if (isExpandedRow) {
+                    // 類 vivo 單週展開模式：每欄縱向堆疊多行彩色行程卡片（最多顯示 3 行文字，清楚閱讀整週行程！）
+                    val cardAreaTop = maxOf(contentStartY + 1f * density, cellTop + unitH * 0.92f)
+                    val cardAreaBottom = cellTop + rowH - 4f * density
+                    var yCursor = cardAreaTop
+                    val lineH = 9.8f * density
+                    val cardGap = 2.5f * density
+                    val padX = 2.2f * density
+                    val innerMaxW = (colW - padX * 2f - 5f * density).coerceAtLeast(12f * density)
+                    var drawnCount = 0
+
+                    for (ev in dayEvents) {
+                        val remainH = cardAreaBottom - yCursor
+                        if (remainH < lineH + 5f * density) break
                         val label = (if (ev.isTask) "○" else "") + ev.title
-                        val clipped = clipTextToWidth(label, chipTextPaint, colW - 6f * density)
-                        chipTextPaint.alpha = alphaFactor
-                        canvas.drawText(clipped, cellLeft + 3.5f * density, top + chipH - 2.2f * density, chipTextPaint)
+                        val maxLinesForCard = when {
+                            dayEvents.size <= 2 && remainH >= lineH * 3 + 8f * density -> 3
+                            remainH >= lineH * 2 + 6f * density -> 2
+                            else -> 1
+                        }
+                        val lines = wrapTextToLines(label, cardTitlePaint, innerMaxW, maxLinesForCard)
+                        val cardH = lines.size * lineH + 5f * density
+                        if (yCursor + cardH > cardAreaBottom) break
+
+                        // 彩色半透明圓角卡片底色 + 左側實心色條
+                        chipPaint.color = (ev.colorArgb and 0x00FFFFFF) or (if (darkStyle) 0x8A000000.toInt() else 0x3D000000)
+                        val cardRect = RectF(cellLeft + padX, yCursor, cellLeft + colW - padX, yCursor + cardH)
+                        canvas.drawRoundRect(cardRect, 4.5f * density, 4.5f * density, chipPaint)
+
+                        chipPaint.color = ev.colorArgb
+                        canvas.drawRoundRect(
+                            RectF(cellLeft + padX, yCursor + 1.5f * density, cellLeft + padX + 2.2f * density, yCursor + cardH - 1.5f * density),
+                            1.5f * density,
+                            1.5f * density,
+                            chipPaint
+                        )
+
+                        cardTitlePaint.alpha = if (inMonth) 255 else 175
+                        lines.forEachIndexed { lIdx, lineText ->
+                            canvas.drawText(
+                                lineText,
+                                cellLeft + padX + 4f * density,
+                                yCursor + 2.2f * density + (lIdx + 1) * lineH - 1.5f * density,
+                                cardTitlePaint
+                            )
+                        }
+                        yCursor += cardH + cardGap
+                        drawnCount++
+                    }
+
+                    val hiddenMore = dayEvents.size - drawnCount
+                    if (hiddenMore > 0 && cardAreaBottom - yCursor >= 8f * density) {
+                        lunarPaint.color = secondaryText
+                        lunarPaint.alpha = 220
+                        canvas.drawText("+$hiddenMore", cx, cardAreaBottom - 1f * density, lunarPaint)
+                    }
+                } else if (hasExpanded) {
+                    // 其他收合週列：以精巧彩色圓點提示當天有行程，點擊該週即可展開！
+                    if (dayEvents.isNotEmpty() && contentStartY + 3f * density <= cellTop + rowH) {
+                        val dots = dayEvents.take(3)
+                        val dotR = 1.7f * density
+                        val dotGap = 4.6f * density
+                        val totalDotW = (dots.size - 1) * dotGap
+                        dots.forEachIndexed { idx, ev ->
+                            chipPaint.color = ev.colorArgb
+                            chipPaint.alpha = alphaFactor
+                            canvas.drawCircle(cx - totalDotW / 2f + idx * dotGap, contentStartY + 1.2f * density, dotR, chipPaint)
+                        }
+                        chipPaint.alpha = 255
+                    }
+                } else {
+                    // 一般全月等高檢視：顯示單行行程標籤
+                    val chipH = 10.5f * density
+                    dayEvents.take(maxChips).forEachIndexed { idx, ev ->
+                        val top = contentStartY + idx * (chipH + 1.5f * density)
+                        if (top + chipH <= cellTop + rowH) {
+                            chipPaint.color = (ev.colorArgb and 0x00FFFFFF) or 0x55000000
+                            val rect = RectF(cellLeft + 2f * density, top, cellLeft + colW - 2f * density, top + chipH)
+                            canvas.drawRoundRect(rect, 3f * density, 3f * density, chipPaint)
+                            val label = (if (ev.isTask) "○" else "") + ev.title
+                            val clipped = clipTextToWidth(label, chipTextPaint, colW - 6f * density)
+                            chipTextPaint.alpha = alphaFactor
+                            canvas.drawText(clipped, cellLeft + 3.5f * density, top + chipH - 2.2f * density, chipTextPaint)
+                        }
                     }
                 }
             }
         }
         return bmp
+    }
+
+    private fun wrapTextToLines(text: String, paint: Paint, maxWidth: Float, maxLines: Int): List<String> {
+        if (text.isEmpty() || maxLines <= 0) return emptyList()
+        val lines = mutableListOf<String>()
+        var start = 0
+        while (start < text.length && lines.size < maxLines) {
+            val isLastLine = lines.size == maxLines - 1
+            var end = start + 1
+            while (end <= text.length && paint.measureText(text, start, end) <= maxWidth) {
+                end++
+            }
+            val fitEnd = (end - 1).coerceAtLeast(start + 1)
+            if (isLastLine && fitEnd < text.length) {
+                var ellEnd = fitEnd
+                while (ellEnd > start + 1 && paint.measureText(text.substring(start, ellEnd) + "…") > maxWidth) {
+                    ellEnd--
+                }
+                lines.add(text.substring(start, ellEnd) + "…")
+                break
+            } else {
+                lines.add(text.substring(start, fitEnd))
+                start = fitEnd
+            }
+        }
+        return lines
     }
 
     fun renderWeekExpandedBitmap(
@@ -1106,6 +1311,55 @@ private val WEEK_CELL_VIEW_IDS = intArrayOf(
     R.id.widget_week_cell_3, R.id.widget_week_cell_4, R.id.widget_week_cell_5, R.id.widget_week_cell_6
 )
 
+private val MONTH_ROW_VIEW_IDS = intArrayOf(
+    R.id.widget_row_0, R.id.widget_row_1, R.id.widget_row_2,
+    R.id.widget_row_3, R.id.widget_row_4, R.id.widget_row_5
+)
+
+private val MONTH_ROW_EXPAND_VIEW_IDS = intArrayOf(
+    R.id.widget_row_expand_0, R.id.widget_row_expand_1, R.id.widget_row_expand_2,
+    R.id.widget_row_expand_3, R.id.widget_row_expand_4, R.id.widget_row_expand_5
+)
+
+private fun bindVivoAccordionWeekTapRows(
+    context: Context,
+    views: RemoteViews,
+    widgetId: Int,
+    numWeeks: Int,
+    expandedWeekRow: Int
+) {
+    for (r in 0 until 6) {
+        val rowVisible = r < numWeeks
+        views.setViewVisibility(MONTH_ROW_VIEW_IDS[r], if (rowVisible) android.view.View.VISIBLE else android.view.View.GONE)
+        val expandVisible = rowVisible && r == expandedWeekRow
+        views.setViewVisibility(MONTH_ROW_EXPAND_VIEW_IDS[r], if (expandVisible) android.view.View.VISIBLE else android.view.View.GONE)
+
+        if (rowVisible) {
+            val rowTogglePi = buildWeekRowTogglePi(context, widgetId, r)
+            for (c in 0 until 7) {
+                views.setOnClickPendingIntent(MONTH_CELL_VIEW_IDS[r * 7 + c], rowTogglePi)
+            }
+            if (expandVisible) {
+                views.setOnClickPendingIntent(MONTH_ROW_EXPAND_VIEW_IDS[r], rowTogglePi)
+            }
+        }
+    }
+}
+
+private fun buildWeekRowTogglePi(context: Context, widgetId: Int, weekRow: Int): PendingIntent {
+    val intent = Intent(context, VivoMonthWidgetProvider::class.java).apply {
+        action = WidgetRefreshHelper.ACTION_TOGGLE_WEEK_ROW
+        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+        putExtra(WidgetRefreshHelper.EXTRA_WEEK_ROW, weekRow)
+    }
+    return PendingIntent.getBroadcast(
+        context,
+        widgetId * 100 + 40 + weekRow,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+}
+
 private fun bindMonthTapCells(
     context: Context,
     views: RemoteViews,
@@ -1113,6 +1367,10 @@ private fun bindMonthTapCells(
     yearMonth: YearMonth,
     startMonday: Boolean
 ) {
+    for (r in 0 until 6) {
+        views.setViewVisibility(MONTH_ROW_VIEW_IDS[r], android.view.View.VISIBLE)
+        views.setViewVisibility(MONTH_ROW_EXPAND_VIEW_IDS[r], android.view.View.GONE)
+    }
     val firstOfMonth = yearMonth.atDay(1)
     val shift = if (startMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
     val startDate = firstOfMonth.minusDays(shift.toLong())

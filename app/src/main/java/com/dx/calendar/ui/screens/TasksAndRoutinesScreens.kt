@@ -290,7 +290,9 @@ fun RoutinesAndHiddenHubView(
     checkIns: List<RoutineCheckInEntity>,
     externalOverrides: List<ExternalEventOverrideEntity>,
     isPrivacyUnlocked: Boolean,
+    routineMedicationFeatureEnabled: Boolean,
     routineDefaultHideFromMonth: Boolean,
+    onToggleRoutineMedicationFeature: (Boolean) -> Unit,
     onToggleDefaultRoutineHide: (Boolean) -> Unit,
     onAddRoutineQuick: () -> Unit,
     onToggleTodayCheckIn: (targetType: String, targetId: Long, currentlyDone: Boolean) -> Unit,
@@ -357,19 +359,47 @@ fun RoutinesAndHiddenHubView(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "不必開關整個帳號！單獨隱藏每日吃藥等例行提醒，在此集中控管防累積",
+                                text = "預設關閉且不自動添加任何吃藥提醒；開啟後可依需求自行新增與設定不佔月曆規則",
                                 color = tokens.secondaryTextColor,
                                 fontSize = 12.sp
                             )
                         }
                         Button(
                             onClick = onAddRoutineQuick,
+                            enabled = routineMedicationFeatureEnabled,
                             colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
                         ) {
                             Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("新增例行")
                         }
+                    }
+
+                    HorizontalDivider(color = tokens.gridLineColor)
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "啟用吃藥／例行提醒功能（預設關閉）",
+                                color = tokens.primaryTextColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = if (routineMedicationFeatureEnabled) "已開啟：可自行新增項目並依規則排程提醒"
+                                else "已關閉：不會建立或觸發任何吃藥／例行提醒",
+                                color = tokens.secondaryTextColor,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Switch(
+                            checked = routineMedicationFeatureEnabled,
+                            onCheckedChange = onToggleRoutineMedicationFeature
+                        )
                     }
 
                     // 三格統計數據
