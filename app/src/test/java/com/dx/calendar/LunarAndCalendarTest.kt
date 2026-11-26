@@ -106,6 +106,12 @@ class LunarAndCalendarTest {
         assertTrue(wLarge * hLarge <= MonthCanvasRenderer.DEFAULT_MAX_PIXELS + 1500)
         assertTrue(wLarge >= 160 && hLarge >= 120)
 
+        // 動畫輕量幀預算（160_000 px）絕不可因 coerceIn 空區間拋出 IllegalArgumentException！
+        val animBudget = MonthCanvasRenderer.computeScreenSafePixelBudget(1080, 2400, MonthCanvasRenderer.ANIM_FRAME_MAX_PIXELS)
+        assertEquals(MonthCanvasRenderer.ANIM_FRAME_MAX_PIXELS, animBudget)
+        val (wAnim, hAnim) = MonthCanvasRenderer.computeSafeCanvasDimensions(320, 320, 3.0f, maxPixels = animBudget)
+        assertTrue(wAnim * hAnim <= animBudget + 1500)
+
         // 極端過渡 0dp 防呆保護
         val (wZero, hZero) = MonthCanvasRenderer.computeSafeCanvasDimensions(0, -10, 2.5f)
         assertTrue(wZero >= 160 && hZero >= 120)

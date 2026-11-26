@@ -5,6 +5,17 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.9.2] - 2026-11-26 (`versionCode = 19`)
+
+### 🐛 關鍵修復與動畫流暢度升級 / Fixed & Performance
+- **🔥 修復月曆桌面小工具「點擊展開週次」功能失效問題**：
+  - 精準定位根因：`v1.8.5` 導入輕量動畫幀預算 `ANIM_FRAME_MAX_PIXELS` 時，`MonthCanvasRenderer.renderMonthBitmap` 內的 `coerceIn(650_000L, maxPixels)` 因上限小於下限拋出 `IllegalArgumentException`，導致點擊任何一週時靜默中止、無法展開。
+  - 改以 `computeScreenSafePixelBudget()` 安全計算像素上限並為動畫階段加上 `runCatching` 保護（確保終幀定格必然執行），同時新增單元測試防止回歸。
+- **🎬 進一步提升小工具展開／收合動畫幀率 (60fps)**：
+  - 將動畫中間幀輕量化至 `160,000 px`（Binder IPC 傳輸量再降 33%）並擴充為 10 個 cubic-out 平滑過渡幀，展開與收合更絲滑順暢，動畫結束後立即定格 2K 銳利高解析畫面。
+
+---
+
 ## [v1.9.1] - 2026-11-26 (`versionCode = 18`)
 
 ### ✨ 新增功能與安全強化 / Added & Improved

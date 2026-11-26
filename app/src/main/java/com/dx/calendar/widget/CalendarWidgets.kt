@@ -302,9 +302,9 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
     private fun safeGoAsync(): BroadcastReceiver.PendingResult? = runCatching { goAsync() }.getOrNull()
 
     companion object {
-        // 預渲染 60fps 手風琴展開/收合平滑緩動中間幀（8 個 cubic-out 過渡幀 + 終幀，總時長約 145ms，絲滑高幀率不卡頓）
+        // 預渲染 60fps 手風琴展開/收合平滑緩動中間幀（10 個 cubic-out 過渡幀 + 終幀，總時長約 160ms，絲滑高幀率不卡頓）
         private val EXPAND_ANIM_EASED_STEPS = floatArrayOf(
-            0.18f, 0.35f, 0.51f, 0.65f, 0.77f, 0.87f, 0.94f, 0.98f
+            0.14f, 0.28f, 0.42f, 0.55f, 0.67f, 0.77f, 0.85f, 0.91f, 0.96f, 0.99f
         )
         private const val EXPAND_ANIM_FRAME_INTERVAL_MS = 16L
 
@@ -389,35 +389,37 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                         val accentArgb = settings.brandStyle.primaryHex.toInt()
 
                         if (resolvedFrom != resolvedTo) {
-                            // 先於背景一次預渲染所有輕量動畫幀，再以精準 16ms (~60fps) 節拍連續推送，消除幀間渲染與 IPC 延遲！
-                            val preRenderedFrames = EXPAND_ANIM_EASED_STEPS.map { easedStep ->
-                                MonthCanvasRenderer.renderMonthBitmap(
-                                    context = appCtx,
-                                    yearMonth = ym,
-                                    widthDp = minW,
-                                    heightDp = canvasHeightDp,
-                                    items = items,
-                                    startMonday = settings.startWeekOnMonday,
-                                    showLunar = settings.showLunar,
-                                    darkStyle = darkStyle,
-                                    accentArgb = accentArgb,
-                                    googleGridStyle = false,
-                                    numWeeks = numWeeks,
-                                    expandedWeekRow = resolvedTo,
-                                    prevExpandedRow = resolvedFrom,
-                                    transitionProgress = easedStep,
-                                    maxPixels = MonthCanvasRenderer.ANIM_FRAME_MAX_PIXELS
-                                )
-                            }
-                            var nextFrameDeadline = android.os.SystemClock.elapsedRealtime()
-                            for (frameBmp in preRenderedFrames) {
-                                val partialViews = RemoteViews(appCtx.packageName, R.layout.widget_month_canvas).apply {
-                                    setImageViewBitmap(R.id.widget_canvas_img, frameBmp)
+                            runCatching {
+                                // 先於背景一次預渲染所有輕量動畫幀，再以精準 16ms (~60fps) 節拍連續推送，消除幀間渲染與 IPC 延遲！
+                                val preRenderedFrames = EXPAND_ANIM_EASED_STEPS.map { easedStep ->
+                                    MonthCanvasRenderer.renderMonthBitmap(
+                                        context = appCtx,
+                                        yearMonth = ym,
+                                        widthDp = minW,
+                                        heightDp = canvasHeightDp,
+                                        items = items,
+                                        startMonday = settings.startWeekOnMonday,
+                                        showLunar = settings.showLunar,
+                                        darkStyle = darkStyle,
+                                        accentArgb = accentArgb,
+                                        googleGridStyle = false,
+                                        numWeeks = numWeeks,
+                                        expandedWeekRow = resolvedTo,
+                                        prevExpandedRow = resolvedFrom,
+                                        transitionProgress = easedStep,
+                                        maxPixels = MonthCanvasRenderer.ANIM_FRAME_MAX_PIXELS
+                                    )
                                 }
-                                safePartiallyUpdateWidget(mgr, widgetId, partialViews)
-                                nextFrameDeadline += EXPAND_ANIM_FRAME_INTERVAL_MS
-                                val waitMs = nextFrameDeadline - android.os.SystemClock.elapsedRealtime()
-                                if (waitMs > 0L) delay(waitMs)
+                                var nextFrameDeadline = android.os.SystemClock.elapsedRealtime()
+                                for (frameBmp in preRenderedFrames) {
+                                    val partialViews = RemoteViews(appCtx.packageName, R.layout.widget_month_canvas).apply {
+                                        setImageViewBitmap(R.id.widget_canvas_img, frameBmp)
+                                    }
+                                    safePartiallyUpdateWidget(mgr, widgetId, partialViews)
+                                    nextFrameDeadline += EXPAND_ANIM_FRAME_INTERVAL_MS
+                                    val waitMs = nextFrameDeadline - android.os.SystemClock.elapsedRealtime()
+                                    if (waitMs > 0L) delay(waitMs)
+                                }
                             }
                         }
 
@@ -1242,8 +1244,14 @@ internal object MonthCanvasRenderer {
     // 升級為 2K 旗艦／摺疊機原生高解析像素預算（Android 8+ RemoteViews Bitmap 走 ashmem 共享記憶體，系統上限達螢幕像素 1.5 倍 ≈ 15MB，
     // 1,650,000 像素 ≈ 1285×1285 px = 6.6MB，既有 1:1 銳利字體又遠低於系統記憶體上限！）
     const val DEFAULT_MAX_PIXELS = 1_650_000
-    const val ANIM_FRAME_MAX_PIXELS = 240_000
+    const val ANIM_FRAME_MAX_PIXELS = 160_000
     const val MAX_SIDE_PX = 1650
+
+    internal fun computeScreenSafePixelBudget(screenWidthPx: Int, screenHeightPx: Int, requestedMaxPixels: Int): Int {
+        val safeReq = requestedMaxPixels.coerceAtLeast(60_000).toLong()
+        val screenCap = (screenWidthPx.toLong().coerceAtLeast(320L) * screenHeightPx.toLong().coerceAtLeast(320L)) * 85L / 100L
+        return minOf(safeReq, screenCap.coerceAtLeast(60_000L)).toInt()
+    }
 
     internal fun computeSafeCanvasDimensions(
         widthDp: Int,
@@ -1311,15 +1319,13 @@ internal object MonthCanvasRenderer {
     ): Bitmap {
         val dm = context.resources.displayMetrics
         val rawDensity = dm.density
-        // 動態結合當前螢幕解析度計算絕對安全上限（不超過螢幕像素 85%，杜絕摺疊機切外螢幕時超過系統上限）
-        val screenSafeBudget = ((dm.widthPixels.toLong() * dm.heightPixels.toLong()) * 85L / 100L)
-            .coerceIn(650_000L, maxPixels.toLong())
-            .toInt()
+        // 動態結合當前螢幕解析度計算絕對安全上限（修正動畫輕量幀 maxPixels < 650_000 時舊 coerceIn 空區間崩潰！）
+        val effectiveMaxPixels = computeScreenSafePixelBudget(dm.widthPixels, dm.heightPixels, maxPixels)
         val (wPx, hPx) = computeSafeCanvasDimensions(
             widthDp = widthDp,
             heightDp = heightDp,
             density = rawDensity,
-            maxPixels = minOf(maxPixels, screenSafeBudget)
+            maxPixels = effectiveMaxPixels
         )
         val density = (wPx.toFloat() / widthDp.coerceIn(120, 760).toFloat()).coerceIn(1.0f, 3.5f)
 
