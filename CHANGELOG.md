@@ -5,6 +5,15 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.9.5] - 2026-11-26 (`versionCode = 22`)
+
+### 🐛 圖示修復與微調 / Fixed
+- **✨ 修復雙位數日期動態圖示（10–31 日）個位數遺漏問題，並優化金色圖示安全區比例**：
+  - 修正先前批次產生 `ic_launcher_day_10_fg.xml` ~ `ic_launcher_day_31_fg.xml` 時僅保留十位數 `<group>` 導致個位數（如 `26` 的 `6`）消失的錯誤；全面還原 10–31 日完整十位數＋個位數金色筆畫並通過全部 31 檔結構校驗。
+  - 微調頂部雙金屬環扣與日曆框體位置至 Android Adaptive Icon 安全區內，避免桌面圓角裁切邊緣。
+
+---
+
 ## [v1.9.4] - 2026-11-26 (`versionCode = 21`)
 
 ### 🐛 關鍵修復 / Fixed

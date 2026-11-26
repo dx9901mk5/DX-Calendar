@@ -4,31 +4,39 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 金色外框日曆卡片（隨系統自動切換金白／金黑） -->
+    <!-- 金色外框日曆卡片（隨系統自動切換金白／金黑，完整置於安全區） -->
     <path
         android:fillColor="@color/dx_icon_card_fill"
         android:strokeColor="@color/dx_icon_gold_primary"
         android:strokeWidth="2.8"
-        android:pathData="M29,25h50c4.8,0 8.5,3.7 8.5,8.5v45c0,4.8 -3.7,8.5 -8.5,8.5H29c-4.8,0 -8.5,-3.7 -8.5,-8.5v-45C20.5,28.7 24.2,25 29,25z" />
+        android:pathData="M29,27h50c4.6,0 8.5,3.7 8.5,8.5v43c0,4.8 -3.9,8.5 -8.5,8.5H29c-4.6,0 -8.5,-3.7 -8.5,-8.5v-43C20.5,30.7 24.4,27 29,27z" />
     <!-- 頂部金色眉條 -->
     <path
         android:fillColor="@color/dx_icon_gold_header"
-        android:pathData="M29,25h50c4.8,0 8.5,3.7 8.5,8.5v8.5H20.5v-8.5C20.5,28.7 24.2,25 29,25z" />
+        android:pathData="M29,27h50c4.6,0 8.5,3.7 8.5,8.5v7.5H20.5v-7.5C20.5,30.7 24.4,27 29,27z" />
     <!-- 頂部雙金屬環扣 -->
     <path
         android:fillColor="@color/dx_icon_gold_deep"
-        android:pathData="M36,20.5c1.5,0 2.7,1.2 2.7,2.7v6.2c0,1.5 -1.2,2.7 -2.7,2.7s-2.7,-1.2 -2.7,-2.7v-6.2C33.3,21.7 34.5,20.5 36,20.5z" />
+        android:pathData="M37,22.5c1.5,0 2.7,1.2 2.7,2.7v5.8c0,1.5 -1.2,2.7 -2.7,2.7s-2.7,-1.2 -2.7,-2.7v-5.8C34.3,23.7 35.5,22.5 37,22.5z" />
     <path
         android:fillColor="@color/dx_icon_gold_deep"
-        android:pathData="M72,20.5c1.5,0 2.7,1.2 2.7,2.7v6.2c0,1.5 -1.2,2.7 -2.7,2.7s-2.7,-1.2 -2.7,-2.7v-6.2C69.3,21.7 70.5,20.5 72,20.5z" />
+        android:pathData="M71,22.5c1.5,0 2.7,1.2 2.7,2.7v5.8c0,1.5 -1.2,2.7 -2.7,2.7s-2.7,-1.2 -2.7,-2.7v-5.8C68.3,23.7 69.5,22.5 71,22.5z" />
     <!-- 內層金色分隔細線 -->
     <path
         android:strokeColor="@color/dx_icon_gold_ring"
         android:strokeWidth="1.2"
-        android:pathData="M27,46.5h54" />
+        android:pathData="M27,47.5h54" />
     <group android:translateX="33.5" android:translateY="51.0" android:scaleX="0.92" android:scaleY="0.92">
         <path
             android:pathData="M4,7 C4,3 6.5,1 10.5,1 C14.5,1 16.5,3.5 16.5,7 C16.5,11 13.5,13.5 9.5,17 L4,22 L4,26.5 L17,26.5"
+            android:strokeColor="@color/dx_icon_digit"
+            android:strokeWidth="4.3"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+    <group android:translateX="55.0" android:translateY="51.0" android:scaleX="0.92" android:scaleY="0.92">
+        <path
+            android:pathData="M4.5,23 C5.5,25.7 7.5,27 10,27 C14,27 16.2,23.2 16.2,14 C16.2,5 13.8,1 9.5,1 C5.5,1 3,4.2 3,8.8 C3,13.5 5.7,16.5 9.5,16.5 C12.5,16.5 14.8,14.8 15.8,12"
             android:strokeColor="@color/dx_icon_digit"
             android:strokeWidth="4.3"
             android:strokeLineCap="round"
