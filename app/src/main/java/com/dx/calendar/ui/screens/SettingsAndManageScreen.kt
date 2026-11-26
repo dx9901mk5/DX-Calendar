@@ -107,12 +107,12 @@ private enum class DxSettingsSection(
     val subtitle: String,
     val icon: ImageVector
 ) {
-    ACCOUNTS_AND_TASKS("行事曆與 Google Tasks", "行事曆顯示開關、本機類型與 Tasks 同步", Icons.Filled.AccountCircle),
-    APPEARANCE("外觀主題與底圖", "金白預設與 仿V / 仿O / 仿M / 仿G / 仿S 風格", Icons.Filled.Palette),
-    ICON_AND_ISLAND("動態圖示與原子島", "1–31 日期圖示、Android 16 上島通知", Icons.Filled.NotificationsActive),
+    ABOUT_UPDATE("GitHub 與自動更新", "GitHub 專案連結、點擊檢查更新與自動下載安裝", Icons.Filled.SystemUpdate),
+    APPEARANCE("外觀主題與底圖", "金白明亮預設、金色灰黑暗色預設與跟隨系統", Icons.Filled.Palette),
+    ACCOUNTS_AND_TASKS("行事曆與 Google Tasks", "行事曆顯示開關、本機類型與 Tasks 自動同步", Icons.Filled.AccountCircle),
+    ICON_AND_ISLAND("原子島與動態圖示", "日曆通知上原子島、1–31 日期圖示", Icons.Filled.NotificationsActive),
     CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線與連段測試", Icons.Filled.Tune),
-    IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport),
-    ABOUT_UPDATE("關於 DX日曆與自動更新", "GitHub 專案連結、版本判讀與下載", Icons.Filled.SystemUpdate)
+    IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport)
 }
 
 /**
@@ -165,7 +165,7 @@ fun SettingsAndManageScreen(
     onCancelLiveUpdateIsland: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
-    var selectedSection by remember { mutableStateOf(DxSettingsSection.ACCOUNTS_AND_TASKS) }
+    var selectedSection by remember { mutableStateOf(DxSettingsSection.ABOUT_UPDATE) }
     var showNewCatDialog by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
 
@@ -208,10 +208,31 @@ fun SettingsAndManageScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "DX-Calendar v${updateState.currentVersion} · 自有雙欄設定架構",
+                        text = "v${updateState.currentVersion} · 跟隨系統金白／金色灰黑主題",
                         color = tokens.secondaryTextColor,
                         fontSize = 11.sp
                     )
+                }
+                if (!BuildConfig.IS_PLAY_BUILD) {
+                    TextButton(
+                        onClick = { onOpenUrl(GitHubAutoUpdater.GITHUB_REPO_URL) },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(15.dp), tint = tokens.accentColor)
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text("GitHub", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.accentColor)
+                    }
+                    Button(
+                        onClick = {
+                            selectedSection = DxSettingsSection.ABOUT_UPDATE
+                            onManualCheckUpdate()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("檢查更新", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -585,9 +606,9 @@ private fun DxSettingsSectionContent(
                         }
                         Text(
                             text = if (settings.googleAccountEmail.isNotBlank()) {
-                                "已連結 Google Tasks 雲端同步"
+                                "已連結自動同步：每次開啟／切回 App 皆會於背景自動判讀並同步 Google Tasks 至月曆與小工具。"
                             } else {
-                                "尚未連結，點擊下方按鈕即可同步 Google Tasks 並顯示於月曆、時間表與桌面小工具。"
+                                "只需首次點選下方按鈕連結授權一次，之後每次開啟 App 即會自動判讀同步 Google Tasks！"
                             },
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
@@ -702,7 +723,7 @@ private fun DxSettingsSectionContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.Palette, contentDescription = null, tint = tokens.accentColor)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("六大主題視覺風格", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text("主題視覺風格（預設跟隨手機主題移動）", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
 
                         BrandStyle.entries.forEach { style ->
@@ -1007,12 +1028,12 @@ private fun GitHubUpdateCard(
                 OutlinedButton(onClick = onOpenGitHubRepo, modifier = Modifier.weight(1f)) {
                     Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("GitHub 儲存庫", fontSize = 13.sp)
+                    Text("GitHub 專案連結", fontSize = 13.sp)
                 }
                 OutlinedButton(onClick = onOpenGitHubReleases, modifier = Modifier.weight(1f)) {
                     Icon(Icons.Filled.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(if (BuildConfig.IS_PLAY_BUILD) "Google Play 商店" else "Releases 頁面", fontSize = 13.sp)
+                    Text(if (BuildConfig.IS_PLAY_BUILD) "Google Play 商店" else "GitHub Releases", fontSize = 13.sp)
                 }
             }
 
@@ -1023,6 +1044,27 @@ private fun GitHubUpdateCard(
                     fontSize = 12.sp
                 )
                 return@Column
+            }
+
+            // 醒目的一鍵「點擊檢查自動更新（有更新自動下載並直接進入安裝）」主按鈕！
+            Button(
+                onClick = onCheckNow,
+                enabled = updateState.phase != UpdatePhase.CHECKING && updateState.phase != UpdatePhase.DOWNLOADING,
+                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                modifier = Modifier.fillMaxWidth().height(46.dp)
+            ) {
+                Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = when (updateState.phase) {
+                        UpdatePhase.CHECKING -> "正在檢查 GitHub 最新版本..."
+                        UpdatePhase.DOWNLOADING -> "正在自動下載新版 APK..."
+                        else -> "點擊檢查自動更新（有新版自動下載安裝）"
+                    },
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             HorizontalDivider(color = tokens.gridLineColor)

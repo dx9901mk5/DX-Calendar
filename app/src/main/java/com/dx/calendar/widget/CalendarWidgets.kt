@@ -150,18 +150,22 @@ object WidgetRefreshHelper {
         context: Context,
         appWidgetId: Int,
         globalDark: Boolean,
-        globalOpacity: Float
+        globalOpacity: Float,
+        followSystemDark: Boolean = false
     ): Pair<Boolean, Float> {
+        val sysNight = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val baseDark = if (followSystemDark) sysNight else globalDark
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
-            return globalDark to globalOpacity.coerceIn(0f, 1f)
+            return baseDark to globalOpacity.coerceIn(0f, 1f)
         }
         val sp = context.getSharedPreferences(PREF_WIDGET_STATE, Context.MODE_PRIVATE)
         return if (sp.getBoolean("has_custom_style_$appWidgetId", false)) {
-            val d = sp.getBoolean("custom_dark_$appWidgetId", globalDark)
+            val d = sp.getBoolean("custom_dark_$appWidgetId", baseDark)
             val o = sp.getFloat("custom_opacity_$appWidgetId", globalOpacity).coerceIn(0f, 1f)
             d to o
         } else {
-            globalDark to globalOpacity.coerceIn(0f, 1f)
+            baseDark to globalOpacity.coerceIn(0f, 1f)
         }
     }
 
@@ -170,30 +174,17 @@ object WidgetRefreshHelper {
             val appContext = context.applicationContext ?: context
             val mgr = AppWidgetManager.getInstance(appContext)
 
-            // 1. 刷新類 vivo 月曆小工具
+            // 1. 刷新 DX 月曆小工具
             val vivoMonthIds = mgr.getAppWidgetIds(ComponentName(appContext, VivoMonthWidgetProvider::class.java))
             if (vivoMonthIds.isNotEmpty()) {
                 VivoMonthWidgetProvider.updateWidgets(appContext, mgr, vivoMonthIds)
             }
 
-            // 2. 刷新類 Google 月檢視小工具
-            val googleMonthIds = mgr.getAppWidgetIds(ComponentName(appContext, GoogleMonthWidgetProvider::class.java))
-            if (googleMonthIds.isNotEmpty()) {
-                GoogleMonthWidgetProvider.updateWidgets(appContext, mgr, googleMonthIds)
-            }
-
-            // 3. 刷新類 Google 日曆時間表可捲動小工具
+            // 2. 刷新 DX 時間表可捲動小工具
             val googleSchedIds = mgr.getAppWidgetIds(ComponentName(appContext, GoogleScheduleWidgetProvider::class.java))
             if (googleSchedIds.isNotEmpty()) {
                 GoogleScheduleWidgetProvider.updateWidgets(appContext, mgr, googleSchedIds)
                 runCatching { mgr.notifyAppWidgetViewDataChanged(googleSchedIds, R.id.widget_list_view) }
-            }
-
-            // 4. 刷新類 vivo 待辦與例行事項可捲動小工具
-            val vivoTaskIds = mgr.getAppWidgetIds(ComponentName(appContext, VivoTasksWidgetProvider::class.java))
-            if (vivoTaskIds.isNotEmpty()) {
-                VivoTasksWidgetProvider.updateWidgets(appContext, mgr, vivoTaskIds)
-                runCatching { mgr.notifyAppWidgetViewDataChanged(vivoTaskIds, R.id.widget_list_view) }
             }
         }
     }
@@ -377,7 +368,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                         val checkIns = repo.dao.getRoutineCheckInsOnce()
 
                         val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
-                            appCtx, widgetId, settings.widgetDarkStyle, settings.widgetOpacity
+                            appCtx, widgetId, settings.widgetDarkStyle, settings.widgetOpacity, settings.widgetFollowSystemDark
                         )
                         val offset = WidgetRefreshHelper.getMonthOffset(appCtx, widgetId)
                         val ym = YearMonth.now().plusMonths(offset.toLong())
@@ -391,7 +382,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                             gridStart, gridEnd, cats, events, tasks, checkIns, emptyList(), settings, isPrivacyUnlocked = false
                         ).filter { it.showInMonthGrid && it.showInAgendaAndWidget }
 
-                        val (minW, minH) = readSafeWidgetDp(mgr, widgetId, defaultW = 250, defaultH = 250)
+                        val (minW, minH) = readSafeWidgetDp(appCtx, mgr, widgetId, defaultW = 280, defaultH = 280)
                         val canvasHeightDp = (minH - 42).coerceAtLeast(100)
                         val accentArgb = settings.brandStyle.primaryHex.toInt()
 
@@ -468,7 +459,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                             activeWidgetAnimJobs[id]?.cancel()
                             runCatching {
                                 val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
-                                    appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity
+                                    appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity, settings.widgetFollowSystemDark
                                 )
                                 val offset = WidgetRefreshHelper.getMonthOffset(appCtx, id)
                                 val ym = YearMonth.now().plusMonths(offset.toLong())
@@ -484,7 +475,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                                     gridStart, gridEnd, cats, events, tasks, checkIns, emptyList(), settings, isPrivacyUnlocked = false
                                 ).filter { it.showInMonthGrid && it.showInAgendaAndWidget }
 
-                                val (minW, minH) = readSafeWidgetDp(mgr, id, defaultW = 250, defaultH = 250)
+                                val (minW, minH) = readSafeWidgetDp(appCtx, mgr, id, defaultW = 280, defaultH = 280)
                                 val views = buildVivoMonthFullRemoteViews(
                                     context = appCtx,
                                     id = id,
@@ -656,7 +647,7 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                         for (id in ids) {
                             runCatching {
                                 val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
-                                    appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity
+                                    appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity, settings.widgetFollowSystemDark
                                 )
                                 val offset = WidgetRefreshHelper.getMonthOffset(appCtx, id)
                                 val ym = YearMonth.now().plusMonths(offset.toLong())
@@ -665,7 +656,7 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                                     cats, events, tasks, checkIns, emptyList(), settings, isPrivacyUnlocked = false
                                 ).filter { it.showInMonthGrid && it.showInAgendaAndWidget }
 
-                                val (minW, minH) = readSafeWidgetDp(mgr, id, defaultW = 260, defaultH = 260)
+                                val (minW, minH) = readSafeWidgetDp(appCtx, mgr, id, defaultW = 280, defaultH = 280)
 
                                 val googleAccent = if (darkStyle) 0xFF8AB4F8.toInt() else 0xFF1A73E8.toInt()
                                 val bmp = MonthCanvasRenderer.renderMonthBitmap(
@@ -804,7 +795,7 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
                 for (id in ids) {
                     runCatching {
                         val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
-                            appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity
+                            appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity, settings.widgetFollowSystemDark
                         )
                         val views = RemoteViews(appCtx.packageName, R.layout.widget_scrollable_list)
                         applyListContainerThemeAndOpacity(views, darkStyle, opacity, settings.brandStyle.primaryHex.toInt())
@@ -880,7 +871,7 @@ class VivoTasksWidgetProvider : AppWidgetProvider() {
                 for (id in ids) {
                     runCatching {
                         val (darkStyle, opacity) = WidgetRefreshHelper.getEffectiveWidgetAppearance(
-                            appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity
+                            appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity, settings.widgetFollowSystemDark
                         )
                         val views = RemoteViews(appCtx.packageName, R.layout.widget_scrollable_list)
                         applyListContainerThemeAndOpacity(views, darkStyle, opacity, settings.brandStyle.primaryHex.toInt())
@@ -951,7 +942,7 @@ private class ScheduleRemoteViewsFactory(
                 val repo = CalendarRepository(context)
                 val settings = repo.prefs.getSettingsOnce()
                 val eff = WidgetRefreshHelper.getEffectiveWidgetAppearance(
-                    context, appWidgetId, settings.widgetDarkStyle, settings.widgetOpacity
+                    context, appWidgetId, settings.widgetDarkStyle, settings.widgetOpacity, settings.widgetFollowSystemDark
                 )
                 darkStyle = eff.first
                 opacity = eff.second
@@ -1057,16 +1048,51 @@ private class ScheduleRemoteViewsFactory(
 }
 
 private fun readSafeWidgetDp(
+    context: Context,
     mgr: AppWidgetManager,
     widgetId: Int,
     defaultW: Int,
     defaultH: Int
 ): Pair<Int, Int> {
     val opts = runCatching { mgr.getAppWidgetOptions(widgetId) }.getOrNull()
-    val rawW = opts?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, defaultW) ?: defaultW
-    val rawH = opts?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, defaultH) ?: defaultH
-    // 摺疊機內外螢幕切換時可能回報極大或極小過渡 dp，強制夾緊在合理範圍
-    return rawW.coerceIn(140, 620) to rawH.coerceIn(140, 660)
+    val isLandscape = context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+    // Android 12+ 優先讀取桌面精準回報的實際小工具長寬 (OPTION_APPWIDGET_SIZES)，消除 fitXY 非等比拉伸造成的字體模糊！
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && opts != null) {
+        val sizes = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                opts.getParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, android.util.SizeF::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                opts.getParcelableArrayList<android.util.SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
+            }
+        }.getOrNull()
+        if (!sizes.isNullOrEmpty()) {
+            val picked = if (isLandscape) {
+                sizes.maxByOrNull { it.width / it.height.coerceAtLeast(1f) }
+            } else {
+                sizes.maxByOrNull { it.height / it.width.coerceAtLeast(1f) }
+            } ?: sizes.first()
+            val w = picked.width.roundToInt().coerceIn(150, 760)
+            val h = picked.height.roundToInt().coerceIn(150, 820)
+            return w to h
+        }
+    }
+
+    // 標準回退：直向桌面實際寬高為 MIN_WIDTH × MAX_HEIGHT；橫向桌面實際寬高為 MAX_WIDTH × MIN_HEIGHT
+    val rawW = if (isLandscape) {
+        opts?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, defaultW) ?: defaultW
+    } else {
+        opts?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, defaultW) ?: defaultW
+    }
+    val rawH = if (isLandscape) {
+        opts?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, defaultH) ?: defaultH
+    } else {
+        opts?.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, defaultH)?.takeIf { it > 0 }
+            ?: opts?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, defaultH)
+            ?: defaultH
+    }
+    return rawW.coerceIn(150, 760) to rawH.coerceIn(150, 820)
 }
 
 private fun safeUpdateWidget(mgr: AppWidgetManager, widgetId: Int, views: RemoteViews) {
@@ -1184,9 +1210,11 @@ private fun buildWidgetConfigPi(context: Context, widgetId: Int, reqOffset: Int)
  */
 internal object MonthCanvasRenderer {
 
-    const val DEFAULT_MAX_PIXELS = 340_000   // 約 1.36 MB 上限，兼顧清晰度與摺疊機外螢幕記憶體安全
-    const val ANIM_FRAME_MAX_PIXELS = 175_000 // 動畫中間幀約 700 KB，極速渲染零卡頓
-    const val MAX_SIDE_PX = 820
+    // 升級為 2K 旗艦／摺疊機原生高解析像素預算（Android 8+ RemoteViews Bitmap 走 ashmem 共享記憶體，系統上限達螢幕像素 1.5 倍 ≈ 15MB，
+    // 1,650,000 像素 ≈ 1285×1285 px = 6.6MB，既有 1:1 銳利字體又遠低於系統記憶體上限！）
+    const val DEFAULT_MAX_PIXELS = 1_650_000
+    const val ANIM_FRAME_MAX_PIXELS = 720_000
+    const val MAX_SIDE_PX = 1650
 
     internal fun computeSafeCanvasDimensions(
         widthDp: Int,
@@ -1195,12 +1223,12 @@ internal object MonthCanvasRenderer {
         maxPixels: Int = DEFAULT_MAX_PIXELS,
         maxSidePx: Int = MAX_SIDE_PX
     ): Pair<Int, Int> {
-        val safeDensity = density.takeIf { it.isFinite() && it > 0f }?.coerceIn(1f, 2.4f) ?: 2f
-        val safeWdp = widthDp.coerceIn(120, 680)
-        val safeHdp = heightDp.coerceIn(90, 680)
+        val safeDensity = density.takeIf { it.isFinite() && it > 0f }?.coerceIn(1.5f, 3.5f) ?: 2.75f
+        val safeWdp = widthDp.coerceIn(120, 760)
+        val safeHdp = heightDp.coerceIn(90, 820)
 
-        var w = (safeWdp * safeDensity).coerceAtLeast(180f)
-        var h = (safeHdp * safeDensity).coerceAtLeast(140f)
+        var w = (safeWdp * safeDensity).coerceAtLeast(240f)
+        var h = (safeHdp * safeDensity).coerceAtLeast(180f)
 
         val longest = maxOf(w, h)
         if (longest > maxSidePx) {
@@ -1210,14 +1238,14 @@ internal object MonthCanvasRenderer {
         }
 
         val area = w * h
-        val safeBudget = maxPixels.coerceAtLeast(60_000).toFloat()
+        val safeBudget = maxPixels.coerceAtLeast(120_000).toFloat()
         if (area > safeBudget) {
             val areaScale = sqrt(safeBudget / area)
             w *= areaScale
             h *= areaScale
         }
 
-        return w.roundToInt().coerceAtLeast(160) to h.roundToInt().coerceAtLeast(120)
+        return w.roundToInt().coerceAtLeast(200) to h.roundToInt().coerceAtLeast(150)
     }
 
     internal fun computeAccordionRowWeights(
@@ -1252,45 +1280,52 @@ internal object MonthCanvasRenderer {
         transitionProgress: Float = 1f,
         maxPixels: Int = DEFAULT_MAX_PIXELS
     ): Bitmap {
-        val rawDensity = context.resources.displayMetrics.density
+        val dm = context.resources.displayMetrics
+        val rawDensity = dm.density
+        // 動態結合當前螢幕解析度計算絕對安全上限（不超過螢幕像素 85%，杜絕摺疊機切外螢幕時超過系統上限）
+        val screenSafeBudget = ((dm.widthPixels.toLong() * dm.heightPixels.toLong()) * 85L / 100L)
+            .coerceIn(650_000L, maxPixels.toLong())
+            .toInt()
         val (wPx, hPx) = computeSafeCanvasDimensions(
             widthDp = widthDp,
             heightDp = heightDp,
             density = rawDensity,
-            maxPixels = maxPixels
+            maxPixels = minOf(maxPixels, screenSafeBudget)
         )
-        // 依據實際畫布像素與邏輯寬度反推繪圖等效密度，確保任何縮放比例下文字與圓角完全成比例且銳利！
-        val density = (wPx.toFloat() / widthDp.coerceIn(120, 680).toFloat()).coerceIn(0.85f, 2.4f)
+        val density = (wPx.toFloat() / widthDp.coerceIn(120, 760).toFloat()).coerceIn(1.0f, 3.5f)
 
         val bmp = Bitmap.createBitmap(wPx, hPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
 
-        val primaryText = if (darkStyle) 0xFFF2F2F7.toInt() else 0xFF18181B.toInt()
-        val secondaryText = if (darkStyle) 0xFF9898A0.toInt() else 0xFF5C5C66.toInt()
+        val primaryText = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF18181B.toInt()
+        val secondaryText = if (darkStyle) 0xFFA4A4AE.toInt() else 0xFF565660.toInt()
         val gridLineColor = if (darkStyle) 0x26FFFFFF else 0x22000000
 
-        val headerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val textFlags = Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG or Paint.LINEAR_TEXT_FLAG
+        val headerPaint = Paint(textFlags).apply {
             color = secondaryText
-            textSize = 10.5f * density
-            textAlign = Paint.Align.CENTER
-        }
-        val dayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = (if (hPx < 300) 11.5f else 13.5f) * density
+            textSize = 11.2f * density
             textAlign = Paint.Align.CENTER
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
-        val lunarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = 8.2f * density
+        val dayPaint = Paint(textFlags).apply {
+            textSize = (if (hPx < 420) 12.2f else 14.2f) * density
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        }
+        val lunarPaint = Paint(textFlags).apply {
+            textSize = 9.0f * density
             textAlign = Paint.Align.CENTER
         }
         val chipPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        val chipTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val chipTextPaint = Paint(textFlags).apply {
             color = primaryText
-            textSize = 8.2f * density
+            textSize = 9.0f * density
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
-        val cardTitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val cardTitlePaint = Paint(textFlags).apply {
             color = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF141418.toInt()
-            textSize = 8.5f * density
+            textSize = 9.4f * density
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

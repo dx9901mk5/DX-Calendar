@@ -45,31 +45,67 @@ val LocalBrandTokens = staticCompositionLocalOf {
     buildBrandTokens(BrandStyle.GOLD_WHITE, isDark = false)
 }
 
+/**
+ * 建立主題視覺 Token：
+ * - 明亮主題預設 (`GOLD_WHITE` + Light)：珍珠白底 `#FAF8F3` ＋ 純白卡片 `#FFFFFF` ＋ 18K 香檳金 `#B8841E`
+ * - 暗色主題預設 (`GOLD_DARK` 或 `GOLD_WHITE` 於手機切換為深色模式時)：
+ *   溫潤沉穩「灰黑底」(`#16171B` 主背景 ＋ `#202228` 炭灰黑卡片 ＋ `#2B2E36` 浮起層，絕非死黑) ＋ 璀璨流光金 `#D9A83E`！
+ */
 fun buildBrandTokens(style: BrandStyle, isDark: Boolean): BrandVisualTokens {
     return when (style) {
-        BrandStyle.GOLD_WHITE -> BrandVisualTokens(
-            brandStyle = style,
-            isDark = isDark,
-            accentColor = if (isDark) Color(0xFFD8A63A) else Color(0xFFB8841E),
-            secondaryAccent = if (isDark) Color(0xFFF0C96B) else Color(0xFFD9A948),
-            backgroundColor = if (isDark) Color(0xFF0F0E0B) else Color(0xFFFAF8F3),
-            surfaceCardColor = if (isDark) Color(0xFF1B1914) else Color(0xFFFFFFFF),
-            elevatedSurfaceColor = if (isDark) Color(0xFF28241B) else Color(0xFFF4EEE1),
-            floatingPillColor = if (isDark) Color(0xEE211E17) else Color(0xF7FFFFFF),
-            gridLineColor = if (isDark) Color(0x2BD8A63A) else Color(0x28C6922C),
-            primaryTextColor = if (isDark) Color(0xFFFAF6EE) else Color(0xFF221E17),
-            secondaryTextColor = if (isDark) Color(0xFFA89E8C) else Color(0xFF7A6F5D),
-            weekendSundayColor = if (isDark) Color(0xFFE57368) else Color(0xFFC45646),
-            weekendSaturdayColor = if (isDark) Color(0xFFD8A63A) else Color(0xFFB8841E),
-            holidayBadgeColor = if (isDark) Color(0xFFD8A63A) else Color(0xFFB8841E),
-            selectedCellFill = if (isDark) Color(0xFF332B19) else Color(0xFFFFF5DC),
-            selectedCellBorder = if (isDark) Color(0xFFD8A63A) else Color(0xFFC6922C),
-            cardCorner = 22.dp,
-            cellCorner = 12.dp,
-            useDualToneYearHeader = true,
-            useFloatingOriginCapsule = true,
-            inlineDateAndLunar = false
-        )
+        BrandStyle.GOLD_WHITE, BrandStyle.GOLD_DARK -> {
+            if (isDark) {
+                // 金色・灰黑底暗色預設主題（沉穩石墨灰黑底 + 香檳流光金）
+                BrandVisualTokens(
+                    brandStyle = style,
+                    isDark = true,
+                    accentColor = Color(0xFFD9A83E),
+                    secondaryAccent = Color(0xFFF0C96B),
+                    backgroundColor = Color(0xFF16171B),
+                    surfaceCardColor = Color(0xFF202228),
+                    elevatedSurfaceColor = Color(0xFF2B2E36),
+                    floatingPillColor = Color(0xF024262D),
+                    gridLineColor = Color(0x2ED9A83E),
+                    primaryTextColor = Color(0xFFF7F4EC),
+                    secondaryTextColor = Color(0xFFA9A396),
+                    weekendSundayColor = Color(0xFFE57368),
+                    weekendSaturdayColor = Color(0xFFD9A83E),
+                    holidayBadgeColor = Color(0xFFD9A83E),
+                    selectedCellFill = Color(0xFF342E20),
+                    selectedCellBorder = Color(0xFFD9A83E),
+                    cardCorner = 22.dp,
+                    cellCorner = 12.dp,
+                    useDualToneYearHeader = true,
+                    useFloatingOriginCapsule = true,
+                    inlineDateAndLunar = false
+                )
+            } else {
+                // 金色・珍珠白底明亮預設主題
+                BrandVisualTokens(
+                    brandStyle = style,
+                    isDark = false,
+                    accentColor = Color(0xFFB8841E),
+                    secondaryAccent = Color(0xFFD9A948),
+                    backgroundColor = Color(0xFFFAF8F3),
+                    surfaceCardColor = Color(0xFFFFFFFF),
+                    elevatedSurfaceColor = Color(0xFFF4EEE1),
+                    floatingPillColor = Color(0xF7FFFFFF),
+                    gridLineColor = Color(0x28C6922C),
+                    primaryTextColor = Color(0xFF221E17),
+                    secondaryTextColor = Color(0xFF7A6F5D),
+                    weekendSundayColor = Color(0xFFC45646),
+                    weekendSaturdayColor = Color(0xFFB8841E),
+                    holidayBadgeColor = Color(0xFFB8841E),
+                    selectedCellFill = Color(0xFFFFF5DC),
+                    selectedCellBorder = Color(0xFFC6922C),
+                    cardCorner = 22.dp,
+                    cellCorner = 12.dp,
+                    useDualToneYearHeader = true,
+                    useFloatingOriginCapsule = true,
+                    inlineDateAndLunar = false
+                )
+            }
+        }
 
         BrandStyle.VIVO -> BrandVisualTokens(
             brandStyle = style,

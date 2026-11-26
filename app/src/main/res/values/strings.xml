@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DX日曆</string>
-    <string name="widget_vivo_month_label">DX 月曆 (仿V 單週展開 / 縮放)</string>
-    <string name="widget_vivo_month_desc">農曆節氣月曆，支援桌面點擊展開單週動畫、翻月、now 回到當日與任意縮放</string>
-    <string name="widget_google_month_label">DX 月檢視 (仿G 網格 / 縮放)</string>
-    <string name="widget_google_month_desc">滿版網格月檢視，含 Tasks 待辦顯示、now 回當日與自由縮放</string>
-    <string name="widget_google_schedule_label">DX 時間表 (仿G 可點擊 / 捲動)</string>
-    <string name="widget_google_schedule_desc">可上下捲動瀏覽近期行程與待辦，點擊事件直接開啟當日行程</string>
-    <string name="widget_vivo_tasks_label">DX 待辦與例行 (仿V 打勾 / 捲動)</string>
-    <string name="widget_vivo_tasks_desc">集中顯示待辦事項與例行事務，支援桌面打勾與點擊進入詳情</string>
+    <string name="widget_vivo_month_label">DX 月曆 (單週展開動畫 / 自由縮放)</string>
+    <string name="widget_vivo_month_desc" formatted="false">高解析農曆節氣月曆，支援點擊單週展開動畫、翻月、now 回當日與 0%–100% 自由透明度</string>
+    <string name="widget_google_schedule_label">DX 時間表 (近期行程與待辦 / 可捲動)</string>
+    <string name="widget_google_schedule_desc" formatted="false">可上下捲動瀏覽近期行程與待辦事項，點擊事件直達詳情，支援 0%–100% 自由透明度與縮放</string>
+    <string name="widget_google_month_label">DX 月檢視</string>
+    <string name="widget_google_month_desc">月檢視</string>
+    <string name="widget_vivo_tasks_label">DX 待辦</string>
+    <string name="widget_vivo_tasks_desc">待辦事項</string>
 </resources>

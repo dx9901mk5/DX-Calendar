@@ -216,13 +216,48 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val liveIslandEnabled = runCatching {
+            runBlocking(Dispatchers.IO) { AppPreferences(context).getSettingsOnce().liveUpdateIslandEnabled }
+        }.getOrDefault(true)
+
+        val shortText = when {
+            enableMultiCall && burstTotal > 1 -> "連段$burstIndex/$burstTotal"
+            offsetMin > 0 -> "${offsetMin}分後"
+            else -> "進行中"
+        }
+        val progressPct = if (enableMultiCall && burstTotal > 1) {
+            ((burstIndex.toFloat() / burstTotal.toFloat()) * 100f).toInt().coerceIn(10, 100)
+        } else if (offsetMin > 0) {
+            (100 - (offsetMin * 2)).coerceIn(20, 95)
+        } else {
+            100
+        }
+        val eventWhenMillis = System.currentTimeMillis() + offsetMin.coerceAtLeast(0) * 60_000L
+
+        if (liveIslandEnabled && !useAlarmStream && !enableMultiCall) {
+            // 一般日曆提醒直接以「原生原子島 Live Updates 通知」單一整合發送：彈出提醒音效後直接收攏駐留於原子島！
+            LiveUpdateIslandHelper.postLiveUpdateNotification(
+                context = context,
+                notifId = notifId,
+                title = displayTitle,
+                body = displayBody,
+                shortCriticalText = shortText,
+                progressPercent = progressPct,
+                targetWhenMillis = eventWhenMillis,
+                alertWithSound = true,
+                dismissPendingIntent = dismissPi,
+                snoozePendingIntent = snoozePi
+            )
+            return
+        }
+
         val channelId = if (useAlarmStream || enableMultiCall) CHANNEL_ALARM_BURST else CHANNEL_STANDARD_REMINDER
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(com.dx.calendar.R.drawable.ic_stat_calendar_island)
             .setContentTitle(displayTitle)
             .setContentText(displayBody)
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(if (useAlarmStream) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
+            .setCategory(if (useAlarmStream) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_EVENT)
             .setAutoCancel(true)
             .setContentIntent(openMainPi)
             .addAction(0, "確認收到 (停止連段)", dismissPi)
@@ -230,30 +265,14 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
 
         if (useAlarmStream || enableMultiCall) {
             builder.setFullScreenIntent(fullScreenPi, true)
-            // 若當前處於前景/桌面可直接啟動全螢幕鬧鐘響鈴頁
             runCatching { context.startActivity(fullScreenIntent) }
         }
 
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(notifId, builder.build())
 
-        // 同步發布 Android 16 原生 Live Updates（OriginOS 6 原子島上島通知）
-        val liveIslandEnabled = runCatching {
-            runBlocking(Dispatchers.IO) { AppPreferences(context).getSettingsOnce().liveUpdateIslandEnabled }
-        }.getOrDefault(true)
+        // 連段強鬧鐘模式下，亦同步推送安靜上島膠囊顯示連段進度
         if (liveIslandEnabled) {
-            val shortText = when {
-                enableMultiCall && burstTotal > 1 -> "連段$burstIndex/$burstTotal"
-                offsetMin > 0 -> "${offsetMin}分後"
-                else -> "進行中"
-            }
-            val progressPct = if (enableMultiCall && burstTotal > 1) {
-                ((burstIndex.toFloat() / burstTotal.toFloat()) * 100f).toInt().coerceIn(10, 100)
-            } else if (offsetMin > 0) {
-                (100 - (offsetMin * 2)).coerceIn(15, 95)
-            } else {
-                100
-            }
             LiveUpdateIslandHelper.postLiveUpdateNotification(
                 context = context,
                 notifId = notifId + 50000,
@@ -261,6 +280,8 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 body = displayBody,
                 shortCriticalText = shortText,
                 progressPercent = progressPct,
+                targetWhenMillis = eventWhenMillis,
+                alertWithSound = false,
                 dismissPendingIntent = dismissPi,
                 snoozePendingIntent = snoozePi
             )

@@ -21,7 +21,7 @@ private val Context.dataStore by preferencesDataStore(name = "dx_calendar_prefs"
 
 data class UserSettings(
     val brandStyle: BrandStyle = BrandStyle.GOLD_WHITE,
-    val darkThemeMode: DarkThemeMode = DarkThemeMode.LIGHT,
+    val darkThemeMode: DarkThemeMode = DarkThemeMode.SYSTEM,
     val startWeekOnMonday: Boolean = false,
     val showLunar: Boolean = true,
     val showWeekNumber: Boolean = false,
@@ -37,6 +37,7 @@ data class UserSettings(
     val googleAccountEmail: String = "",
     val hiddenSystemCalIds: Set<String> = emptySet(),
     val widgetDarkStyle: Boolean = false,
+    val widgetFollowSystemDark: Boolean = true,
     val widgetOpacity: Float = 0.88f,
     val autoCheckUpdate: Boolean = true,
     val dynamicDayIconEnabled: Boolean = true,
@@ -57,7 +58,7 @@ class AppPreferences(context: Context) {
         private val KEY_PEEK_HIDDEN = booleanPreferencesKey("peek_hidden_in_month")
         private val KEY_ROUTINE_MED_FEATURE_ENABLED = booleanPreferencesKey("routine_med_feature_enabled")
         private val KEY_LEGACY_MED_DEMO_CLEANED = booleanPreferencesKey("legacy_med_demo_cleaned_v1")
-        private val KEY_GOLD_WHITE_DEFAULT_APPLIED = booleanPreferencesKey("gold_white_default_applied_v1")
+        private val KEY_GOLD_SYSTEM_AUTO_APPLIED_V2 = booleanPreferencesKey("gold_system_auto_applied_v2")
         private val KEY_ROUTINE_DEFAULT_HIDE = booleanPreferencesKey("routine_default_hide")
         private val KEY_WALLPAPER_URI = stringPreferencesKey("wallpaper_uri")
         private val KEY_WALLPAPER_ALPHA = floatPreferencesKey("wallpaper_alpha")
@@ -88,8 +89,8 @@ class AppPreferences(context: Context) {
             }.getOrDefault(BrandStyle.GOLD_WHITE)
 
             val dark = runCatching {
-                DarkThemeMode.valueOf(prefs[KEY_DARK_MODE] ?: DarkThemeMode.LIGHT.name)
-            }.getOrDefault(DarkThemeMode.LIGHT)
+                DarkThemeMode.valueOf(prefs[KEY_DARK_MODE] ?: DarkThemeMode.SYSTEM.name)
+            }.getOrDefault(DarkThemeMode.SYSTEM)
 
             UserSettings(
                 brandStyle = brand,
@@ -109,6 +110,7 @@ class AppPreferences(context: Context) {
                 googleAccountEmail = prefs[KEY_GOOGLE_EMAIL] ?: "",
                 hiddenSystemCalIds = prefs[KEY_HIDDEN_SYS_CALS] ?: emptySet(),
                 widgetDarkStyle = prefs[KEY_WIDGET_DARK] ?: false,
+                widgetFollowSystemDark = prefs[KEY_WIDGET_DARK] == null,
                 widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.88f,
                 autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true,
                 dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: true,
@@ -162,17 +164,16 @@ class AppPreferences(context: Context) {
     }
 
     /**
-     * 升級至新版「金白風格 (預設)」時執行一次性預設套用（之後使用者仍可自由切換任意風格與深淺色）
+     * 升級至新版「明亮=金白 / 暗色=金色灰黑底・預設跟隨手機主題移動」時執行一次性預設套用
      */
     suspend fun applyGoldWhiteDefaultMigrationOnce() {
         appContext.dataStore.edit { prefs ->
-            if (prefs[KEY_GOLD_WHITE_DEFAULT_APPLIED] != true) {
-                prefs[KEY_BRAND_STYLE] = BrandStyle.GOLD_WHITE.name
-                prefs[KEY_DARK_MODE] = DarkThemeMode.LIGHT.name
-                if (prefs[KEY_WIDGET_DARK] == null) {
-                    prefs[KEY_WIDGET_DARK] = false
+            if (prefs[KEY_GOLD_SYSTEM_AUTO_APPLIED_V2] != true) {
+                if (prefs[KEY_BRAND_STYLE] == null || prefs[KEY_BRAND_STYLE] == BrandStyle.VIVO.name || prefs[KEY_BRAND_STYLE] == BrandStyle.GOLD_WHITE.name) {
+                    prefs[KEY_BRAND_STYLE] = BrandStyle.GOLD_WHITE.name
                 }
-                prefs[KEY_GOLD_WHITE_DEFAULT_APPLIED] = true
+                prefs[KEY_DARK_MODE] = DarkThemeMode.SYSTEM.name
+                prefs[KEY_GOLD_SYSTEM_AUTO_APPLIED_V2] = true
             }
         }
     }

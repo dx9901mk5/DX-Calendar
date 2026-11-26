@@ -2,9 +2,11 @@ package com.dx.calendar.data.sync
 
 import android.accounts.Account
 import android.content.Context
+import android.content.Intent
 import com.dx.calendar.data.local.CalendarDao
 import com.dx.calendar.data.model.TaskItemEntity
 import com.google.android.gms.auth.GoogleAuthUtil
+import com.google.android.gms.auth.UserRecoverableAuthException
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
@@ -18,9 +20,12 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
 
+class GoogleTasksConsentRequiredException(val consentIntent: Intent) :
+    Exception("需要授權存取 Google Tasks")
+
 /**
- * Google Tasks 雲端雙向同步引擎
- * 支援透過裝置上已授權的 Google 帳號同步 Google Tasks 清單與任務到 DX日曆 月曆格、時間表與小工具！
+ * Google Tasks 雲端雙向自動同步引擎：
+ * 首次綁定授權一次後，每次開啟／切回 App 即自動於背景判讀同步 Google Tasks 至月曆、時間表與桌面小工具！
  */
 class GoogleTasksSyncManager(
     private val context: Context,
@@ -38,11 +43,20 @@ class GoogleTasksSyncManager(
 
     suspend fun syncWithGoogleAccount(accountEmail: String): Result<Int> = withContext(Dispatchers.IO) {
         if (accountEmail.isBlank()) {
-            return@withContext Result.failure(IllegalArgumentException("尚未選擇 Google 帳號"))
+            return@withContext Result.failure(IllegalArgumentException("尚未選擇連結帳號"))
         }
         runCatching {
             val account = Account(accountEmail, "com.google")
-            val token = GoogleAuthUtil.getToken(context, account, TASKS_SCOPE)
+            val token = try {
+                GoogleAuthUtil.getToken(context, account, TASKS_SCOPE)
+            } catch (recoverable: UserRecoverableAuthException) {
+                val intent = recoverable.intent
+                if (intent != null) {
+                    throw GoogleTasksConsentRequiredException(intent)
+                }
+                throw recoverable
+            }
+
             var syncedCount = 0
 
             // 1. 取得所有 Google Tasks 清單

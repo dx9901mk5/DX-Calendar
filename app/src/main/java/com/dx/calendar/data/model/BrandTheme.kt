@@ -8,10 +8,17 @@ enum class BrandStyle(
     val cardCornerDp: Int
 ) {
     GOLD_WHITE(
-        displayName = "金白風格 (預設)",
-        subtitle = "預設基底：純淨珍珠白底、18K 香檳曜金點綴與溫潤懸浮卡片",
+        displayName = "金白風格 (明亮主題預設)",
+        subtitle = "明亮預設：珍珠白底＋18K 香檳金（跟隨系統切暗色時自動轉為金色灰黑底）",
         primaryHex = 0xFFC6922C,
         secondaryHex = 0xFFE0B458,
+        cardCornerDp = 22
+    ),
+    GOLD_DARK(
+        displayName = "金色灰黑風格 (暗色主題預設)",
+        subtitle = "暗色預設：沉穩質感灰黑底＋璀璨香檳曜金（跟隨系統切明亮時自動轉為金白底）",
+        primaryHex = 0xFFD9A83E,
+        secondaryHex = 0xFFF0C96B,
         cardCornerDp = 22
     ),
     VIVO(
@@ -52,9 +59,9 @@ enum class BrandStyle(
 }
 
 enum class DarkThemeMode(val label: String) {
-    LIGHT("淺色白底 (預設)"),
-    DARK("深色模式"),
-    SYSTEM("跟隨系統")
+    SYSTEM("跟隨手機主題 (預設)"),
+    LIGHT("固定明亮白底"),
+    DARK("固定暗色灰黑底")
 }
 
 enum class CalendarViewMode(val label: String) {

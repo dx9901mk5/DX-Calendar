@@ -13,6 +13,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -20,14 +22,17 @@ import androidx.core.content.ContextCompat
 import com.dx.calendar.security.DualBiometricHelper
 import com.dx.calendar.ui.CalendarViewModel
 import com.dx.calendar.ui.DXCalendarRootApp
+import com.dx.calendar.update.GitHubAutoUpdater
 import com.dx.calendar.util.DynamicAppIconManager
 import com.dx.calendar.widget.WidgetRefreshHelper
 import com.google.android.gms.common.AccountPicker
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
     private val viewModel: CalendarViewModel by viewModels()
     private var hasCalPerm by mutableStateOf(false)
+    private var awaitingUnknownSourcesApkPath: String? = null
 
     private val calendarPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -75,6 +80,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val googleTasksConsentLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == Activity.RESULT_OK) {
+            val email = viewModel.settings.value.googleAccountEmail
+            if (email.isNotBlank()) {
+                viewModel.syncGoogleTasksWithEmail(email)
+            }
+        }
+    }
+
+    private val unknownSourcesPermLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        resumePendingApkInstallIfAllowed()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         runCatching { enableEdgeToEdge() }
@@ -96,10 +118,25 @@ class MainActivity : AppCompatActivity() {
 
         handleWidgetIntent(intent)
         DynamicAppIconManager.scheduleMidnightRefresh(this)
-        // 注意：絕不在 onCreate / onNewIntent / onResume 前景啟動動畫期間停用 <activity-alias>，
-        // 避免 Android 14–16 / 摺疊機 ActivityTaskManager 因組件狀態變更強制終止正在開啟的畫面！
 
         setContent {
+            val pendingApkPath by viewModel.pendingInstallApkPath.collectAsState()
+            val pendingConsentIntent by viewModel.pendingGoogleTasksConsentIntent.collectAsState()
+
+            // 下載 100% 完成時，自動由前景 Activity 直接啟動系統安裝器（若首次未開未知來源權限，開啟授權返回後亦自動接續進入安裝！）
+            LaunchedEffect(pendingApkPath) {
+                val path = pendingApkPath ?: return@LaunchedEffect
+                viewModel.consumePendingInstallApkPath()
+                triggerApkInstallWithPermissionCheck(path)
+            }
+
+            // Google Tasks 首次綁定 OAuth 授權視窗自動導引
+            LaunchedEffect(pendingConsentIntent) {
+                val consent = pendingConsentIntent ?: return@LaunchedEffect
+                viewModel.consumeGoogleTasksConsentIntent()
+                runCatching { googleTasksConsentLauncher.launch(consent) }
+            }
+
             DXCalendarRootApp(
                 viewModel = viewModel,
                 hasCalendarPermission = hasCalPerm,
@@ -160,6 +197,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun triggerApkInstallWithPermissionCheck(apkPath: String) {
+        val file = File(apkPath)
+        if (!file.exists()) return
+        if (!GitHubAutoUpdater.canInstallPackages(this)) {
+            awaitingUnknownSourcesApkPath = apkPath
+            Toast.makeText(this, "請開啟「允許來自此來源的應用程式」，返回後將自動進入安裝", Toast.LENGTH_LONG).show()
+            runCatching {
+                unknownSourcesPermLauncher.launch(GitHubAutoUpdater.buildUnknownSourcesSettingsIntent(this))
+            }
+            return
+        }
+        awaitingUnknownSourcesApkPath = null
+        GitHubAutoUpdater.launchApkInstaller(this, file)
+    }
+
+    private fun resumePendingApkInstallIfAllowed() {
+        val path = awaitingUnknownSourcesApkPath ?: return
+        if (GitHubAutoUpdater.canInstallPackages(this)) {
+            awaitingUnknownSourcesApkPath = null
+            val file = File(path)
+            if (file.exists()) {
+                GitHubAutoUpdater.launchApkInstaller(this, file)
+            }
+        }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -200,13 +263,12 @@ class MainActivity : AppCompatActivity() {
             this,
             Manifest.permission.READ_CALENDAR
         ) == PackageManager.PERMISSION_GRANTED
+        viewModel.onAppForegroundResumed()
+        resumePendingApkInstallIfAllowed()
     }
 
     override fun onStop() {
         super.onStop()
-        // 當離開前景或鎖定螢幕（且非摺疊機/旋轉組態變更）時：
-        // 1. 自動重新鎖上隱私日曆，確保機密不外洩
-        // 2. 於退回背景後安全檢查並同步當日動態日期圖示，絕不干擾前景啟動與摺疊切換
         if (!isChangingConfigurations) {
             viewModel.setPrivacyUnlocked(false)
             viewModel.syncDynamicAppIconNow()

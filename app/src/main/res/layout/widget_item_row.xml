@@ -12,7 +12,7 @@
         android:paddingBottom="2dp"
         android:text="11月25日 週三"
         android:textColor="#FFA8A8B2"
-        android:textSize="11sp"
+        android:textSize="11.5sp"
         android:textStyle="bold" />
 
     <FrameLayout
@@ -57,7 +57,7 @@
                     android:maxLines="1"
                     android:text="活動標題"
                     android:textColor="#FFF5F5F7"
-                    android:textSize="13sp"
+                    android:textSize="13.5sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -66,7 +66,7 @@
                     android:layout_height="wrap_content"
                     android:text="10:00 - 11:00"
                     android:textColor="#FFB5B5BE"
-                    android:textSize="11sp" />
+                    android:textSize="11.5sp" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

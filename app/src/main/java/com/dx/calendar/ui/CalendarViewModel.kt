@@ -24,6 +24,7 @@ import com.dx.calendar.data.model.TaskItemEntity
 import com.dx.calendar.data.repository.CalendarRepository
 import com.dx.calendar.data.repository.UnifiedCalendarItem
 import com.dx.calendar.data.repository.UnifiedSourceType
+import com.dx.calendar.data.sync.GoogleTasksConsentRequiredException
 import com.dx.calendar.data.sync.GoogleTasksSyncManager
 import com.dx.calendar.data.sync.IcsManager
 import com.dx.calendar.data.sync.SystemCalendarAccountInfo
@@ -152,7 +153,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         AppUpdateUiState(currentVersion = GitHubAutoUpdater.getCurrentVersionName(app))
     )
     val updateState: StateFlow<AppUpdateUiState> = _updateState.asStateFlow()
+    private var activeCheckJob: Job? = null
     private var activeDownloadJob: Job? = null
+    private var lastAutoTasksSyncMillis: Long = 0L
+
+    private val _pendingInstallApkPath = MutableStateFlow<String?>(null)
+    val pendingInstallApkPath: StateFlow<String?> = _pendingInstallApkPath.asStateFlow()
+
+    private val _pendingGoogleTasksConsentIntent = MutableStateFlow<Intent?>(null)
+    val pendingGoogleTasksConsentIntent: StateFlow<Intent?> = _pendingGoogleTasksConsentIntent.asStateFlow()
 
     private val _refreshTick = MutableStateFlow(0)
 
@@ -205,9 +214,33 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
             val initSettings = repo.prefs.settingsFlow.first()
+            if (initSettings.googleAccountEmail.isNotBlank()) {
+                autoSyncGoogleTasksSilently(initSettings.googleAccountEmail)
+            }
             if (initSettings.autoCheckUpdate && !BuildConfig.IS_PLAY_BUILD) {
                 checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = true)
             }
+        }
+    }
+
+    fun onAppForegroundResumed() {
+        refreshSystemCalendars()
+        viewModelScope.launch {
+            val email = repo.prefs.getSettingsOnce().googleAccountEmail
+            if (email.isNotBlank() && System.currentTimeMillis() - lastAutoTasksSyncMillis >= 120_000L) {
+                autoSyncGoogleTasksSilently(email)
+            }
+        }
+    }
+
+    private suspend fun autoSyncGoogleTasksSilently(email: String) {
+        if (_isSyncingTasks.value || email.isBlank()) return
+        lastAutoTasksSyncMillis = System.currentTimeMillis()
+        _isSyncingTasks.value = true
+        val res = googleTasksSync.syncWithGoogleAccount(email)
+        _isSyncingTasks.value = false
+        res.onSuccess {
+            WidgetRefreshHelper.refreshAllWidgets(getApplication())
         }
     }
 
@@ -675,23 +708,29 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _isSyncingTasks.value = true
             repo.prefs.setGoogleAccountEmail(email)
+            lastAutoTasksSyncMillis = System.currentTimeMillis()
             val res = googleTasksSync.syncWithGoogleAccount(email)
             _isSyncingTasks.value = false
             res.onSuccess { cnt ->
-                toast("Google Tasks 同步成功，共更新 $cnt 項任務")
+                toast("Google Tasks 已自動同步完成（共 $cnt 項任務，後續開啟 App 將自動同步）")
                 WidgetRefreshHelper.refreshAllWidgets(getApplication())
             }.onFailure { err ->
-                toast("同步提示：${err.message ?: "請確認網路或授權狀態"}")
+                if (err is GoogleTasksConsentRequiredException) {
+                    _pendingGoogleTasksConsentIntent.value = err.consentIntent
+                } else {
+                    toast("同步提示：${err.message ?: "請確認網路或授權狀態"}")
+                }
             }
         }
+    }
+
+    fun consumeGoogleTasksConsentIntent() {
+        _pendingGoogleTasksConsentIntent.value = null
     }
 
     // === 設定與匯入匯出操作 ===
     fun setBrandStyle(style: BrandStyle) = viewModelScope.launch {
         repo.prefs.setBrandStyle(style)
-        if (style == BrandStyle.GOLD_WHITE) {
-            repo.prefs.setDarkThemeMode(DarkThemeMode.LIGHT)
-        }
         WidgetRefreshHelper.refreshAllWidgets(getApplication())
     }
 
@@ -848,8 +887,9 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun checkGitHubUpdate(autoDownloadIfFound: Boolean = true, showDialogIfOnMain: Boolean = false) {
-        if (_updateState.value.phase == UpdatePhase.CHECKING || _updateState.value.phase == UpdatePhase.DOWNLOADING) return
-        viewModelScope.launch {
+        if (_updateState.value.phase == UpdatePhase.DOWNLOADING) return
+        activeCheckJob?.cancel()
+        activeCheckJob = viewModelScope.launch {
             val app = getApplication<Application>()
             val curVer = GitHubAutoUpdater.getCurrentVersionName(app)
             _updateState.value = _updateState.value.copy(
@@ -875,7 +915,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         latestVersion = res.info.cleanVersion,
                         releaseInfo = res.info,
                         totalBytes = res.info.apkSizeBytes,
-                        statusMessage = "發現新版本 ${res.info.tagName}！",
+                        statusMessage = "發現新版本 ${res.info.tagName}！即將自動下載安裝...",
                         showAutoPromptDialog = showDialogIfOnMain && !_isSettingsOpen.value
                     )
                     if (autoDownloadIfFound) {
@@ -906,7 +946,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 progressFraction = 0f,
                 downloadedBytes = 0L,
                 totalBytes = targetInfo.apkSizeBytes,
-                statusMessage = "正在下載 ${targetInfo.tagName}..."
+                statusMessage = "正在自動下載 ${targetInfo.tagName}..."
             )
 
             val dlResult = GitHubAutoUpdater.downloadReleaseApk(app, targetInfo) { downloaded, total, frac ->
@@ -915,7 +955,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                     downloadedBytes = downloaded,
                     totalBytes = total,
                     progressFraction = frac,
-                    statusMessage = "正在下載 ${targetInfo.tagName} (${(frac * 100).toInt()}%)"
+                    statusMessage = "正在自動下載 ${targetInfo.tagName} (${(frac * 100).toInt()}%)"
                 )
             }
 
@@ -926,12 +966,10 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                     downloadedBytes = apkFile.length(),
                     totalBytes = apkFile.length(),
                     downloadedApkPath = apkFile.absolutePath,
-                    statusMessage = "下載完成！正在啟動安裝程序..."
+                    statusMessage = "下載完成！正在自動開啟安裝畫面..."
                 )
-                val launched = GitHubAutoUpdater.launchApkInstaller(app, apkFile)
-                if (!launched) {
-                    toast("請允許「安裝未知應用程式」權限後，再點一次「立即安裝新版本」")
-                }
+                // 優先由前景 MainActivity 直接喚起系統安裝器（解決 Android 14–16 非 Activity Context 安裝攔截）
+                _pendingInstallApkPath.value = apkFile.absolutePath
             }.onFailure { err ->
                 _updateState.value = _updateState.value.copy(
                     phase = UpdatePhase.ERROR,
@@ -939,6 +977,10 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 )
             }
         }
+    }
+
+    fun consumePendingInstallApkPath() {
+        _pendingInstallApkPath.value = null
     }
 
     fun cancelUpdateDownload() {
@@ -956,10 +998,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         val path = _updateState.value.downloadedApkPath ?: return
         val file = File(path)
         if (file.exists()) {
-            val ok = GitHubAutoUpdater.launchApkInstaller(getApplication(), file)
-            if (!ok) {
-                toast("請先開啟「允許來自此來源的應用程式」授權開關")
-            }
+            _pendingInstallApkPath.value = file.absolutePath
         } else {
             startUpdateDownload()
         }

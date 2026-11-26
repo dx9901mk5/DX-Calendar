@@ -48,8 +48,8 @@ object MultiCallAlarmScheduler {
 
     suspend fun rescheduleAllUpcomingReminders(context: Context) = withContext(Dispatchers.IO) {
         val dao = AppDatabase.getInstance(context).calendarDao()
-        val routineEnabled = com.dx.calendar.data.local.AppPreferences(context)
-            .getSettingsOnce().routineMedicationFeatureEnabled
+        val settings = com.dx.calendar.data.local.AppPreferences(context).getSettingsOnce()
+        val routineEnabled = settings.routineMedicationFeatureEnabled
         val now = System.currentTimeMillis()
         val events = dao.getAllEventsOnce()
         val tasks = dao.getAllTasksOnce()
@@ -66,6 +66,40 @@ object MultiCallAlarmScheduler {
                 scheduleForTask(context, tk, now)
             } else if (tk.isRoutine && !routineEnabled) {
                 cancelTaskAlarms(context, tk)
+            }
+        }
+
+        // 同步為近 48 小時內的「雲端同步行事曆 (Google 日曆)」排程原子島即時提醒通知！
+        if (settings.liveUpdateIslandEnabled) {
+            val bridge = com.dx.calendar.data.sync.SystemCalendarBridge(context)
+            if (bridge.hasReadPermission()) {
+                val sysEvents = bridge.querySystemInstances(now - 60_000L, now + 48L * 3_600_000L)
+                    .filter { !settings.hiddenSystemCalIds.contains(it.calendarId.toString()) && !it.isAllDay }
+                    .take(24)
+                for (inst in sysEvents) {
+                    listOf(10, 0).forEach { offsetMin ->
+                        val triggerAt = inst.beginMillis - offsetMin * 60_000L
+                        if (triggerAt > now + 2_000L) {
+                            val sub = if (offsetMin == 0) "行程現在開始" else "${offsetMin} 分鐘後開始"
+                            scheduleExactTrigger(
+                                context = context,
+                                requestCode = computeRequestCode("SYS_EVENT", inst.eventId, offsetMin, 1),
+                                triggerAtMillis = triggerAt,
+                                sourceType = "SYS_EVENT",
+                                itemId = inst.eventId,
+                                title = inst.title,
+                                subtitle = sub,
+                                isPrivacy = false,
+                                useAlarmStream = false,
+                                enableMultiCall = false,
+                                burstIndex = 1,
+                                burstTotal = 1,
+                                burstIntervalMin = 5,
+                                offsetMinutes = offsetMin
+                            )
+                        }
+                    }
+                }
             }
         }
     }

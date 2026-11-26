@@ -137,19 +137,29 @@ class LunarAndCalendarTest {
     }
 
     @Test
-    fun verifyGoldWhiteDefaultThemeAndBrandRenaming() {
+    fun verifyGoldWhiteAndGoldDarkDefaultSystemThemeAndBrandRenaming() {
         val defaultSettings = UserSettings()
         assertEquals(BrandStyle.GOLD_WHITE, defaultSettings.brandStyle)
-        assertEquals(DarkThemeMode.LIGHT, defaultSettings.darkThemeMode)
+        assertEquals(DarkThemeMode.SYSTEM, defaultSettings.darkThemeMode)
+        assertTrue(defaultSettings.widgetFollowSystemDark)
 
         val entries = BrandStyle.entries
-        assertEquals(6, entries.size)
+        assertEquals(7, entries.size)
         assertEquals(BrandStyle.GOLD_WHITE, entries[0])
-        assertEquals("金白風格 (預設)", BrandStyle.GOLD_WHITE.displayName)
+        assertEquals(BrandStyle.GOLD_DARK, entries[1])
+        assertEquals("金白風格 (明亮主題預設)", BrandStyle.GOLD_WHITE.displayName)
+        assertEquals("金色灰黑風格 (暗色主題預設)", BrandStyle.GOLD_DARK.displayName)
         assertEquals("仿V 風格", BrandStyle.VIVO.displayName)
         assertEquals("仿O 風格", BrandStyle.OPPO.displayName)
         assertEquals("仿M 風格", BrandStyle.XIAOMI.displayName)
         assertEquals("仿G 風格", BrandStyle.GOOGLE.displayName)
         assertEquals("仿S 風格", BrandStyle.SAMSUNG.displayName)
+
+        // 驗證明亮模式為白底、暗色模式自動切換為沉穩灰黑底 (#16171B)
+        val lightTokens = com.dx.calendar.ui.theme.buildBrandTokens(BrandStyle.GOLD_WHITE, isDark = false)
+        val darkTokens = com.dx.calendar.ui.theme.buildBrandTokens(BrandStyle.GOLD_WHITE, isDark = true)
+        assertFalse(lightTokens.isDark)
+        assertTrue(darkTokens.isDark)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF16171B), darkTokens.backgroundColor)
     }
 }
