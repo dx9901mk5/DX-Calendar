@@ -162,4 +162,44 @@ class LunarAndCalendarTest {
         assertTrue(darkTokens.isDark)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF16171B), darkTokens.backgroundColor)
     }
+
+    @Test
+    fun verifyDefaultGmailGoogleCalendarSelection() {
+        val cals = listOf(
+            com.dx.calendar.data.sync.SystemCalendarAccountInfo(
+                id = 10L,
+                displayName = "家庭",
+                accountName = "dx9901mk5@gmail.com",
+                accountType = "com.google",
+                colorArgb = 0xFF00B884.toInt(),
+                isWritable = true,
+                isPrimary = false,
+                isGoogleAccount = true
+            ),
+            com.dx.calendar.data.sync.SystemCalendarAccountInfo(
+                id = 20L,
+                displayName = "主要行事曆",
+                accountName = "dx9901mk5@gmail.com",
+                accountType = "com.google",
+                colorArgb = 0xFF4285F4.toInt(),
+                isWritable = true,
+                isPrimary = true,
+                isGoogleAccount = true
+            ),
+            com.dx.calendar.data.sync.SystemCalendarAccountInfo(
+                id = 30L,
+                displayName = "公司帳號",
+                accountName = "work@company.com",
+                accountType = "com.google",
+                colorArgb = 0xFFFF5238.toInt(),
+                isWritable = true,
+                isPrimary = true,
+                isGoogleAccount = true
+            )
+        )
+        // 未指定特定信箱時，優先挑選裝置已登記的 @gmail.com 主行事曆
+        assertEquals(20L, SystemCalendarBridge.pickDefaultGoogleCalendar(cals)?.id)
+        // 指定已連結帳號時，精準對應其主行事曆
+        assertEquals(30L, SystemCalendarBridge.pickDefaultGoogleCalendar(cals, "work@company.com")?.id)
+    }
 }

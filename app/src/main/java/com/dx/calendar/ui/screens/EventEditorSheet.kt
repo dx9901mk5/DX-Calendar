@@ -55,6 +55,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -76,6 +77,7 @@ import com.dx.calendar.data.model.EventTitleHistoryEntity
 import com.dx.calendar.data.model.RecurrenceType
 import com.dx.calendar.data.model.TaskItemEntity
 import com.dx.calendar.data.sync.SystemCalendarAccountInfo
+import com.dx.calendar.data.sync.SystemCalendarBridge
 import com.dx.calendar.ui.theme.LocalBrandTokens
 import com.dx.calendar.util.PrivacyCryptoManager
 import java.time.Instant
@@ -153,6 +155,9 @@ fun EventEditorScreen(
     routineDefaultHideFromMonth: Boolean,
     categories: List<CalendarCategoryEntity>,
     writableSystemCalendars: List<SystemCalendarAccountInfo>,
+    defaultGoogleEmail: String = "",
+    hasCalendarPermission: Boolean = true,
+    onRequestCalendarPermission: () -> Unit = {},
     titleHistory: List<EventTitleHistoryEntity>,
     parseIntList: (String) -> List<Int>,
     parseDateList: (String) -> List<LocalDate>,
@@ -189,7 +194,21 @@ fun EventEditorScreen(
     var categoryId by remember {
         mutableLongStateOf(editingEvent?.categoryId ?: categories.firstOrNull { !it.isTaskCategory }?.id ?: 1L)
     }
-    var selectedSystemCalId by remember { mutableStateOf<Long?>(null) }
+    val isNewRegularEvent = editingEvent == null && editingTask == null && !presetPrivacy && !presetTaskMode && !presetRoutine
+    val defaultGoogleCal = remember(writableSystemCalendars, defaultGoogleEmail) {
+        SystemCalendarBridge.pickDefaultGoogleCalendar(writableSystemCalendars, defaultGoogleEmail)
+    }
+    var userManuallyPickedCalendar by remember { mutableStateOf(false) }
+    var selectedSystemCalId by remember {
+        mutableStateOf<Long?>(if (isNewRegularEvent) defaultGoogleCal?.id else null)
+    }
+
+    // 若進入新增頁時系統剛載入完裝置已登記的 Gmail Google 行事曆，且使用者尚未手動切換，自動設為預設！
+    LaunchedEffect(defaultGoogleCal?.id, isNewRegularEvent) {
+        if (isNewRegularEvent && !userManuallyPickedCalendar && selectedSystemCalId == null && defaultGoogleCal != null) {
+            selectedSystemCalId = defaultGoogleCal.id
+        }
+    }
 
     var isAllDay by remember { mutableStateOf(editingEvent?.isAllDay ?: false) }
     var startDate by remember {
@@ -403,7 +422,9 @@ fun EventEditorScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = sysCal?.displayName ?: (currentCat?.name ?: "個人"),
+                                text = sysCal?.let {
+                                    if (it.isGoogleAccount) "Google · ${it.displayName}" else it.displayName
+                                } ?: (currentCat?.name ?: "個人"),
                                 color = tokens.primaryTextColor,
                                 fontSize = 14.sp
                             )
@@ -957,13 +978,67 @@ fun EventEditorScreen(
         )
     }
 
-    // === 行事曆選擇對話框（簡潔無帳號顯示） ===
+    // === 行事曆選擇對話框（Google 行事曆置頂優先可選，簡潔不露帳號） ===
     if (showCategoryDialog) {
         AlertDialog(
             onDismissRequest = { showCategoryDialog = false },
             title = { Text("選擇行事曆") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    if (!isPrivacy) {
+                        Text(
+                            text = "Google 行事曆（預設同步至已登記 Gmail）",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = tokens.accentColor
+                        )
+                        if (!hasCalendarPermission) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    showCategoryDialog = false
+                                    onRequestCalendarPermission()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("授權並顯示 Google 行事曆", fontSize = 13.sp)
+                            }
+                        } else if (writableSystemCalendars.isEmpty()) {
+                            Text(
+                                text = "裝置尚未偵測到可寫入的 Google 行事曆",
+                                fontSize = 12.sp,
+                                color = tokens.secondaryTextColor,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        } else {
+                            writableSystemCalendars.forEach { sc ->
+                                val label = if (sc.isGoogleAccount) "Google · ${sc.displayName}" else sc.displayName
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            userManuallyPickedCalendar = true
+                                            selectedSystemCalId = sc.id
+                                            if (entryMode == 1) entryMode = 0
+                                            showCategoryDialog = false
+                                        }
+                                        .padding(vertical = 10.dp)
+                                ) {
+                                    Box(modifier = Modifier.size(12.dp).background(Color(sc.colorArgb), CircleShape))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(label, modifier = Modifier.weight(1f), fontSize = 14.sp)
+                                    if (entryMode != 1 && selectedSystemCalId == sc.id) {
+                                        Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
                     Text("本機行事曆與待辦", fontSize = 12.sp, color = tokens.secondaryTextColor)
                     categories.forEach { cat ->
                         val isSelectedCat = if (cat.isTaskCategory) {
@@ -976,6 +1051,7 @@ fun EventEditorScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
+                                    userManuallyPickedCalendar = true
                                     categoryId = cat.id
                                     selectedSystemCalId = null
                                     if (cat.isTaskCategory) {
@@ -993,30 +1069,6 @@ fun EventEditorScreen(
                             Text(cat.name, modifier = Modifier.weight(1f), fontSize = 14.sp)
                             if (isSelectedCat) {
                                 Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
-                            }
-                        }
-                    }
-
-                    if (writableSystemCalendars.isNotEmpty() && !isPrivacy) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("同步行事曆", fontSize = 12.sp, color = tokens.secondaryTextColor)
-                        writableSystemCalendars.forEach { sc ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedSystemCalId = sc.id
-                                        showCategoryDialog = false
-                                    }
-                                    .padding(vertical = 10.dp)
-                            ) {
-                                Box(modifier = Modifier.size(12.dp).background(Color(sc.colorArgb), CircleShape))
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(sc.displayName, modifier = Modifier.weight(1f), fontSize = 14.sp)
-                                if (selectedSystemCalId == sc.id) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
-                                }
                             }
                         }
                     }

@@ -15,7 +15,9 @@ data class SystemCalendarAccountInfo(
     val accountName: String,
     val accountType: String,
     val colorArgb: Int,
-    val isWritable: Boolean
+    val isWritable: Boolean,
+    val isPrimary: Boolean = false,
+    val isGoogleAccount: Boolean = false
 )
 
 data class SystemEventInstance(
@@ -83,6 +85,35 @@ class SystemCalendarBridge(private val context: Context) {
             }
             return cleaned
         }
+
+        /**
+         * 依據裝置已登記的 Gmail／Google 帳號，自動挑選預設新增活動之 Google 行事曆：
+         * 1. 優先匹配已綁定帳號 (`preferredEmail`) 的主要 Google 行事曆
+         * 2. 次選裝置上任一 `@gmail.com` 的主要 Google 行事曆
+         * 3. 再選任一可寫入的 Google 行事曆，最後退回第一個可寫入同步行事曆
+         */
+        fun pickDefaultGoogleCalendar(
+            writableCalendars: List<SystemCalendarAccountInfo>,
+            preferredEmail: String = ""
+        ): SystemCalendarAccountInfo? {
+            if (writableCalendars.isEmpty()) return null
+            val pref = preferredEmail.trim()
+            if (pref.isNotBlank()) {
+                writableCalendars.firstOrNull { it.accountName.equals(pref, ignoreCase = true) && it.isPrimary }
+                    ?.let { return it }
+                writableCalendars.firstOrNull { it.accountName.equals(pref, ignoreCase = true) }
+                    ?.let { return it }
+            }
+            writableCalendars.firstOrNull {
+                it.isGoogleAccount && it.accountName.endsWith("@gmail.com", ignoreCase = true) && it.isPrimary
+            }?.let { return it }
+            writableCalendars.firstOrNull {
+                it.isGoogleAccount && it.accountName.endsWith("@gmail.com", ignoreCase = true)
+            }?.let { return it }
+            writableCalendars.firstOrNull { it.isGoogleAccount && it.isPrimary }?.let { return it }
+            writableCalendars.firstOrNull { it.isGoogleAccount }?.let { return it }
+            return writableCalendars.firstOrNull()
+        }
     }
 
     fun hasReadPermission(): Boolean {
@@ -108,7 +139,8 @@ class SystemCalendarBridge(private val context: Context) {
             CalendarContract.Calendars.ACCOUNT_NAME,
             CalendarContract.Calendars.ACCOUNT_TYPE,
             CalendarContract.Calendars.CALENDAR_COLOR,
-            CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL
+            CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL,
+            CalendarContract.Calendars.IS_PRIMARY
         )
 
         runCatching {
@@ -117,7 +149,7 @@ class SystemCalendarBridge(private val context: Context) {
                 projection,
                 null,
                 null,
-                "${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} ASC"
+                "${CalendarContract.Calendars.IS_PRIMARY} DESC, ${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} ASC"
             )?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(0)
@@ -132,6 +164,12 @@ class SystemCalendarBridge(private val context: Context) {
                     val color = if (rawColor == 0) 0xFF4285F4.toInt() else (rawColor or 0xFF000000.toInt())
                     val access = cursor.getInt(5)
                     val writable = access >= CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
+                    val isGoogle = accountType.equals("com.google", ignoreCase = true) ||
+                        accountName.endsWith("@gmail.com", ignoreCase = true)
+                    val isPrimaryCol = runCatching { cursor.getInt(6) == 1 }.getOrDefault(false)
+                    val isPrimary = isPrimaryCol ||
+                        (isGoogle && rawDisplayName.orEmpty().trim().equals(accountName.trim(), ignoreCase = true))
+
                     result.add(
                         SystemCalendarAccountInfo(
                             id = id,
@@ -139,13 +177,21 @@ class SystemCalendarBridge(private val context: Context) {
                             accountName = accountName,
                             accountType = accountType,
                             colorArgb = color,
-                            isWritable = writable
+                            isWritable = writable,
+                            isPrimary = isPrimary,
+                            isGoogleAccount = isGoogle
                         )
                     )
                 }
             }
         }
-        return result
+        // Google 主行事曆優先排在最前面，方便新增活動時一眼挑選！
+        return result.sortedWith(
+            compareByDescending<SystemCalendarAccountInfo> { it.isGoogleAccount && it.isPrimary }
+                .thenByDescending { it.isGoogleAccount }
+                .thenByDescending { it.isPrimary }
+                .thenBy { it.displayName }
+        )
     }
 
     fun querySystemInstances(startMillis: Long, endMillis: Long): List<SystemEventInstance> {
@@ -229,22 +275,30 @@ class SystemCalendarBridge(private val context: Context) {
         startMillis: Long,
         endMillis: Long,
         isAllDay: Boolean,
-        reminderMinutes: List<Int>
+        reminderMinutes: List<Int>,
+        rrule: String? = null
     ): Long? {
         if (!hasWritePermission()) return null
         return runCatching {
+            val safeEnd = endMillis.coerceAtLeast(startMillis + 60_000L)
             val values = ContentValues().apply {
                 put(CalendarContract.Events.CALENDAR_ID, systemCalendarId)
                 put(CalendarContract.Events.TITLE, title)
                 put(CalendarContract.Events.DESCRIPTION, description)
                 put(CalendarContract.Events.EVENT_LOCATION, location)
                 put(CalendarContract.Events.DTSTART, startMillis)
-                put(CalendarContract.Events.DTEND, endMillis.coerceAtLeast(startMillis + 60_000L))
                 put(CalendarContract.Events.ALL_DAY, if (isAllDay) 1 else 0)
                 put(
                     CalendarContract.Events.EVENT_TIMEZONE,
                     if (isAllDay) "UTC" else TimeZone.getDefault().id
                 )
+                if (!rrule.isNullOrBlank()) {
+                    val durMinutes = ((safeEnd - startMillis) / 60_000L).coerceAtLeast(30L)
+                    put(CalendarContract.Events.RRULE, rrule)
+                    put(CalendarContract.Events.DURATION, if (isAllDay) "P1D" else "PT${durMinutes}M")
+                } else {
+                    put(CalendarContract.Events.DTEND, safeEnd)
+                }
             }
             val uri = context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
             val newEventId = uri?.lastPathSegment?.toLongOrNull()

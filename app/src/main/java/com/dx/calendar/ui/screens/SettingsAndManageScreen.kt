@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,7 +71,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -166,6 +169,8 @@ fun SettingsAndManageScreen(
 ) {
     val tokens = LocalBrandTokens.current
     var selectedSection by remember { mutableStateOf(DxSettingsSection.ABOUT_UPDATE) }
+    val phoneListState = rememberLazyListState()
+    val uiScope = rememberCoroutineScope()
     var showNewCatDialog by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
 
@@ -225,6 +230,7 @@ fun SettingsAndManageScreen(
                     Button(
                         onClick = {
                             selectedSection = DxSettingsSection.ABOUT_UPDATE
+                            uiScope.launch { phoneListState.animateScrollToItem(0) }
                             onManualCheckUpdate()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
@@ -388,37 +394,32 @@ fun SettingsAndManageScreen(
                         }
                     }
                 } else {
-                    // 手機單欄：頂部橫向分類選擇膠囊 + 當前分類詳情
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(tokens.surfaceCardColor.copy(alpha = 0.65f))
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 12.dp, vertical = 10.dp)
-                        ) {
-                            DxSettingsSection.entries.forEach { sec ->
-                                val active = selectedSection == sec
-                                FilterChip(
-                                    selected = active,
-                                    onClick = { selectedSection = sec },
-                                    leadingIcon = {
-                                        Icon(sec.icon, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    },
-                                    label = { Text(sec.title, fontSize = 12.sp) }
-                                )
+                    // 手機單欄：全設定區塊由上往下垂直單頁捲動排列（無左右橫向分頁切換）
+                    LazyColumn(
+                        state = phoneListState,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        DxSettingsSection.entries.forEach { sec ->
+                            item(key = "hdr_${sec.name}") {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    Icon(sec.icon, contentDescription = null, tint = tokens.accentColor, modifier = Modifier.size(19.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = sec.title,
+                                        color = tokens.primaryTextColor,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
-                        }
-
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            item {
+                            item(key = "body_${sec.name}") {
                                 DxSettingsSectionContent(
-                                    section = selectedSection,
+                                    section = sec,
                                     settings = settings,
                                     updateState = updateState,
                                     categories = categories,
@@ -461,8 +462,8 @@ fun SettingsAndManageScreen(
                                     onCancelLiveUpdateIsland = onCancelLiveUpdateIsland
                                 )
                             }
-                            item { Spacer(modifier = Modifier.height(40.dp)) }
                         }
+                        item { Spacer(modifier = Modifier.height(40.dp)) }
                     }
                 }
             }
