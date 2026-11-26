@@ -5,9 +5,10 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
 
-    <!-- 日曆雙向同步權限 -->
+    <!-- 日曆雙向同步與聯絡人生日讀取權限 -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <!-- 多重連段提醒、全螢幕強喚醒與連動系統時鐘鬧鐘權限 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -569,6 +570,7 @@
             android:label="@string/widget_google_schedule_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.dx.calendar.widget.ACTION_RESET_TODAY" />
                 <action android:name="com.dx.calendar.widget.ACTION_TOGGLE_TASK" />
                 <action android:name="com.dx.calendar.widget.ACTION_CLICK_ITEM" />
             </intent-filter>
@@ -601,6 +603,20 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_countdown_weather_info" />
+        </receiver>
+
+        <!-- 小工具 5：DX 單週 7 天天氣與行程小工具 (4x2) -->
+        <receiver
+            android:name=".widget.WeekWeatherWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_week_weather_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.dx.calendar.widget.ACTION_RESET_TODAY" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_week_weather_info" />
         </receiver>
 
         <service

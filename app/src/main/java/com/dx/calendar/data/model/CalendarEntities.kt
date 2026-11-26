@@ -93,7 +93,7 @@ data class TaskItemEntity(
     val googleTaskId: String? = null,
     val googleTaskListId: String? = null,
     val googleTaskListTitle: String = "Google Tasks",
-    val colorArgb: Int = 0xFF4285F4.toInt(),
+    val colorArgb: Int = 0xFF1A73E8.toInt(),
     val updatedAt: Long = System.currentTimeMillis()
 )
 

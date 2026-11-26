@@ -228,6 +228,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.prefs.applyGoldWhiteDefaultMigrationOnce()
             cleanupLegacyMedicationDemoOnce()
+            migrateTaskAndPersonalColorsOnce()
             registerSystemCalendarObserverIfPermitted()
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
@@ -715,6 +716,52 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private suspend fun migrateTaskAndPersonalColorsOnce() {
+        val sp = getApplication<Application>().getSharedPreferences("dx_migrations", android.content.Context.MODE_PRIVATE)
+        if (sp.getBoolean("migrated_google_tasks_blue_and_personal_gold_v201", false)) return
+        runCatching {
+            val cats = repo.dao.getCategoriesOnce()
+            cats.find { it.id == 1L && it.colorArgb == 0xFF448AFF.toInt() }?.let { personal ->
+                repo.dao.upsertCategory(personal.copy(colorArgb = 0xFFC8962E.toInt()))
+            }
+            cats.find { it.isTaskCategory }?.let { taskCat ->
+                if (taskCat.colorArgb != 0xFF1A73E8.toInt() || taskCat.name.contains("To-Do")) {
+                    repo.dao.upsertCategory(taskCat.copy(name = "Google Tasks", colorArgb = 0xFF1A73E8.toInt()))
+                }
+            }
+            val allTks = repo.dao.getAllTasksOnce()
+            allTks.forEach { tk ->
+                if (tk.colorArgb == 0xFF4285F4.toInt() || tk.colorArgb == 0xFFFFAB00.toInt()) {
+                    repo.dao.upsertTask(tk.copy(colorArgb = 0xFF1A73E8.toInt()))
+                }
+            }
+            sp.edit().putBoolean("migrated_google_tasks_blue_and_personal_gold_v201", true).apply()
+            WidgetRefreshHelper.refreshAllWidgets(getApplication())
+        }
+    }
+
+    fun importContactBirthdays() {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val zone = settings.value.effectiveZoneId
+            com.dx.calendar.data.sync.ContactsBirthdayImporter
+                .importFromContacts(app, repo.dao, zone)
+                .onSuccess { count ->
+                    if (count > 0) {
+                        _refreshTick.value += 1
+                        MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
+                        WidgetRefreshHelper.refreshAllWidgets(app)
+                        toast("🎂 已匯入 $count 筆聯絡人生日（自動計算今年幾歲與倒數天數）")
+                    } else {
+                        toast("手機聯絡人中未偵測到生日欄位資料")
+                    }
+                }
+                .onFailure { e ->
+                    toast("聯絡人生日匯入失敗：${e.message}")
+                }
+        }
+    }
+
     fun quickAddTask(title: String, dueToday: Boolean, showInMonth: Boolean) {
         viewModelScope.launch {
             val task = TaskItemEntity(
@@ -759,11 +806,11 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             parsed.recurrenceType == com.dx.calendar.data.model.RecurrenceType.LUNAR_YEARLY
         saveFromEditor(
             EditorSavePayload(
-                isTaskMode = parsed.isTaskMode,
+                isTaskMode = false,
                 editingEventId = null,
                 editingTaskId = null,
                 categoryId = categories.value.firstOrNull { !it.isTaskCategory }?.id ?: 1L,
-                writeToSystemCalendarId = if (parsed.isTaskMode || useLocalForLunar) null else defaultSysCal?.id,
+                writeToSystemCalendarId = if (useLocalForLunar) null else defaultSysCal?.id,
                 title = parsed.title,
                 isAllDay = parsed.isAllDay,
                 startDate = parsed.date,

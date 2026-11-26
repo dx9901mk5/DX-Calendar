@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PauseCircle
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
@@ -102,15 +103,14 @@ fun TasksCenterView(
 ) {
     val tokens = LocalBrandTokens.current
     val context = androidx.compose.ui.platform.LocalContext.current
-    var quickText by remember { mutableStateOf("") }
-    var quickShowInMonth by remember { mutableStateOf(true) }
+    val googleTasksBlue = Color(0xFF1A73E8)
 
     val visibleTasks = remember(tasks, isPrivacyUnlocked, showCompleted) {
         tasks.filter { (!it.isPrivacy || isPrivacyUnlocked) && (showCompleted || !it.isCompleted) }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp)) {
-        // 頂部 Google Tasks 同步狀態與操作列
+        // 頂部 Google Tasks 同步呈現列（僅同步與檢視；新增待辦直接交由官方 Google Tasks App）
         Surface(
             color = tokens.surfaceCardColor,
             shape = RoundedCornerShape(tokens.cardCorner),
@@ -119,81 +119,74 @@ fun TasksCenterView(
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(googleTasksBlue.copy(alpha = 0.16f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.TaskAlt,
+                            contentDescription = "Google Tasks",
+                            tint = googleTasksBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "待辦事項 & Google Tasks",
+                            text = "Google Tasks 同步事項",
                             color = tokens.primaryTextColor,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (googleEmail.isNotBlank()) "已連結雲端同步 · 可自由決定待辦是否顯示於月曆格"
-                            else "支援本機待辦與連結 Google Tasks 同步顯示於日曆",
+                            text = if (googleEmail.isNotBlank()) "已連結同步顯示 · 新增待辦請直接於 Google Tasks App 操作"
+                            else "連結帳號後將自動同步 Google Tasks 並呈現於月曆與小工具",
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
                         )
                     }
-                    OutlinedButton(
-                        onClick = onSyncGoogleTasks,
-                        enabled = !isSyncingTasks
-                    ) {
-                        Icon(Icons.Filled.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isSyncingTasks) "同步中..." else "同步 Google Tasks", fontSize = 12.sp)
-                    }
                 }
 
-                // 快速新增待辦輸入列 + 月曆顯示決定鈕
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedTextField(
-                        value = quickText,
-                        onValueChange = { quickText = it },
-                        placeholder = { Text("快速新增今日待辦事項...", fontSize = 13.sp) },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f)
-                    )
                     Button(
                         onClick = {
-                            if (quickText.isNotBlank()) {
-                                onQuickAddTask(quickText.trim(), true, quickShowInMonth)
-                                quickText = ""
+                            val launch = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.tasks")
+                            if (launch != null) {
+                                runCatching { context.startActivity(launch) }
+                            } else {
+                                runCatching {
+                                    context.startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.tasks")
+                                        )
+                                    )
+                                }
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
+                        colors = ButtonDefaults.buttonColors(containerColor = googleTasksBlue),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text("新增")
+                        Icon(Icons.Filled.TaskAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text("開啟 Google Tasks", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    FilterChip(
-                        selected = quickShowInMonth,
-                        onClick = { quickShowInMonth = !quickShowInMonth },
-                        label = {
-                            Text(
-                                if (quickShowInMonth) "新待辦：顯示於月曆格" else "新待辦：不在月曆佔空間",
-                                fontSize = 11.sp
-                            )
-                        }
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = onOpenFullEditorForTask) {
-                            Text("進階提醒設定", fontSize = 12.sp)
-                        }
-                        TextButton(onClick = onClearCompleted) {
-                            Text("清除已完成", fontSize = 12.sp, color = tokens.secondaryTextColor)
-                        }
+                    OutlinedButton(
+                        onClick = onSyncGoogleTasks,
+                        enabled = !isSyncingTasks,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(if (isSyncingTasks) "同步中..." else "立即同步", fontSize = 12.sp)
                     }
                 }
             }
@@ -238,9 +231,9 @@ fun TasksCenterView(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
                     ) {
                         Icon(
-                            imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                            imageVector = if (task.isCompleted) Icons.Filled.CheckCircle else Icons.Filled.TaskAlt,
                             contentDescription = "完成",
-                            tint = Color(task.colorArgb),
+                            tint = googleTasksBlue,
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable { onToggleTask(task) }

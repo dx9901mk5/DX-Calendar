@@ -198,6 +198,12 @@ object WidgetRefreshHelper {
             if (countdownIds.isNotEmpty()) {
                 CountdownWeatherWidgetProvider.updateWidgets(appContext, mgr, countdownIds)
             }
+
+            // 5. 刷新 DX 單週 7 天天氣與行程小工具
+            val weekWeatherIds = mgr.getAppWidgetIds(ComponentName(appContext, WeekWeatherWidgetProvider::class.java))
+            if (weekWeatherIds.isNotEmpty()) {
+                WeekWeatherWidgetProvider.updateWidgets(appContext, mgr, weekWeatherIds)
+            }
         }
     }
 }
@@ -264,10 +270,14 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                         updateWidgets(appCtx, mgr, intArrayOf(widgetId), pendingResult = safeGoAsync())
                     }
                     WidgetRefreshHelper.ACTION_RESET_TODAY -> {
+                        val wasOtherMonth = WidgetRefreshHelper.getMonthOffset(appCtx, widgetId) != 0
                         WidgetRefreshHelper.setMonthOffset(appCtx, widgetId, 0)
                         WidgetRefreshHelper.setWeekOffset(appCtx, widgetId, 0)
-                        if (currentExpanded >= 0) {
+                        if (wasOtherMonth && currentExpanded >= 0) {
                             WidgetRefreshHelper.setExpandedWeekRow(appCtx, widgetId, -2)
+                        } else if (!wasOtherMonth && currentExpanded >= 0) {
+                            // 若已在當月展開其他週，點擊 now 回到當月完整視圖（若原本未展開則即時刷新今日）
+                            WidgetRefreshHelper.setExpandedWeekRow(appCtx, widgetId, -1)
                         }
                         updateWidgets(appCtx, mgr, intArrayOf(widgetId), pendingResult = safeGoAsync())
                     }
@@ -578,15 +588,11 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                 }
             }
             views.setTextViewText(R.id.widget_month_title, titleSpan)
-            // 完全對齊 vivo 簡潔大字頂欄：隱藏多餘的「全月」與「＋」鈕，非當月才顯示「今」快捷返回鈕
+            // 頂欄常駐醒目「now」快捷鍵：隨時一鍵回到今天當月並刷新
             views.setViewVisibility(R.id.btn_widget_mode, android.view.View.GONE)
             views.setViewVisibility(R.id.btn_widget_add, android.view.View.GONE)
-            val isNotCurrentMonth = ym != YearMonth.now()
-            views.setViewVisibility(
-                R.id.btn_widget_today,
-                if (isNotCurrentMonth) android.view.View.VISIBLE else android.view.View.GONE
-            )
-            views.setTextViewText(R.id.btn_widget_today, "今")
+            views.setViewVisibility(R.id.btn_widget_today, android.view.View.VISIBLE)
+            views.setTextViewText(R.id.btn_widget_today, "now")
             views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
 
             views.setOnClickPendingIntent(
@@ -729,6 +735,7 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
 
                                 views.setTextViewText(R.id.widget_month_title, "%d年%d月".format(ym.year, ym.monthValue))
                                 views.setViewVisibility(R.id.btn_widget_mode, android.view.View.GONE)
+                                views.setViewVisibility(R.id.btn_widget_today, android.view.View.VISIBLE)
                                 views.setTextViewText(R.id.btn_widget_today, "now")
                                 views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
 
@@ -783,6 +790,16 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == WidgetRefreshHelper.ACTION_RESET_TODAY) {
+            val appCtx = context.applicationContext ?: context
+            val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                val mgr = AppWidgetManager.getInstance(appCtx)
+                updateWidgets(appCtx, mgr, intArrayOf(widgetId), scrollToTop = true)
+                runCatching { mgr.notifyAppWidgetViewDataChanged(intArrayOf(widgetId), R.id.widget_list_view) }
+            }
+            return
+        }
         if (intent.action == WidgetRefreshHelper.ACTION_TOGGLE_TASK ||
             intent.action == WidgetRefreshHelper.ACTION_CLICK_ITEM
         ) {
@@ -835,7 +852,7 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
-        fun updateWidgets(context: Context, mgr: AppWidgetManager, ids: IntArray) {
+        fun updateWidgets(context: Context, mgr: AppWidgetManager, ids: IntArray, scrollToTop: Boolean = false) {
             val appCtx = context.applicationContext ?: context
             widgetScope.launch {
                 val repo = CalendarRepository(appCtx)
@@ -855,6 +872,8 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
                         views.setTextViewText(R.id.widget_list_header_title, header)
                         views.setTextViewText(R.id.widget_list_badge, "")
                         views.setViewVisibility(R.id.widget_list_badge, android.view.View.INVISIBLE)
+                        views.setViewVisibility(R.id.btn_widget_list_now, android.view.View.VISIBLE)
+                        views.setTextViewText(R.id.btn_widget_list_now, "now")
 
                         val svcIntent = Intent(appCtx, ScheduleRemoteViewsService::class.java).apply {
                             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -863,7 +882,14 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
                         }
                         views.setRemoteAdapter(R.id.widget_list_view, svcIntent)
                         views.setEmptyView(R.id.widget_list_view, R.id.widget_empty_text)
+                        if (scrollToTop) {
+                            views.setScrollPosition(R.id.widget_list_view, 0)
+                        }
 
+                        views.setOnClickPendingIntent(
+                            R.id.btn_widget_list_now,
+                            buildBroadcastPi(appCtx, GoogleScheduleWidgetProvider::class.java, WidgetRefreshHelper.ACTION_RESET_TODAY, id, 29)
+                        )
                         views.setOnClickPendingIntent(R.id.btn_widget_list_config, buildWidgetConfigPi(appCtx, id, 28))
                         views.setOnClickPendingIntent(R.id.btn_widget_list_add, buildMainAppPi(appCtx, id * 10 + 21, quickAdd = true))
                         views.setOnClickPendingIntent(R.id.widget_list_header_title, buildMainAppPi(appCtx, id * 10 + 22, quickAdd = false))
@@ -1182,7 +1208,11 @@ private fun applyMonthContainerThemeAndOpacity(
     views.setTextColor(R.id.btn_widget_mode, modeChipTextColor)
     views.setInt(R.id.btn_widget_mode, "setBackgroundColor", modeChipBgColor)
     views.setTextColor(R.id.btn_widget_today, safeAccent)
-    views.setInt(R.id.btn_widget_today, "setBackgroundColor", todayChipBg)
+    views.setInt(
+        R.id.btn_widget_today,
+        "setBackgroundResource",
+        if (darkStyle) R.drawable.bg_widget_now_pill_dark else R.drawable.bg_widget_now_pill_light
+    )
     views.setTextColor(R.id.btn_widget_add, safeAccent)
 }
 
@@ -1199,12 +1229,18 @@ private fun applyListContainerThemeAndOpacity(
     )
     views.setInt(R.id.widget_bg_layer, "setImageAlpha", alpha255)
 
-    val titleColor = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF161618.toInt()
-    val iconMutedColor = if (darkStyle) 0xFFA8A8B4.toInt() else 0xFF5A5A66.toInt()
-    val emptyColor = if (darkStyle) 0xFF8E8E96.toInt() else 0xFF64646E.toInt()
+    val titleColor = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF101014.toInt()
+    val iconMutedColor = if (darkStyle) 0xFFE6E6F0.toInt() else 0xFF282832.toInt()
+    val emptyColor = if (darkStyle) 0xFFD0D0DC.toInt() else 0xFF3E3E4A.toInt()
     val safeAccent = accentArgb or 0xFF000000.toInt()
 
     views.setTextColor(R.id.widget_list_header_title, titleColor)
+    views.setTextColor(R.id.btn_widget_list_now, safeAccent)
+    views.setInt(
+        R.id.btn_widget_list_now,
+        "setBackgroundResource",
+        if (darkStyle) R.drawable.bg_widget_now_pill_dark else R.drawable.bg_widget_now_pill_light
+    )
     views.setTextColor(R.id.btn_widget_list_config, iconMutedColor)
     views.setTextColor(R.id.widget_empty_text, emptyColor)
     views.setTextColor(R.id.widget_list_badge, safeAccent)
@@ -1559,7 +1595,7 @@ internal object MonthCanvasRenderer {
                         for (ev in dayEvents) {
                             val remainH = cardAreaBottom - yCursor
                             if (remainH < lineH + 5f * density) break
-                            val label = (if (ev.isTask) "○" else "") + ev.title
+                            val label = (if (ev.isTask) (if (ev.isCompleted) "☑ " else "✓ ") else "") + ev.title
                             val maxLinesForCard = when {
                                 remainH >= lineH * 3 + 8f * density -> 3
                                 remainH >= lineH * 2 + 6f * density -> 2
@@ -1628,7 +1664,7 @@ internal object MonthCanvasRenderer {
                             chipPaint.color = (ev.colorArgb and 0x00FFFFFF) or 0x55000000
                             val rect = RectF(cellLeft + 2f * density, top, cellLeft + colW - 2f * density, top + chipH)
                             canvas.drawRoundRect(rect, 3f * density, 3f * density, chipPaint)
-                            val label = (if (ev.isTask) "○" else "") + ev.title
+                            val label = (if (ev.isTask) (if (ev.isCompleted) "☑ " else "✓ ") else "") + ev.title
                             val clipped = clipTextToWidth(label, chipTextPaint, colW - 6f * density)
                             chipTextPaint.alpha = alphaFactor
                             canvas.drawText(clipped, cellLeft + 3.5f * density, top + chipH - 2.2f * density, chipTextPaint)

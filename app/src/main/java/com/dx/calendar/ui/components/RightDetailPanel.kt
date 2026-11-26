@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material3.Button
@@ -265,9 +266,9 @@ fun RightDetailPanel(
                     ) {
                         if (item.isTask) {
                             Icon(
-                                imageVector = if (item.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                contentDescription = "打勾",
-                                tint = Color(item.colorArgb),
+                                imageVector = if (item.isCompleted) Icons.Filled.CheckCircle else Icons.Filled.TaskAlt,
+                                contentDescription = "Google Tasks",
+                                tint = Color(0xFF1A73E8),
                                 modifier = Modifier
                                     .size(22.dp)
                                     .clickable { onToggleComplete(item) }
@@ -418,14 +419,40 @@ private fun FocusedItemDetailCard(
             TextButton(onClick = onBack) {
                 Text("← 返回當日總覽", color = tokens.secondaryTextColor)
             }
-            Button(
-                onClick = onEdit,
-                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("編輯")
+            if (item.isTask) {
+                Button(
+                    onClick = {
+                        val launch = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.tasks")
+                        if (launch != null) {
+                            runCatching { context.startActivity(launch) }
+                        } else {
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.tasks")
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8)),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Icon(Icons.Filled.TaskAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("開啟 Google Tasks", color = Color.White, fontSize = 12.sp)
+                }
+            } else {
+                Button(
+                    onClick = onEdit,
+                    colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("編輯")
+                }
             }
         }
 

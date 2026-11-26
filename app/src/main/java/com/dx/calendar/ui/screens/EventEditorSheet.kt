@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -193,7 +194,8 @@ fun EventEditorScreen(
     onDelete: (() -> Unit)? = null,
     initialRichMeta: com.dx.calendar.data.local.EventRichMeta? = null,
     onPickAttachmentImage: ((String) -> Unit) -> Unit = {},
-    onSaveAsTemplate: ((com.dx.calendar.data.local.EventTemplateItem) -> Unit)? = null
+    onSaveAsTemplate: ((com.dx.calendar.data.local.EventTemplateItem) -> Unit)? = null,
+    onLaunchVoiceInput: ((String) -> Unit) -> Unit = {}
 ) {
     val tokens = LocalBrandTokens.current
     val context = LocalContext.current
@@ -202,12 +204,11 @@ fun EventEditorScreen(
     var entryMode by remember {
         mutableIntStateOf(
             when {
-                editingTask != null || presetTaskMode -> 1
                 editingEvent?.isRoutine == true || presetRoutine -> 2
                 else -> 0
             }
         )
-    } // 0: 日曆活動, 1: 待辦事項(Task), 2: 例行事務(Routine)
+    } // 0: 日曆活動, 2: 例行事務(Routine)（已移除直接新增 Google Tasks，改由 Google Tasks App 新增後同步呈現）
 
     val initStartZdt = editingEvent?.let { Instant.ofEpochMilli(it.startEpochMillis).atZone(zone) }
         ?: editingSystemEvent?.let { Instant.ofEpochMilli(it.startMillis).atZone(zone) }
@@ -443,20 +444,20 @@ fun EventEditorScreen(
             }
 
             val leftEditorSection: @Composable () -> Unit = {
-                // 模式快速切換：一般活動 / 待辦(Task) / 例行事務(Routine)
+                // 模式快速切換：一般活動 / 例行事務（新增待辦由 Google Tasks App 負責，此處專注日曆活動）
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf("一般活動", "待辦 Task", "例行事務").forEachIndexed { index, label ->
+                    listOf(0 to "一般活動", 2 to "例行事務").forEachIndexed { idx, (modeValue, label) ->
                         SegmentedButton(
-                            selected = entryMode == index,
+                            selected = entryMode == modeValue,
                             onClick = {
-                                entryMode = index
-                                if (index == 2) {
+                                entryMode = modeValue
+                                if (modeValue == 2) {
                                     isRoutine = true
                                     if (routineDefaultHideFromMonth) showInMonthGrid = false
                                     if (recurrence == RecurrenceType.NONE) recurrence = RecurrenceType.DAILY
                                 }
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 3)
+                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = 2)
                         ) {
                             Text(label, fontSize = 13.sp)
                         }
@@ -498,30 +499,67 @@ fun EventEditorScreen(
                     }
                 }
 
-                // 區塊 2：標題 + 歷史範本按鈕（仿截圖 2 右側時鐘圖示）
+                // 區塊 2：標題 + 語音一句話自動填表 + 歷史範本按鈕
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
                         OutlinedTextField(
                             value = title,
                             onValueChange = { title = it },
-                            label = { Text("標題 (例如：開會、每日吃藥提醒)") },
+                            label = { Text("標題（或點右側麥克風語音自動填日期時間）") },
                             trailingIcon = {
-                                Box {
-                                    IconButton(onClick = { showHistoryMenu = true }) {
-                                        Icon(Icons.Filled.History, contentDescription = "常用標題紀錄")
-                                    }
-                                    DropdownMenu(
-                                        expanded = showHistoryMenu,
-                                        onDismissRequest = { showHistoryMenu = false }
-                                    ) {
-                                        titleHistory.forEach { h ->
-                                            DropdownMenuItem(
-                                                text = { Text(h.title) },
-                                                onClick = {
-                                                    title = h.title
-                                                    showHistoryMenu = false
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = {
+                                            onLaunchVoiceInput { spoken ->
+                                                val parsed = com.dx.calendar.util.NaturalLanguageEventParser.parse(spoken, initialDate)
+                                                title = parsed.title
+                                                startDate = parsed.date
+                                                endDate = parsed.date
+                                                isAllDay = parsed.isAllDay
+                                                if (!parsed.isAllDay) {
+                                                    startTime = parsed.startTime
+                                                    endTime = parsed.endTime
                                                 }
-                                            )
+                                                if (parsed.recurrenceType != RecurrenceType.NONE) {
+                                                    recurrence = parsed.recurrenceType
+                                                    recurrenceIntervalWeeks = parsed.recurrenceIntervalWeeks
+                                                }
+                                                if (parsed.reminderMinutes.isNotEmpty()) {
+                                                    selectedReminders.clear()
+                                                    selectedReminders.addAll(parsed.reminderMinutes)
+                                                }
+                                                if (parsed.isCountdown) isCountdown = true
+                                                android.widget.Toast.makeText(
+                                                    context,
+                                                    "🎙️ 已語音解析：${parsed.title}（${parsed.date}）",
+                                                    android.widget.Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Mic,
+                                            contentDescription = "語音輸入自動填表",
+                                            tint = tokens.accentColor
+                                        )
+                                    }
+                                    Box {
+                                        IconButton(onClick = { showHistoryMenu = true }) {
+                                            Icon(Icons.Filled.History, contentDescription = "常用標題紀錄")
+                                        }
+                                        DropdownMenu(
+                                            expanded = showHistoryMenu,
+                                            onDismissRequest = { showHistoryMenu = false }
+                                        ) {
+                                            titleHistory.forEach { h ->
+                                                DropdownMenuItem(
+                                                    text = { Text(h.title) },
+                                                    onClick = {
+                                                        title = h.title
+                                                        showHistoryMenu = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1286,7 +1324,7 @@ fun EventEditorScreen(
             onDismissRequest = { showRecurrenceDialog = false },
             title = { Text("重複規則") },
             text = {
-                Column {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     RecurrenceType.entries.forEach { type ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -1417,13 +1455,9 @@ fun EventEditorScreen(
                         Spacer(modifier = Modifier.height(10.dp))
                     }
 
-                    Text("本機行事曆與待辦", fontSize = 12.sp, color = tokens.secondaryTextColor)
-                    categories.filter { allowPrivacyEditing || !it.isPrivacyCategory }.forEach { cat ->
-                        val isSelectedCat = if (cat.isTaskCategory) {
-                            entryMode == 1
-                        } else {
-                            entryMode != 1 && selectedSystemCalId == null && categoryId == cat.id
-                        }
+                    Text("本機行事曆分類", fontSize = 12.sp, color = tokens.secondaryTextColor)
+                    categories.filter { !it.isTaskCategory && (allowPrivacyEditing || !it.isPrivacyCategory) }.forEach { cat ->
+                        val isSelectedCat = selectedSystemCalId == null && categoryId == cat.id
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -1432,12 +1466,7 @@ fun EventEditorScreen(
                                     userManuallyPickedCalendar = true
                                     categoryId = cat.id
                                     selectedSystemCalId = null
-                                    if (cat.isTaskCategory) {
-                                        entryMode = 1
-                                    } else {
-                                        if (entryMode == 1) entryMode = 0
-                                        if (cat.isPrivacyCategory) isPrivacy = true
-                                    }
+                                    if (cat.isPrivacyCategory) isPrivacy = true
                                     showCategoryDialog = false
                                 }
                                 .padding(vertical = 10.dp)

@@ -62,12 +62,12 @@ abstract class AppDatabase : RoomDatabase() {
         private suspend fun seedDefaultData(dao: CalendarDao) {
             // 仿 vivo 日曆預設本機時間表類型 + 待辦事項 + 例行事務 + 隱私空間
             val defaultCategories = listOf(
-                CalendarCategoryEntity(id = 1, name = "個人", colorArgb = 0xFF448AFF.toInt(), accountName = "本機時間表", isBuiltIn = true),
+                CalendarCategoryEntity(id = 1, name = "個人", colorArgb = 0xFFC8962E.toInt(), accountName = "本機時間表", isBuiltIn = true),
                 CalendarCategoryEntity(id = 2, name = "生日", colorArgb = 0xFFFFB300.toInt(), accountName = "本機時間表", isBuiltIn = true),
                 CalendarCategoryEntity(id = 3, name = "工作", colorArgb = 0xFFFF5252.toInt(), accountName = "本機時間表", isBuiltIn = true),
                 CalendarCategoryEntity(id = 4, name = "紀念日", colorArgb = 0xFFAB47BC.toInt(), accountName = "本機時間表", isBuiltIn = true),
                 CalendarCategoryEntity(id = 5, name = "倒數天數", colorArgb = 0xFF00C853.toInt(), accountName = "本機時間表", isBuiltIn = true),
-                CalendarCategoryEntity(id = 6, name = "To-Do / Google Tasks", colorArgb = 0xFFFFAB00.toInt(), accountName = "待辦事項", isTaskCategory = true, isBuiltIn = true),
+                CalendarCategoryEntity(id = 6, name = "Google Tasks", colorArgb = 0xFF1A73E8.toInt(), accountName = "待辦事項", isTaskCategory = true, isBuiltIn = true),
                 CalendarCategoryEntity(id = 7, name = "例行事務", colorArgb = 0xFF26A69A.toInt(), accountName = "例行中心", isBuiltIn = true),
                 CalendarCategoryEntity(id = 8, name = "隱私密件", colorArgb = 0xFFE91E63.toInt(), accountName = "隱私日曆", isPrivacyCategory = true, isBuiltIn = true)
             )

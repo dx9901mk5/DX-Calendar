@@ -173,6 +173,8 @@ fun SettingsAndManageScreen(
     onUploadBackupToGoogleDrive: () -> Unit = {},
     onExportFullBackupFile: () -> Unit = {},
     onRestoreFullBackupFile: () -> Unit = {},
+    onImportContactBirthdays: () -> Unit = {},
+    onOpenFeatureGuide: () -> Unit = {},
     onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
     onUpdateDefaultTaskReminders: (List<Int>) -> Unit = {},
@@ -463,6 +465,8 @@ fun SettingsAndManageScreen(
                                     onUploadBackupToGoogleDrive = onUploadBackupToGoogleDrive,
                                     onExportFullBackupFile = onExportFullBackupFile,
                                     onRestoreFullBackupFile = onRestoreFullBackupFile,
+                                    onImportContactBirthdays = onImportContactBirthdays,
+                                    onOpenFeatureGuide = onOpenFeatureGuide,
                                     onUpdateHolidayPrefs = onUpdateHolidayPrefs,
                                     onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
                                     onUpdateDefaultTaskReminders = onUpdateDefaultTaskReminders,
@@ -577,6 +581,8 @@ fun SettingsAndManageScreen(
                                     onUploadBackupToGoogleDrive = onUploadBackupToGoogleDrive,
                                     onExportFullBackupFile = onExportFullBackupFile,
                                     onRestoreFullBackupFile = onRestoreFullBackupFile,
+                                    onImportContactBirthdays = onImportContactBirthdays,
+                                    onOpenFeatureGuide = onOpenFeatureGuide,
                                     onUpdateHolidayPrefs = onUpdateHolidayPrefs,
                                     onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
                                     onUpdateDefaultTaskReminders = onUpdateDefaultTaskReminders,
@@ -731,6 +737,8 @@ private fun DxSettingsSectionContent(
     onUploadBackupToGoogleDrive: () -> Unit = {},
     onExportFullBackupFile: () -> Unit = {},
     onRestoreFullBackupFile: () -> Unit = {},
+    onImportContactBirthdays: () -> Unit = {},
+    onOpenFeatureGuide: () -> Unit = {},
     onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
     onUpdateDefaultTaskReminders: (List<Int>) -> Unit = {},
@@ -924,14 +932,14 @@ private fun DxSettingsSectionContent(
                                         Icon(
                                             Icons.Filled.TaskAlt,
                                             contentDescription = null,
-                                            tint = Color(0xFFFFAB00),
-                                            modifier = Modifier.size(16.dp)
+                                            tint = Color(0xFF1A73E8),
+                                            modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text("Google Tasks", color = tokens.primaryTextColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                                             Text(
-                                                text = if (isTasksLinked) "已啟動自動同步" else "點擊右側啟動授權同步",
+                                                text = if (isTasksLinked) "已同步呈現於日曆（新增請至 Google Tasks App）" else "點擊右側啟動同步呈現",
                                                 color = tokens.secondaryTextColor,
                                                 fontSize = 11.sp
                                             )
@@ -1727,6 +1735,11 @@ private fun DxSettingsSectionContent(
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("匯出本機日程為標準 .ics 檔案分享")
                         }
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        Text("聯絡人生日自動匯入", color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        OutlinedButton(onClick = onImportContactBirthdays, modifier = Modifier.fillMaxWidth()) {
+                            Text("🎂 從手機聯絡人匯入生日（自動計算今年幾歲與倒數）", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -1762,6 +1775,9 @@ private fun DxSettingsSectionContent(
             }
 
             DxSettingsSection.ABOUT_UPDATE -> {
+                OutlinedButton(onClick = onOpenFeatureGuide, modifier = Modifier.fillMaxWidth()) {
+                    Text("📖 查看全功能操作指南與快捷按鈕", color = tokens.accentColor, fontWeight = FontWeight.Bold)
+                }
                 GitHubUpdateCard(
                     autoCheckEnabled = settings.autoCheckUpdate,
                     updateState = updateState,

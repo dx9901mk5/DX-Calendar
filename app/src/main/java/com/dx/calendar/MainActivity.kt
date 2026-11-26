@@ -97,6 +97,16 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { }
 
+    private val contactsPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.importContactBirthdays()
+        } else {
+            Toast.makeText(this, "需要聯絡人權限才能自動匯入聯絡人生日", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private val wallpaperPickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -296,6 +306,15 @@ class MainActivity : AppCompatActivity() {
                 },
                 onRestoreFullBackupFile = {
                     runCatching { backupRestoreLauncher.launch(arrayOf("application/json", "*/*")) }
+                },
+                onImportContactBirthdays = {
+                    val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) ==
+                        PackageManager.PERMISSION_GRANTED
+                    if (granted) {
+                        viewModel.importContactBirthdays()
+                    } else {
+                        contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                    }
                 }
             )
         }

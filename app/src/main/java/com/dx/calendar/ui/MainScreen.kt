@@ -54,6 +54,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Search
@@ -144,7 +145,8 @@ fun DXCalendarRootApp(
     onPickEventAttachment: ((String) -> Unit) -> Unit = {},
     onUploadBackupToGoogleDrive: () -> Unit = {},
     onExportFullBackupFile: () -> Unit = {},
-    onRestoreFullBackupFile: () -> Unit = {}
+    onRestoreFullBackupFile: () -> Unit = {},
+    onImportContactBirthdays: () -> Unit = {}
 ) {
     val settings by viewModel.settings.collectAsState()
     val categories by viewModel.categories.collectAsState()
@@ -175,6 +177,7 @@ fun DXCalendarRootApp(
     var showSearchDialog by remember { mutableStateOf(false) }
     var showAlmanacDiscoveryDialog by remember { mutableStateOf(false) }
     var showQuickNlpDialog by remember { mutableStateOf(false) }
+    var autoLaunchVoiceInNlp by remember { mutableStateOf(false) }
     var showTemplateStampBar by remember { mutableStateOf(false) }
     var activeStampTemplate by remember { mutableStateOf<com.dx.calendar.data.local.EventTemplateItem?>(null) }
     var showNewTemplateDialog by remember { mutableStateOf(false) }
@@ -182,6 +185,7 @@ fun DXCalendarRootApp(
     var pomodoroTargetTitle by remember { mutableStateOf<String?>(null) }
     var showPomodoroDialog by remember { mutableStateOf(false) }
     var pomodoroCompleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var showFeatureGuideDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
     // 仿三星日曆手勢動畫狀態：手機月檢視預設滿版月曆 (false)，上滑平滑壓縮月曆並拉起下方時間表 (true)；再點已選日期彈出 24h 浮動時間軸卡片
     var showCompactBottomDayPanel by remember {
@@ -296,7 +300,10 @@ fun DXCalendarRootApp(
                     onOpenSearch = { showSearchDialog = true },
                     onOpenSettings = { viewModel.openSettings(true) },
                     onJumpToToday = { viewModel.jumpToToday() },
-                    onOpenQuickNlp = { showQuickNlpDialog = true },
+                    onOpenQuickNlp = {
+                        autoLaunchVoiceInNlp = false
+                        showQuickNlpDialog = true
+                    },
                     onToggleTemplateBar = {
                         showTemplateStampBar = !showTemplateStampBar
                         if (!showTemplateStampBar) activeStampTemplate = null
@@ -306,6 +313,8 @@ fun DXCalendarRootApp(
                         pomodoroCompleteAction = null
                         showPomodoroDialog = true
                     },
+                    onImportContactBirthdays = onImportContactBirthdays,
+                    onOpenFeatureGuide = { showFeatureGuideDialog = true },
                     onJumpToDate = {
                         runCatching {
                             DatePickerDialog(
@@ -518,6 +527,9 @@ fun DXCalendarRootApp(
                                             onShiftEventTimeMinutes = { ev, deltaMin ->
                                                 viewModel.shiftUnifiedItemTimeMinutes(ev, deltaMin)
                                             },
+                                            onSelectSecondaryTimeZone = { tzId ->
+                                                viewModel.setSecondaryTimeZoneId(tzId)
+                                            },
                                             onSwipePrevMonth = { viewModel.shiftMonth(-1) },
                                             onSwipeNextMonth = { viewModel.shiftMonth(1) },
                                             onVerticalDragDelta = { deltaY ->
@@ -544,11 +556,22 @@ fun DXCalendarRootApp(
                                             onDeleteItem = { viewModel.deleteUnifiedItem(it) },
                                             onShareItem = { item ->
                                                 runCatching {
+                                                    val meta = richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(item.sourceType.name, item.rawId)]
+                                                    val commentsBlock = meta?.sharedComments?.takeIf { it.isNotEmpty() }?.joinToString("\n") {
+                                                        "・${it.author}：${it.content}"
+                                                    }
+                                                    val mapUrl = if (item.location.isNotBlank()) "\n導航：https://maps.google.com/?q=${Uri.encode(item.location)}" else ""
+                                                    val textBody = buildString {
+                                                        append("【${item.title}】\n日期：${item.date}")
+                                                        if (item.location.isNotBlank()) append("\n地點：${item.location}$mapUrl")
+                                                        if (item.notes.isNotBlank()) append("\n備註：${item.notes}")
+                                                        if (!commentsBlock.isNullOrBlank()) append("\n\n💬 協作留言：\n$commentsBlock")
+                                                    }
                                                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                                         type = "text/plain"
-                                                        putExtra(Intent.EXTRA_TEXT, "【${item.title}】\n日期：${item.date}\n地點：${item.location}\n${item.notes}")
+                                                        putExtra(Intent.EXTRA_TEXT, textBody)
                                                     }
-                                                    context.startActivity(Intent.createChooser(shareIntent, "分享行程"))
+                                                    context.startActivity(Intent.createChooser(shareIntent, "分享行程給家人／另一半"))
                                                 }
                                             },
                                             onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
@@ -674,6 +697,9 @@ fun DXCalendarRootApp(
                                                 onShiftEventTimeMinutes = { ev, deltaMin ->
                                                     viewModel.shiftUnifiedItemTimeMinutes(ev, deltaMin)
                                                 },
+                                                onSelectSecondaryTimeZone = { tzId ->
+                                                    viewModel.setSecondaryTimeZoneId(tzId)
+                                                },
                                                 onSwipePrevMonth = { viewModel.shiftMonth(-1) },
                                                 onSwipeNextMonth = { viewModel.shiftMonth(1) },
                                                 onVerticalDragDelta = if (canSplitVertically) { deltaY ->
@@ -752,11 +778,22 @@ fun DXCalendarRootApp(
                                                     onDeleteItem = { viewModel.deleteUnifiedItem(it) },
                                                     onShareItem = { item ->
                                                         runCatching {
+                                                            val meta = richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(item.sourceType.name, item.rawId)]
+                                                            val commentsBlock = meta?.sharedComments?.takeIf { it.isNotEmpty() }?.joinToString("\n") {
+                                                                "・${it.author}：${it.content}"
+                                                            }
+                                                            val mapUrl = if (item.location.isNotBlank()) "\n導航：https://maps.google.com/?q=${Uri.encode(item.location)}" else ""
+                                                            val textBody = buildString {
+                                                                append("【${item.title}】\n日期：${item.date}")
+                                                                if (item.location.isNotBlank()) append("\n地點：${item.location}$mapUrl")
+                                                                if (item.notes.isNotBlank()) append("\n備註：${item.notes}")
+                                                                if (!commentsBlock.isNullOrBlank()) append("\n\n💬 協作留言：\n$commentsBlock")
+                                                            }
                                                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                                                 type = "text/plain"
-                                                                putExtra(Intent.EXTRA_TEXT, "【${item.title}】 ${item.date}")
+                                                                putExtra(Intent.EXTRA_TEXT, textBody)
                                                             }
-                                                            context.startActivity(Intent.createChooser(shareIntent, "分享行程"))
+                                                            context.startActivity(Intent.createChooser(shareIntent, "分享行程給家人／另一半"))
                                                         }
                                                     },
                                                     onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
@@ -807,12 +844,16 @@ fun DXCalendarRootApp(
                                 viewModel.setMainSection(sec)
                             },
                             onJumpToday = { viewModel.jumpToToday() },
+                            onVoiceQuickAdd = {
+                                autoLaunchVoiceInNlp = true
+                                showQuickNlpDialog = true
+                            },
                             onQuickAdd = {
                                 viewModel.openNewEditor(
                                     date = selectedDate,
                                     presetRoutine = mainSection == MainSection.ROUTINES,
                                     presetPrivacy = mainSection == MainSection.PRIVACY && isPrivacyUnlocked,
-                                    presetTaskMode = mainSection == MainSection.TASKS
+                                    presetTaskMode = false
                                 )
                             }
                         )
@@ -828,12 +869,16 @@ fun DXCalendarRootApp(
                             viewModel.setMainSection(sec)
                         },
                         onJumpToday = { viewModel.jumpToToday() },
+                        onVoiceQuickAdd = {
+                            autoLaunchVoiceInNlp = true
+                            showQuickNlpDialog = true
+                        },
                         onQuickAdd = {
                             viewModel.openNewEditor(
                                 date = selectedDate,
                                 presetRoutine = mainSection == MainSection.ROUTINES,
                                 presetPrivacy = mainSection == MainSection.PRIVACY && isPrivacyUnlocked,
-                                presetTaskMode = mainSection == MainSection.TASKS
+                                presetTaskMode = false
                             )
                         }
                     )
@@ -915,6 +960,11 @@ fun DXCalendarRootApp(
                 onUploadBackupToGoogleDrive = onUploadBackupToGoogleDrive,
                 onExportFullBackupFile = onExportFullBackupFile,
                 onRestoreFullBackupFile = onRestoreFullBackupFile,
+                onImportContactBirthdays = onImportContactBirthdays,
+                onOpenFeatureGuide = {
+                    viewModel.openSettings(false)
+                    showFeatureGuideDialog = true
+                },
                 onUpdateHolidayPrefs = { pub, trad, solar -> viewModel.setHolidayPreferences(pub, trad, solar) },
                 onUpdateDefaultEventReminders = { viewModel.setDefaultEventReminders(it) },
                 onUpdateDefaultTaskReminders = { viewModel.setDefaultTaskReminders(it) },
@@ -1023,7 +1073,8 @@ fun DXCalendarRootApp(
                     else -> null
                 },
                 onPickAttachmentImage = onPickEventAttachment,
-                onSaveAsTemplate = { tpl -> viewModel.saveEventTemplate(tpl) }
+                onSaveAsTemplate = { tpl -> viewModel.saveEventTemplate(tpl) },
+                onLaunchVoiceInput = onLaunchVoiceInput
             )
         }
         }
@@ -1032,7 +1083,11 @@ fun DXCalendarRootApp(
         if (showQuickNlpDialog) {
             com.dx.calendar.ui.components.QuickNaturalLanguageDialog(
                 today = today,
-                onDismiss = { showQuickNlpDialog = false },
+                autoLaunchVoice = autoLaunchVoiceInNlp,
+                onDismiss = {
+                    showQuickNlpDialog = false
+                    autoLaunchVoiceInNlp = false
+                },
                 onLaunchVoice = onLaunchVoiceInput,
                 onConfirmCreate = { text -> viewModel.quickCreateFromNaturalLanguage(text) }
             )
@@ -1048,6 +1103,31 @@ fun DXCalendarRootApp(
                 taskTitle = pomodoroTargetTitle,
                 onDismiss = { showPomodoroDialog = false },
                 onCompleteTask = pomodoroCompleteAction
+            )
+        }
+        if (showFeatureGuideDialog) {
+            com.dx.calendar.ui.components.FeatureGuideDialog(
+                onDismiss = { showFeatureGuideDialog = false },
+                onOpenVoiceQuickAdd = {
+                    autoLaunchVoiceInNlp = true
+                    showQuickNlpDialog = true
+                },
+                onOpenShiftStamp = {
+                    viewModel.setMainSection(MainSection.CALENDAR)
+                    viewModel.setViewMode(CalendarViewMode.MONTH)
+                    showTemplateStampBar = true
+                },
+                onOpenPomodoro = {
+                    pomodoroTargetTitle = null
+                    pomodoroCompleteAction = null
+                    showPomodoroDialog = true
+                },
+                onImportContactBirthdays = onImportContactBirthdays,
+                onOpenWeekTimeline = {
+                    viewModel.setMainSection(MainSection.CALENDAR)
+                    viewModel.setViewMode(CalendarViewMode.WEEK)
+                },
+                onOpenSettings = { viewModel.openSettings(true) }
             )
         }
 
@@ -1299,6 +1379,8 @@ private fun AdaptiveTopHeaderBar(
     onOpenQuickNlp: () -> Unit = {},
     onToggleTemplateBar: () -> Unit = {},
     onOpenPomodoro: () -> Unit = {},
+    onImportContactBirthdays: () -> Unit = {},
+    onOpenFeatureGuide: () -> Unit = {},
     onJumpToDate: () -> Unit,
     onOpenAlmanacDiscovery: () -> Unit,
     onQuickPrivacyAccess: () -> Unit
@@ -1351,9 +1433,13 @@ private fun AdaptiveTopHeaderBar(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 大螢幕或橫扁寬分割視窗直接於同行顯示「年 / 月 / 週 / 日 / 時間表」分段膠囊
+            // 大螢幕或橫扁寬分割視窗直接於同行顯示「年 / 月 / 週 / 日 / 時間表」＋「排班 / 番茄」快捷按鈕
             if (!compact && mainSection == MainSection.CALENDAR) {
-                ViewModeSegmentedPill(current = viewMode, onSelect = onSelectViewMode)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ViewModeSegmentedPill(current = viewMode, onSelect = onSelectViewMode)
+                    QuickToolMiniPill("🏷️排班", onToggleTemplateBar)
+                    QuickToolMiniPill("🍅番茄", onOpenPomodoro)
+                }
                 Spacer(modifier = Modifier.weight(1f))
             }
 
@@ -1430,7 +1516,7 @@ private fun AdaptiveTopHeaderBar(
                 DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
                     DropdownMenuItem(
                         text = { Text("🎙️ 一句話／語音快速建行程") },
-                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        leadingIcon = { Icon(Icons.Filled.Mic, contentDescription = null, tint = tokens.accentColor) },
                         onClick = { showOverflow = false; onOpenQuickNlp() }
                     )
                     DropdownMenuItem(
@@ -1442,6 +1528,16 @@ private fun AdaptiveTopHeaderBar(
                         text = { Text("🍅 番茄鐘專注計時器") },
                         leadingIcon = { Icon(Icons.Filled.Today, contentDescription = null) },
                         onClick = { showOverflow = false; onOpenPomodoro() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("🎂 匯入聯絡人生日（自動算歲數）") },
+                        leadingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null) },
+                        onClick = { showOverflow = false; onImportContactBirthdays() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("📖 功能指南與快捷按鈕") },
+                        leadingIcon = { Icon(Icons.Filled.Explore, contentDescription = null, tint = tokens.accentColor) },
+                        onClick = { showOverflow = false; onOpenFeatureGuide() }
                     )
                     DropdownMenuItem(
                         text = { Text("日期重新導向 (跳至指定日)") },
@@ -1457,13 +1553,43 @@ private fun AdaptiveTopHeaderBar(
             }
         }
 
-        // 手機與小視窗：第二行顯示緊湊「年 / 月 / 週 / 日 / 時間表」分段膠囊
+        // 手機與小視窗：第二行顯示「年 / 月 / 週 / 日 / 時間表」＋「排班 / 番茄」一鍵快捷膠囊（零額外高度！）
         if (compact && mainSection == MainSection.CALENDAR) {
             Spacer(modifier = Modifier.height(4.dp))
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
                 ViewModeSegmentedPill(current = viewMode, onSelect = onSelectViewMode)
+                QuickToolMiniPill("🏷️排班", onToggleTemplateBar)
+                QuickToolMiniPill("🍅番茄", onOpenPomodoro)
             }
         }
+    }
+}
+
+@Composable
+private fun QuickToolMiniPill(label: String, onClick: () -> Unit) {
+    val tokens = LocalBrandTokens.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(tokens.surfaceCardColor)
+            .border(0.8.dp, tokens.accentColor.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 5.dp)
+    ) {
+        Text(
+            text = label,
+            color = tokens.accentColor,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
     }
 }
 
@@ -1536,7 +1662,8 @@ private fun CalendarPrimaryViewport(
     onVerticalDragEnd: (() -> Unit)? = null,
     onToggleComplete: (com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit,
     onLongPressItem: ((com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit)? = null,
-    onShiftEventTimeMinutes: ((com.dx.calendar.data.repository.UnifiedCalendarItem, Int) -> Unit)? = null
+    onShiftEventTimeMinutes: ((com.dx.calendar.data.repository.UnifiedCalendarItem, Int) -> Unit)? = null,
+    onSelectSecondaryTimeZone: ((String) -> Unit)? = null
 ) {
     AnimatedContent(
         targetState = viewMode,
@@ -1617,6 +1744,7 @@ private fun CalendarPrimaryViewport(
                 onSelectDate = onSelectDate,
                 onSelectItem = onSelectItem,
                 secondaryTimeZoneId = settings.secondaryTimeZoneId,
+                onSelectSecondaryTimeZone = onSelectSecondaryTimeZone,
                 onShiftEventTimeMinutes = onShiftEventTimeMinutes
             )
 
@@ -1629,6 +1757,7 @@ private fun CalendarPrimaryViewport(
                 onSelectDate = onSelectDate,
                 onSelectItem = onSelectItem,
                 secondaryTimeZoneId = settings.secondaryTimeZoneId,
+                onSelectSecondaryTimeZone = onSelectSecondaryTimeZone,
                 onShiftEventTimeMinutes = onShiftEventTimeMinutes
             )
 
@@ -1652,6 +1781,7 @@ private fun VivoFloatingCapsuleBar(
     isPrivacyUnlocked: Boolean,
     onSelectSection: (MainSection) -> Unit,
     onJumpToday: () -> Unit,
+    onVoiceQuickAdd: () -> Unit = {},
     onQuickAdd: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
@@ -1706,6 +1836,25 @@ private fun VivoFloatingCapsuleBar(
             }
         }
 
+        // 語音一句話快速建行程麥克風按鈕（常駐於 + 按鈕旁，一鍵開口建行程）
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(if (narrow) 42.dp else 46.dp)
+                .shadow(6.dp, CircleShape)
+                .clip(CircleShape)
+                .background(tokens.floatingPillColor)
+                .border(1.2.dp, tokens.accentColor, CircleShape)
+                .clickable { onVoiceQuickAdd() }
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Mic,
+                contentDescription = "語音快速新增行程",
+                tint = tokens.accentColor,
+                modifier = Modifier.size(if (narrow) 20.dp else 22.dp)
+            )
+        }
+
         // 右側圓形「+」快速新增按鈕
         Box(
             contentAlignment = Alignment.Center,
@@ -1743,6 +1892,7 @@ private fun ClassicBottomBar(
     compactHeight: Boolean = false,
     onSelectSection: (MainSection) -> Unit,
     onJumpToday: () -> Unit,
+    onVoiceQuickAdd: () -> Unit = {},
     onQuickAdd: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
@@ -1772,6 +1922,16 @@ private fun ClassicBottomBar(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
+                    .border(1.dp, tokens.accentColor, CircleShape)
+                    .clickable { onVoiceQuickAdd() }
+            ) {
+                Icon(Icons.Filled.Mic, contentDescription = "語音快記", tint = tokens.accentColor, modifier = Modifier.size(17.dp))
+            }
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
                     .background(tokens.accentColor)
                     .clickable { onQuickAdd() }
             ) {
@@ -1781,12 +1941,6 @@ private fun ClassicBottomBar(
         return
     }
     NavigationBar(containerColor = tokens.surfaceCardColor, tonalElevation = 4.dp) {
-        NavigationBarItem(
-            selected = false,
-            onClick = onJumpToday,
-            icon = { Icon(Icons.Filled.Today, contentDescription = "今天") },
-            label = { Text("今天", fontSize = 11.sp) }
-        )
         NavigationBarItem(
             selected = currentSection == MainSection.CALENDAR,
             onClick = { onSelectSection(MainSection.CALENDAR) },
@@ -1804,6 +1958,12 @@ private fun ClassicBottomBar(
             onClick = { onSelectSection(MainSection.ROUTINES) },
             icon = { Icon(Icons.Filled.Repeat, contentDescription = "例行") },
             label = { Text("例行", fontSize = 11.sp) }
+        )
+        NavigationBarItem(
+            selected = false,
+            onClick = onVoiceQuickAdd,
+            icon = { Icon(Icons.Filled.Mic, contentDescription = "語音快記", tint = tokens.accentColor) },
+            label = { Text("語音", fontSize = 11.sp, color = tokens.accentColor) }
         )
         NavigationBarItem(
             selected = false,

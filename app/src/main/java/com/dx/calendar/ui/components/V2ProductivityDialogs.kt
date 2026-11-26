@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -78,6 +79,7 @@ private val NLP_TIME_FMT = DateTimeFormatter.ofPattern("HH:mm")
 @Composable
 fun QuickNaturalLanguageDialog(
     today: LocalDate,
+    autoLaunchVoice: Boolean = false,
     onDismiss: () -> Unit,
     onLaunchVoice: ((String) -> Unit) -> Unit,
     onConfirmCreate: (String) -> Unit
@@ -86,6 +88,14 @@ fun QuickNaturalLanguageDialog(
     var inputText by remember { mutableStateOf("") }
     val preview = remember(inputText, today) {
         if (inputText.isBlank()) null else NaturalLanguageEventParser.parse(inputText, today)
+    }
+
+    LaunchedEffect(autoLaunchVoice) {
+        if (autoLaunchVoice) {
+            onLaunchVoice { spoken ->
+                inputText = spoken
+            }
+        }
     }
 
     AlertDialog(
@@ -126,6 +136,24 @@ fun QuickNaturalLanguageDialog(
                     maxLines = 3,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                OutlinedButton(
+                    onClick = {
+                        onLaunchVoice { spoken ->
+                            inputText = spoken
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Mic,
+                        contentDescription = null,
+                        tint = tokens.accentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("點擊說出行程（系統語音輸入）", color = tokens.accentColor, fontWeight = FontWeight.Bold)
+                }
 
                 // 即時本機解析結果預覽卡
                 AnimatedVisibility(
@@ -503,4 +531,97 @@ fun PomodoroFocusDialog(
             TextButton(onClick = onDismiss) { Text("關閉") }
         }
     )
+}
+
+/**
+ * 📖 DX日曆全功能操作指南與一鍵直達面板（審視全部 23 項功能入口與快捷啟動）
+ */
+@Composable
+fun FeatureGuideDialog(
+    onDismiss: () -> Unit,
+    onOpenVoiceQuickAdd: () -> Unit,
+    onOpenShiftStamp: () -> Unit,
+    onOpenPomodoro: () -> Unit,
+    onImportContactBirthdays: () -> Unit,
+    onOpenWeekTimeline: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    val tokens = LocalBrandTokens.current
+    val scroll = androidx.compose.foundation.rememberScrollState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("📖 DX日曆功能指南與快捷按鈕", fontSize = 17.sp, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(420.dp)
+                    .verticalScroll(scroll)
+            ) {
+                Text(
+                    text = "以下列出全部主要功能按鈕位置，點擊按鈕即可直接體驗：",
+                    color = tokens.secondaryTextColor,
+                    fontSize = 12.sp
+                )
+                GuideActionRow("🎙️ 離線語音／一句話快記", "主畫面底部 + 旁麥克風、或編輯頁標題欄右側麥克風", "立即說", tokens.accentColor) {
+                    onDismiss(); onOpenVoiceQuickAdd()
+                }
+                GuideActionRow("🏷️ 輪班範本連點排班", "主畫面「排班」鈕，點選早/小夜/大夜班後連點日期蓋章", "開啟排班", tokens.accentColor) {
+                    onDismiss(); onOpenShiftStamp()
+                }
+                GuideActionRow("🍅 番茄鐘專注計時", "主畫面「番茄」鈕、待辦頁「🍅專注」或行程詳情頁", "開番茄鐘", tokens.accentColor) {
+                    onDismiss(); onOpenPomodoro()
+                }
+                GuideActionRow("🎂 聯絡人生日自動算歲數", "一鍵讀取手機聯絡人生日並自動計算倒數與今年幾歲", "匯入生日", tokens.accentColor) {
+                    onDismiss(); onImportContactBirthdays()
+                }
+                GuideActionRow("🌐 雙時區 24h 時間軸 ＋ 拖曳", "切到「週 / 日」點左上「🌐雙時區」；上下拖曳事件調 15 分刻度", "前往週視圖", tokens.accentColor) {
+                    onDismiss(); onOpenWeekTimeline()
+                }
+                GuideActionRow("☁️ 雲端硬碟備份／雙指紋隱私／主題", "設定頁含自訂裝置名稱備份、1-31 動態圖示與隱私眼睛", "前往設定", tokens.accentColor) {
+                    onDismiss(); onOpenSettings()
+                }
+                Surface(color = tokens.elevatedSurfaceColor, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("💡 手勢與編輯頁內建技巧", color = tokens.accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("• 月檢視：上下滑壓縮月曆；長按行程改期；再點已選日開 24h 浮動卡。", color = tokens.primaryTextColor, fontSize = 11.sp)
+                        Text("• 編輯頁：含「農曆每月／初一十五／農曆每年」、倒數出生年、圖片附件與「存為範本」。", color = tokens.primaryTextColor, fontSize = 11.sp)
+                        Text("• 詳情頁：地點附「🗺️ 導航」直開 Google Maps，底部附「💬 共用協作留言板」。", color = tokens.primaryTextColor, fontSize = 11.sp)
+                        Text("• 桌面小工具：提供月曆(now+7天天氣)、時間表(now)、下一行程(4×1)、倒數日(2×2)與單週天氣(4×2)。", color = tokens.primaryTextColor, fontSize = 11.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("知道了") }
+        }
+    )
+}
+
+@Composable
+private fun GuideActionRow(
+    title: String,
+    desc: String,
+    actionLabel: String,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val tokens = LocalBrandTokens.current
+    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, color = tokens.primaryTextColor, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(desc, color = tokens.secondaryTextColor, fontSize = 11.sp, lineHeight = 15.sp)
+            }
+            Spacer(modifier = Modifier.width(6.dp))
+            OutlinedButton(onClick = onClick, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
+                Text(actionLabel, color = accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
 }

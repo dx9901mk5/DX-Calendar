@@ -11,4 +11,5 @@
     <string name="widget_vivo_tasks_desc">待辦事項</string>
     <string name="widget_next_event_weather_label">DX 下一行程與天氣 (4×1)</string>
     <string name="widget_countdown_weather_label">DX 倒數日與天氣 (2×2)</string>
+    <string name="widget_week_weather_label">DX 單週 7 天天氣與行程 (4×2)</string>
 </resources>

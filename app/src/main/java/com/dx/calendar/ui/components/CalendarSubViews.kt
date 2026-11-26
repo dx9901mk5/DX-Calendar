@@ -48,6 +48,7 @@ import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -669,11 +670,11 @@ private fun MonthDayCell(
                             .padding(horizontal = 3.dp, vertical = 1.dp)
                     ) {
                         if (item.isTask) {
-                            Text(
-                                text = if (item.isCompleted) "✓" else "○",
-                                color = chipColor,
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.Bold
+                            Icon(
+                                imageVector = if (item.isCompleted) androidx.compose.material.icons.Icons.Filled.CheckCircle else Icons.Filled.TaskAlt,
+                                contentDescription = "Google Tasks",
+                                tint = Color(0xFF1A73E8),
+                                modifier = Modifier.size(10.dp)
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                         } else if (item.isPrivacy) {
@@ -718,9 +719,11 @@ fun WeekOrDayTimelineView(
     onSelectDate: (LocalDate) -> Unit,
     onSelectItem: (UnifiedCalendarItem) -> Unit,
     secondaryTimeZoneId: String = "",
+    onSelectSecondaryTimeZone: ((String) -> Unit)? = null,
     onShiftEventTimeMinutes: ((UnifiedCalendarItem, Int) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
+    var showDualTzQuickPicker by remember { mutableStateOf(false) }
     val zone = ZoneId.systemDefault()
     val secondaryZone = remember(secondaryTimeZoneId) {
         if (secondaryTimeZoneId.isBlank()) null
@@ -765,13 +768,34 @@ fun WeekOrDayTimelineView(
     val scrollState = rememberScrollState(initial = 420) // 預設捲動至早上 7~8 點附近
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 頂部 7 日農曆切換條
+        // 頂部 7 日農曆切換條（左側空白角直接提供「🌐 雙時區」一鍵對照切換！）
         Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .background(tokens.surfaceCardColor.copy(alpha = 0.7f))
-                .padding(start = 42.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
+                .padding(start = 4.dp, end = 6.dp, top = 6.dp, bottom = 6.dp)
         ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .width(if (secondaryZone != null) 50.dp else 38.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (secondaryZone != null) tokens.accentColor.copy(alpha = 0.16f) else Color.Transparent)
+                    .clickable(enabled = onSelectSecondaryTimeZone != null) { showDualTzQuickPicker = true }
+                    .padding(vertical = 4.dp, horizontal = 2.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = "🌐", fontSize = 11.sp)
+                    Text(
+                        text = if (secondaryZone != null) secondaryShortTag else "雙時區",
+                        color = if (secondaryZone != null) tokens.accentColor else tokens.secondaryTextColor,
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+            }
             val dowLabels = listOf("一", "二", "三", "四", "五", "六", "日")
             headerWeekDays.forEach { d ->
                 val lunar = remember(d) { LunarCalendarEngine.getLunarInfo(d) }
@@ -836,13 +860,24 @@ fun WeekOrDayTimelineView(
                                     .clickable { onSelectItem(ev) }
                                     .padding(horizontal = 4.dp, vertical = 2.dp)
                             ) {
-                                Text(
-                                    text = (if (ev.isTask) "○ " else "") + ev.title,
-                                    color = tokens.primaryTextColor,
-                                    fontSize = 10.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (ev.isTask) {
+                                        Icon(
+                                            imageVector = Icons.Filled.TaskAlt,
+                                            contentDescription = "Google Tasks",
+                                            tint = Color(0xFF1A73E8),
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                    }
+                                    Text(
+                                        text = ev.title,
+                                        color = tokens.primaryTextColor,
+                                        fontSize = 10.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }
@@ -953,14 +988,25 @@ fun WeekOrDayTimelineView(
                                     .padding(horizontal = 4.dp, vertical = 2.dp)
                             ) {
                                 Column {
-                                    Text(
-                                        text = (if (ev.isTask) "○ " else "") + ev.title,
-                                        color = tokens.primaryTextColor,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (ev.isTask) {
+                                            Icon(
+                                                imageVector = Icons.Filled.TaskAlt,
+                                                contentDescription = "Google Tasks",
+                                                tint = Color(0xFF1A73E8),
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(2.dp))
+                                        }
+                                        Text(
+                                            text = ev.title,
+                                            color = tokens.primaryTextColor,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                     Text(
                                         text = "${startLocal.format(TIME_FMT)}-${endLocal.format(TIME_FMT)}",
                                         color = tokens.secondaryTextColor,
@@ -995,6 +1041,53 @@ fun WeekOrDayTimelineView(
                 Box(modifier = Modifier.fillMaxWidth().height(1.2.dp).background(tokens.accentColor))
             }
         }
+    }
+
+    if (showDualTzQuickPicker && onSelectSecondaryTimeZone != null) {
+        val tzOptions = listOf(
+            "" to "關閉雙時區對照",
+            "Asia/Tokyo" to "日本東京 (Asia/Tokyo, UTC+9)",
+            "Asia/Seoul" to "韓國首爾 (Asia/Seoul, UTC+9)",
+            "Asia/Singapore" to "新加坡 (Asia/Singapore, UTC+8)",
+            "America/Los_Angeles" to "美西洛杉磯 (America/Los_Angeles)",
+            "America/New_York" to "美東紐約 (America/New_York)",
+            "Europe/London" to "英國倫敦 (Europe/London)",
+            "UTC" to "世界協調時間 (UTC)"
+        )
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDualTzQuickPicker = false },
+            title = { Text("🌐 選擇第二對照時區", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    tzOptions.forEach { (id, label) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSelectSecondaryTimeZone(id)
+                                    showDualTzQuickPicker = false
+                                }
+                                .padding(vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (secondaryTimeZoneId == id) tokens.accentColor else tokens.primaryTextColor,
+                                fontWeight = if (secondaryTimeZoneId == id) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (secondaryTimeZoneId == id) {
+                                Text("✓", color = tokens.accentColor, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showDualTzQuickPicker = false }) { Text("關閉") }
+            }
+        )
     }
 }
 
@@ -1059,9 +1152,9 @@ fun AgendaScheduleListView(
                     ) {
                         if (item.isTask) {
                             Icon(
-                                imageVector = if (item.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
-                                contentDescription = "完成待辦",
-                                tint = Color(item.colorArgb),
+                                imageVector = if (item.isCompleted) Icons.Filled.CheckCircle else Icons.Filled.TaskAlt,
+                                contentDescription = "Google Tasks",
+                                tint = Color(0xFF1A73E8),
                                 modifier = Modifier
                                     .size(22.dp)
                                     .clickable { onToggleTaskComplete(item) }

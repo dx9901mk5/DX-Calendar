@@ -125,6 +125,7 @@ class GoogleTasksSyncManager(
                                 isCompleted = isCompleted,
                                 googleTaskListId = listId,
                                 googleTaskListTitle = listTitle,
+                                colorArgb = 0xFF1A73E8.toInt(),
                                 updatedAt = System.currentTimeMillis()
                             )
                         )
@@ -137,7 +138,8 @@ class GoogleTasksSyncManager(
                                 isCompleted = isCompleted,
                                 googleTaskId = gTaskId,
                                 googleTaskListId = listId,
-                                googleTaskListTitle = listTitle
+                                googleTaskListTitle = listTitle,
+                                colorArgb = 0xFF1A73E8.toInt()
                             )
                         )
                     }

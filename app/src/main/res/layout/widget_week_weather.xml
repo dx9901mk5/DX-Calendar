@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_week_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <ImageView
+        android:id="@+id/widget_bg_layer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/bg_widget_dark_solid" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_week_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:shadowColor="#B3000000"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:text="未來 7 天天氣與行程"
+                android:textColor="#FFFFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btn_widget_week_now"
+                android:layout_width="wrap_content"
+                android:layout_height="22dp"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/bg_widget_now_pill_dark"
+                android:gravity="center"
+                android:paddingHorizontal="8dp"
+                android:shadowColor="#80000000"
+                android:shadowDy="1"
+                android:shadowRadius="2"
+                android:text="now"
+                android:textColor="#FFD9A83E"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btn_widget_week_config"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:gravity="center"
+                android:text="⚙"
+                android:textColor="#FFE6E6F0"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="4dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <LinearLayout android:id="@+id/week_col_0" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="2dp">
+                <TextView android:id="@+id/week_dow_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="今" android:textColor="#FFD9A83E" android:textSize="10sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_num_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="27" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_w_0" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌤️" android:textSize="12sp" />
+                <TextView android:id="@+id/week_ev_0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:ellipsize="end" android:gravity="center_horizontal|top" android:maxLines="3" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="" android:textColor="#FFE8E8F0" android:textSize="9.5sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/week_col_1" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="2dp">
+                <TextView android:id="@+id/week_dow_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="六" android:textColor="#FFE0E0E8" android:textSize="10sp" />
+                <TextView android:id="@+id/week_num_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="28" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_w_1" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌤️" android:textSize="12sp" />
+                <TextView android:id="@+id/week_ev_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:ellipsize="end" android:gravity="center_horizontal|top" android:maxLines="3" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="" android:textColor="#FFE8E8F0" android:textSize="9.5sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/week_col_2" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="2dp">
+                <TextView android:id="@+id/week_dow_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="日" android:textColor="#FFE0E0E8" android:textSize="10sp" />
+                <TextView android:id="@+id/week_num_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="29" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_w_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌤️" android:textSize="12sp" />
+                <TextView android:id="@+id/week_ev_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:ellipsize="end" android:gravity="center_horizontal|top" android:maxLines="3" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="" android:textColor="#FFE8E8F0" android:textSize="9.5sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/week_col_3" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="2dp">
+                <TextView android:id="@+id/week_dow_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="一" android:textColor="#FFE0E0E8" android:textSize="10sp" />
+                <TextView android:id="@+id/week_num_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="30" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_w_3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌤️" android:textSize="12sp" />
+                <TextView android:id="@+id/week_ev_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:ellipsize="end" android:gravity="center_horizontal|top" android:maxLines="3" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="" android:textColor="#FFE8E8F0" android:textSize="9.5sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/week_col_4" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="2dp">
+                <TextView android:id="@+id/week_dow_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="二" android:textColor="#FFE0E0E8" android:textSize="10sp" />
+                <TextView android:id="@+id/week_num_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="1" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_w_4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌤️" android:textSize="12sp" />
+                <TextView android:id="@+id/week_ev_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:ellipsize="end" android:gravity="center_horizontal|top" android:maxLines="3" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="" android:textColor="#FFE8E8F0" android:textSize="9.5sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/week_col_5" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="2dp">
+                <TextView android:id="@+id/week_dow_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="三" android:textColor="#FFE0E0E8" android:textSize="10sp" />
+                <TextView android:id="@+id/week_num_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="2" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_w_5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌤️" android:textSize="12sp" />
+                <TextView android:id="@+id/week_ev_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:ellipsize="end" android:gravity="center_horizontal|top" android:maxLines="3" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="" android:textColor="#FFE8E8F0" android:textSize="9.5sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/week_col_6" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="2dp">
+                <TextView android:id="@+id/week_dow_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="四" android:textColor="#FFE0E0E8" android:textSize="10sp" />
+                <TextView android:id="@+id/week_num_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="3" android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" />
+                <TextView android:id="@+id/week_w_6" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🌤️" android:textSize="12sp" />
+                <TextView android:id="@+id/week_ev_6" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:ellipsize="end" android:gravity="center_horizontal|top" android:maxLines="3" android:shadowColor="#B3000000" android:shadowDy="1" android:shadowRadius="2" android:text="" android:textColor="#FFE8E8F0" android:textSize="9.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
