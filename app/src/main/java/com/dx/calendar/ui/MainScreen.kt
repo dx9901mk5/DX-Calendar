@@ -160,6 +160,7 @@ fun DXCalendarRootApp(
     val viewMode by viewModel.viewMode.collectAsState()
     val mainSection by viewModel.mainSection.collectAsState()
     val isPrivacyUnlocked by viewModel.isPrivacyUnlocked.collectAsState()
+    val onlyWomensHealthFilter by viewModel.onlyWomensHealthFilter.collectAsState()
     val focusedItem by viewModel.focusedItem.collectAsState()
     val editorState by viewModel.editorState.collectAsState()
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
@@ -208,13 +209,14 @@ fun DXCalendarRootApp(
     ) {
         val tokens = LocalBrandTokens.current
 
-        // 主畫面階層式返回鍵邏輯：編輯器 → 設定頁 → 浮動時間軸彈窗 → 詳情面板 → 收合手機時間表 → 返回日曆分頁 → 返回月檢視
+        // 主畫面階層式返回鍵邏輯：編輯器 → 設定頁 → 浮動時間軸彈窗 → 詳情面板 → 收合手機時間表 → 離開女性健康臨時篩選 → 返回日曆分頁 → 返回月檢視
         BackHandler(
             enabled = !editorState.isOpen &&
                 !isSettingsOpen &&
                 (floatingTimelinePopupDate != null ||
                     focusedItem != null ||
                     showCompactBottomDayPanel ||
+                    onlyWomensHealthFilter ||
                     mainSection != MainSection.CALENDAR ||
                     viewMode != CalendarViewMode.MONTH)
         ) {
@@ -225,12 +227,20 @@ fun DXCalendarRootApp(
                     showCompactBottomDayPanel = false
                     sheetDragFraction = 0f
                 }
+                onlyWomensHealthFilter -> viewModel.setOnlyWomensHealthFilter(false)
                 mainSection != MainSection.CALENDAR -> viewModel.setMainSection(MainSection.CALENDAR)
                 viewMode != CalendarViewMode.MONTH -> viewModel.setViewMode(CalendarViewMode.MONTH)
             }
         }
 
-        val itemsByDate = remember(rangeItems) { rangeItems.groupBy { it.date } }
+        val displayRangeItems = remember(rangeItems, onlyWomensHealthFilter) {
+            if (onlyWomensHealthFilter) {
+                rangeItems.filter { com.dx.calendar.data.model.WomensHealthPresets.isWomensHealthItem(it) }
+            } else {
+                rangeItems
+            }
+        }
+        val itemsByDate = remember(displayRangeItems) { displayRangeItems.groupBy { it.date } }
         val selectedDayItems = itemsByDate[selectedDate] ?: emptyList()
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -288,6 +298,8 @@ fun DXCalendarRootApp(
                     narrow = spec.isNarrowSplit,
                     privacyFeatureEnabled = settings.privacyFeatureEnabled,
                     isPrivacyUnlocked = isPrivacyUnlocked,
+                    onlyWomensHealthFilter = onlyWomensHealthFilter,
+                    showTemplateStampBar = showTemplateStampBar,
                     onPrevPeriod = {
                         if (viewMode == CalendarViewMode.YEAR) viewModel.shiftYear(-1)
                         else viewModel.shiftMonth(-1)
@@ -304,6 +316,7 @@ fun DXCalendarRootApp(
                         autoLaunchVoiceInNlp = false
                         showQuickNlpDialog = true
                     },
+                    onToggleWomensHealthFilter = { viewModel.toggleOnlyWomensHealthFilter() },
                     onToggleTemplateBar = {
                         showTemplateStampBar = !showTemplateStampBar
                         if (!showTemplateStampBar) activeStampTemplate = null
@@ -350,6 +363,39 @@ fun DXCalendarRootApp(
                         }
                     }
                 )
+
+                // 臨時專屬檢視橫幅：單獨拉出只檢視「女性健康」類別（一鍵新增健康追蹤或恢復全部行程）
+                AnimatedVisibility(visible = onlyWomensHealthFilter && mainSection == MainSection.CALENDAR) {
+                    val healthRose = Color(com.dx.calendar.data.model.WomensHealthPresets.CATEGORY_COLOR_ARGB)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(healthRose.copy(alpha = 0.16f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "🌸 臨時只檢視：女性健康（本期 ${displayRangeItems.size} 筆）",
+                            color = healthRose,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(
+                            onClick = { viewModel.openNewEditor(date = selectedDate, presetWomensHealth = true) },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("＋ 紀錄", color = healthRose, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        TextButton(
+                            onClick = { viewModel.setOnlyWomensHealthFilter(false) },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("恢復全部", color = tokens.primaryTextColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
 
                 // #2 行程長按拖曳改期提示橫幅
                 AnimatedVisibility(visible = movingItem != null) {
@@ -471,6 +517,8 @@ fun DXCalendarRootApp(
                                     if (spec.showPermanentCategoryRail) {
                                         PermanentCategorySideRail(
                                             categories = categories.filter { !it.isPrivacyCategory },
+                                            onlyWomensHealthFilter = onlyWomensHealthFilter,
+                                            onToggleWomensHealthFilter = { viewModel.toggleOnlyWomensHealthFilter() },
                                             onToggleCategory = { viewModel.toggleCategoryVisible(it) },
                                             onOpenManage = { viewModel.openSettings(true) }
                                         )
@@ -485,7 +533,7 @@ fun DXCalendarRootApp(
                                             today = today,
                                             itemsByDate = itemsByDate,
                                             weatherByDate = weatherByDate,
-                                            allRangeItems = rangeItems,
+                                            allRangeItems = displayRangeItems,
                                             focusedItem = focusedItem,
                                             settings = settings,
                                             maxEventsInCell = spec.maxEventsInMonthCell,
@@ -551,7 +599,7 @@ fun DXCalendarRootApp(
                                             focusedItem = focusedItem,
                                             onClearFocusedItem = { viewModel.setFocusedItem(null) },
                                             onSelectItem = { viewModel.setFocusedItem(it) },
-                                            onAddEventForDate = { viewModel.openNewEditor(date = it) },
+                                            onAddEventForDate = { viewModel.openNewEditor(date = it, presetWomensHealth = onlyWomensHealthFilter) },
                                             onEditItem = { viewModel.openEditForUnifiedItem(it) },
                                             onDeleteItem = { viewModel.deleteUnifiedItem(it) },
                                             onShareItem = { item ->
@@ -650,7 +698,7 @@ fun DXCalendarRootApp(
                                                 today = today,
                                                 itemsByDate = itemsByDate,
                                                 weatherByDate = weatherByDate,
-                                                allRangeItems = rangeItems,
+                                                allRangeItems = displayRangeItems,
                                                 focusedItem = focusedItem,
                                                 settings = settings,
                                                 maxEventsInCell = spec.maxEventsInMonthCell,
@@ -773,7 +821,7 @@ fun DXCalendarRootApp(
                                                     focusedItem = focusedItem,
                                                     onClearFocusedItem = { viewModel.setFocusedItem(null) },
                                                     onSelectItem = { viewModel.setFocusedItem(it) },
-                                                    onAddEventForDate = { viewModel.openNewEditor(date = it) },
+                                                    onAddEventForDate = { viewModel.openNewEditor(date = it, presetWomensHealth = onlyWomensHealthFilter) },
                                                     onEditItem = { viewModel.openEditForUnifiedItem(it) },
                                                     onDeleteItem = { viewModel.deleteUnifiedItem(it) },
                                                     onShareItem = { item ->
@@ -853,7 +901,8 @@ fun DXCalendarRootApp(
                                     date = selectedDate,
                                     presetRoutine = mainSection == MainSection.ROUTINES,
                                     presetPrivacy = mainSection == MainSection.PRIVACY && isPrivacyUnlocked,
-                                    presetTaskMode = false
+                                    presetTaskMode = false,
+                                    presetWomensHealth = onlyWomensHealthFilter
                                 )
                             }
                         )
@@ -878,7 +927,8 @@ fun DXCalendarRootApp(
                                 date = selectedDate,
                                 presetRoutine = mainSection == MainSection.ROUTINES,
                                 presetPrivacy = mainSection == MainSection.PRIVACY && isPrivacyUnlocked,
-                                presetTaskMode = false
+                                presetTaskMode = false,
+                                presetWomensHealth = onlyWomensHealthFilter
                             )
                         }
                     )
@@ -907,7 +957,7 @@ fun DXCalendarRootApp(
                                 sheetDragFraction = 1f
                             }
                         },
-                        onAddEventForDate = { d -> viewModel.openNewEditor(date = d) },
+                        onAddEventForDate = { d -> viewModel.openNewEditor(date = d, presetWomensHealth = onlyWomensHealthFilter) },
                         onToggleTaskComplete = { viewModel.toggleUnifiedItemComplete(it) }
                     )
                 }
@@ -1048,6 +1098,7 @@ fun DXCalendarRootApp(
                 presetRoutine = editorState.presetRoutine,
                 presetPrivacy = editorState.presetPrivacy,
                 presetTaskMode = editorState.presetTaskMode,
+                presetWomensHealth = editorState.presetWomensHealth,
                 privacyFeatureEnabled = settings.privacyFeatureEnabled,
                 allowPrivacyEditing = settings.privacyFeatureEnabled && isPrivacyUnlocked,
                 routineDefaultHideFromMonth = settings.routineDefaultHideFromMonth,
@@ -1121,6 +1172,9 @@ fun DXCalendarRootApp(
                     pomodoroTargetTitle = null
                     pomodoroCompleteAction = null
                     showPomodoroDialog = true
+                },
+                onToggleWomensHealthFilter = {
+                    viewModel.setOnlyWomensHealthFilter(true)
                 },
                 onImportContactBirthdays = onImportContactBirthdays,
                 onOpenWeekTimeline = {
@@ -1370,6 +1424,8 @@ private fun AdaptiveTopHeaderBar(
     narrow: Boolean,
     privacyFeatureEnabled: Boolean,
     isPrivacyUnlocked: Boolean,
+    onlyWomensHealthFilter: Boolean = false,
+    showTemplateStampBar: Boolean = false,
     onPrevPeriod: () -> Unit,
     onNextPeriod: () -> Unit,
     onSelectViewMode: (CalendarViewMode) -> Unit,
@@ -1377,6 +1433,7 @@ private fun AdaptiveTopHeaderBar(
     onOpenSettings: () -> Unit,
     onJumpToToday: () -> Unit = {},
     onOpenQuickNlp: () -> Unit = {},
+    onToggleWomensHealthFilter: () -> Unit = {},
     onToggleTemplateBar: () -> Unit = {},
     onOpenPomodoro: () -> Unit = {},
     onImportContactBirthdays: () -> Unit = {},
@@ -1433,11 +1490,21 @@ private fun AdaptiveTopHeaderBar(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 大螢幕或橫扁寬分割視窗直接於同行顯示「年 / 月 / 週 / 日 / 時間表」＋「排班 / 番茄」快捷按鈕
+            // 大螢幕或橫扁寬分割視窗直接於同行顯示「年 / 月 / 週 / 日 / 時間表」＋「女性健康 / 排班 / 番茄」快捷按鈕
             if (!compact && mainSection == MainSection.CALENDAR) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ViewModeSegmentedPill(current = viewMode, onSelect = onSelectViewMode)
-                    QuickToolMiniPill("🏷️排班", onToggleTemplateBar)
+                    QuickToolMiniPill(
+                        label = "🌸健康",
+                        onClick = onToggleWomensHealthFilter,
+                        active = onlyWomensHealthFilter,
+                        activeColor = Color(com.dx.calendar.data.model.WomensHealthPresets.CATEGORY_COLOR_ARGB)
+                    )
+                    QuickToolMiniPill(
+                        label = "🏷️排班",
+                        onClick = onToggleTemplateBar,
+                        active = showTemplateStampBar
+                    )
                     QuickToolMiniPill("🍅番茄", onOpenPomodoro)
                 }
                 Spacer(modifier = Modifier.weight(1f))
@@ -1520,6 +1587,22 @@ private fun AdaptiveTopHeaderBar(
                         onClick = { showOverflow = false; onOpenQuickNlp() }
                     )
                     DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (onlyWomensHealthFilter) "🌸 結束女性健康篩選（恢復全部）"
+                                else "🌸 臨時只檢視「女性健康」類別"
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.CalendarMonth,
+                                contentDescription = null,
+                                tint = Color(com.dx.calendar.data.model.WomensHealthPresets.CATEGORY_COLOR_ARGB)
+                            )
+                        },
+                        onClick = { showOverflow = false; onToggleWomensHealthFilter() }
+                    )
+                    DropdownMenuItem(
                         text = { Text("🏷️ 輪班／常用範本連點排班") },
                         leadingIcon = { Icon(Icons.Filled.Repeat, contentDescription = null) },
                         onClick = { showOverflow = false; onToggleTemplateBar() }
@@ -1553,7 +1636,7 @@ private fun AdaptiveTopHeaderBar(
             }
         }
 
-        // 手機與小視窗：第二行顯示「年 / 月 / 週 / 日 / 時間表」＋「排班 / 番茄」一鍵快捷膠囊（零額外高度！）
+        // 手機與小視窗：第二行顯示「年 / 月 / 週 / 日 / 時間表」＋「健康 / 排班 / 番茄」一鍵快捷膠囊（單層水平滾動，零額外高度！）
         if (compact && mainSection == MainSection.CALENDAR) {
             Spacer(modifier = Modifier.height(4.dp))
             Row(
@@ -1564,7 +1647,17 @@ private fun AdaptiveTopHeaderBar(
                     .horizontalScroll(rememberScrollState())
             ) {
                 ViewModeSegmentedPill(current = viewMode, onSelect = onSelectViewMode)
-                QuickToolMiniPill("🏷️排班", onToggleTemplateBar)
+                QuickToolMiniPill(
+                    label = "🌸健康",
+                    onClick = onToggleWomensHealthFilter,
+                    active = onlyWomensHealthFilter,
+                    activeColor = Color(com.dx.calendar.data.model.WomensHealthPresets.CATEGORY_COLOR_ARGB)
+                )
+                QuickToolMiniPill(
+                    label = "🏷️排班",
+                    onClick = onToggleTemplateBar,
+                    active = showTemplateStampBar
+                )
                 QuickToolMiniPill("🍅番茄", onOpenPomodoro)
             }
         }
@@ -1572,20 +1665,30 @@ private fun AdaptiveTopHeaderBar(
 }
 
 @Composable
-private fun QuickToolMiniPill(label: String, onClick: () -> Unit) {
+private fun QuickToolMiniPill(
+    label: String,
+    onClick: () -> Unit,
+    active: Boolean = false,
+    activeColor: Color? = null
+) {
     val tokens = LocalBrandTokens.current
+    val highlight = activeColor ?: tokens.accentColor
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(tokens.surfaceCardColor)
-            .border(0.8.dp, tokens.accentColor.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+            .background(if (active) highlight else tokens.surfaceCardColor)
+            .border(
+                width = if (active) 1.2.dp else 0.8.dp,
+                color = if (active) highlight else highlight.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(14.dp)
+            )
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 5.dp)
     ) {
         Text(
             text = label,
-            color = tokens.accentColor,
+            color = if (active) Color.White else highlight,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1
@@ -1984,10 +2087,13 @@ private fun ClassicBottomBar(
 @Composable
 private fun PermanentCategorySideRail(
     categories: List<com.dx.calendar.data.model.CalendarCategoryEntity>,
+    onlyWomensHealthFilter: Boolean = false,
+    onToggleWomensHealthFilter: () -> Unit = {},
     onToggleCategory: (com.dx.calendar.data.model.CalendarCategoryEntity) -> Unit,
     onOpenManage: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
+    val healthRose = Color(com.dx.calendar.data.model.WomensHealthPresets.CATEGORY_COLOR_ARGB)
     Column(
         modifier = Modifier
             .width(205.dp)
@@ -1997,6 +2103,24 @@ private fun PermanentCategorySideRail(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Text("時間表與 Tasks 篩選", color = tokens.secondaryTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (onlyWomensHealthFilter) healthRose else healthRose.copy(alpha = 0.14f))
+                .border(1.dp, healthRose.copy(alpha = 0.6f), RoundedCornerShape(10.dp))
+                .clickable(onClick = onToggleWomensHealthFilter)
+                .padding(horizontal = 8.dp, vertical = 7.dp)
+        ) {
+            Text(
+                text = if (onlyWomensHealthFilter) "🌸 僅看女性健康中（點此恢復）" else "🌸 臨時只檢視女性健康",
+                color = if (onlyWomensHealthFilter) Color.White else healthRose,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
         Column(
             modifier = Modifier
                 .weight(1f)

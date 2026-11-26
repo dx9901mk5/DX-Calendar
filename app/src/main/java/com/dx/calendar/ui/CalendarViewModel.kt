@@ -85,7 +85,8 @@ data class EditorLaunchState(
     val editingSystemCalendarId: Long? = null,
     val presetRoutine: Boolean = false,
     val presetPrivacy: Boolean = false,
-    val presetTaskMode: Boolean = false
+    val presetTaskMode: Boolean = false,
+    val presetWomensHealth: Boolean = false
 )
 
 class CalendarViewModel(app: Application) : AndroidViewModel(app) {
@@ -128,6 +129,10 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _isPrivacyUnlocked = MutableStateFlow(false)
     val isPrivacyUnlocked: StateFlow<Boolean> = _isPrivacyUnlocked.asStateFlow()
+
+    // 臨時專屬檢視：單獨拉出只檢視「女性健康」類別（不影響持久化分類設定、桌面小工具與鬧鐘，一鍵恢復全部）
+    private val _onlyWomensHealthFilter = MutableStateFlow(false)
+    val onlyWomensHealthFilter: StateFlow<Boolean> = _onlyWomensHealthFilter.asStateFlow()
 
     private val _focusedItem = MutableStateFlow<UnifiedCalendarItem?>(null)
     val focusedItem: StateFlow<UnifiedCalendarItem?> = _focusedItem.asStateFlow()
@@ -229,6 +234,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             repo.prefs.applyGoldWhiteDefaultMigrationOnce()
             cleanupLegacyMedicationDemoOnce()
             migrateTaskAndPersonalColorsOnce()
+            ensureWomensHealthCategoryOnce()
             registerSystemCalendarObserverIfPermitted()
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
@@ -389,6 +395,21 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun setOnlyWomensHealthFilter(enabled: Boolean) {
+        _onlyWomensHealthFilter.value = enabled
+        if (enabled) {
+            _mainSection.value = MainSection.CALENDAR
+            val cur = _focusedItem.value
+            if (cur != null && !com.dx.calendar.data.model.WomensHealthPresets.isWomensHealthItem(cur)) {
+                _focusedItem.value = null
+            }
+        }
+    }
+
+    fun toggleOnlyWomensHealthFilter() {
+        setOnlyWomensHealthFilter(!_onlyWomensHealthFilter.value)
+    }
+
     fun openSettings(open: Boolean) {
         _isSettingsOpen.value = open
         if (open && !BuildConfig.IS_PLAY_BUILD && _updateState.value.phase != UpdatePhase.DOWNLOADING) {
@@ -403,7 +424,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         date: LocalDate = _selectedDate.value,
         presetRoutine: Boolean = false,
         presetPrivacy: Boolean = false,
-        presetTaskMode: Boolean = false
+        presetTaskMode: Boolean = false,
+        presetWomensHealth: Boolean = false
     ) {
         refreshSystemCalendars()
         _editorState.value = EditorLaunchState(
@@ -411,7 +433,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             initialDate = date,
             presetRoutine = presetRoutine,
             presetPrivacy = presetPrivacy,
-            presetTaskMode = presetTaskMode
+            presetTaskMode = presetTaskMode,
+            presetWomensHealth = presetWomensHealth
         )
     }
 
@@ -737,6 +760,20 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             }
             sp.edit().putBoolean("migrated_google_tasks_blue_and_personal_gold_v201", true).apply()
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
+        }
+    }
+
+    /**
+     * 確保既有已安裝裝置升級至 v2.0.3 後自動補齊內建「女性健康」分類（id = 9, 玫瑰粉 #EC407A），
+     * 不會影響使用者原有行程或分類設定。
+     */
+    private suspend fun ensureWomensHealthCategoryOnce() = withContext(Dispatchers.IO) {
+        runCatching {
+            val cats = repo.dao.getCategoriesOnce()
+            val exists = cats.any { com.dx.calendar.data.model.WomensHealthPresets.isWomensHealthCategory(it) }
+            if (!exists) {
+                repo.dao.upsertCategory(com.dx.calendar.data.model.WomensHealthPresets.createCategoryEntity())
+            }
         }
     }
 

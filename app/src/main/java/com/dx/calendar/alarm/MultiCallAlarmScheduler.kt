@@ -69,12 +69,12 @@ object MultiCallAlarmScheduler {
             }
         }
 
-        // 同步為近 48 小時內的「Google / 系統同步行事曆」排程真實提醒與連段鬧鐘／原子島通知！
+        // 同步為近 7 天內的「Google / 系統同步行事曆」排程真實提醒與連段鬧鐘／原子島通知！
         val bridge = com.dx.calendar.data.sync.SystemCalendarBridge(context)
         if (bridge.hasReadPermission()) {
-            val sysEvents = bridge.querySystemInstances(now - 60_000L, now + 48L * 3_600_000L)
+            val sysEvents = bridge.querySystemInstances(now - 60_000L, now + 7L * 86_400_000L)
                 .filter { !settings.hiddenSystemCalIds.contains(it.calendarId.toString()) && !it.isAllDay }
-                .take(36)
+                .take(48)
             for (inst in sysEvents) {
                 val meta = com.dx.calendar.data.sync.SystemEventAlarmPrefs.get(context, inst.eventId)
                 // 優先使用該活動在 Google 日曆／DX日曆設定的真實提醒分鐘數；若無設定且開啟上島通知則保底 10 分鐘前與開始時提醒
@@ -92,7 +92,7 @@ object MultiCallAlarmScheduler {
                 offsets.forEach { offsetMin ->
                     val triggerAt = inst.beginMillis - offsetMin * 60_000L
                     if (triggerAt > now + 2_000L) {
-                        val sub = if (offsetMin == 0) "行程現在開始" else "${offsetMin} 分鐘後開始"
+                        val sub = com.dx.calendar.util.ReminderTimeFormatter.formatCountdownSubtitle(offsetMin, "行程")
                         scheduleExactTrigger(
                             context = context,
                             requestCode = computeRequestCode("SYS_EVENT", inst.eventId, offsetMin, 1),
@@ -142,7 +142,7 @@ object MultiCallAlarmScheduler {
         for (offsetMin in offsets) {
             val triggerAt = nextOccurrenceStart - offsetMin * 60_000L
             if (triggerAt > nowMillis - 5_000L) {
-                val subtitle = if (offsetMin == 0) "活動現在開始" else "${offsetMin} 分鐘後開始"
+                val subtitle = com.dx.calendar.util.ReminderTimeFormatter.formatCountdownSubtitle(offsetMin, "活動")
                 scheduleExactTrigger(
                     context = context,
                     requestCode = computeRequestCode("EVENT", event.id, offsetMin, 1),

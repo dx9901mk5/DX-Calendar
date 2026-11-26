@@ -20,7 +20,7 @@
 
 ---
 
-### ✨ Android `v2.0.0` 核心功能特色（已全部實裝）
+### ✨ Android `v2.0.3` 核心功能特色（已全部實裝）
 
 #### 1. 🎙️ 100% 本機離線自然語言＋語音快速建行程（0 費用、免 API）
 - 純本機時間詞法引擎，免外接 LLM API、免額外 OAuth、零延遲。
@@ -52,9 +52,10 @@
 - **雙時區 24h 時間軸**：週／日時間軸左側可並排對照第二時區刻度，跨國會議與出差一目了然。
 - **待辦時間塊（Time Blocking）＋ 環形番茄鐘**：待辦可一鍵「⏰ 排時段」排入當日時間軸，或開啟「🍅 專注」倒數計時器（25/15/45/5 分）。
 
-#### 7. 🔄 例行事務不佔月曆格 ＋ 多重連段追擊鬧鐘 ＋ 國際版 Live Updates
+#### 7. 🔄 例行事務不佔月曆格 ＋ 自訂幾天幾時幾分多提示 ＋ 女性健康專屬追蹤檢視
 - **例行中心**：每日吃藥、繳費、運動可個別設為「不在月曆佔空間」（連外部同步的 Google 重複行程也可單獨隱藏收納），集中打卡、暫停與清理。
-- **多重連段追擊強提醒**：複選多組提早時間、每隔數分鐘連響追擊直到確認、鎖屏全螢幕鬧鐘聲道強響、連動系統時鐘鬧鐘，並遵循國際版 **Android 16+ Live Updates** 即時動態通知規範。
+- **自訂幾天幾時幾分前多提示 ＋ 多重連段追擊強提醒**：除內建多組預設提前通知外，支援自訂任意 **`天／小時／分鐘前`** 多組疊加提示（最多 365 天前）、每隔數分鐘連響追擊直到確認、鎖屏全螢幕鬧鐘聲道強響、連動系統時鐘鬧鐘，並遵循國際版 **Android 16+ Live Updates** 即時動態通知規範。
+- **🌸 女性健康追蹤與臨時獨立檢視**：內建 **`女性健康`** 專屬類別與 8 組追蹤範本（生理期、排卵期、懷孕週數、產檢預約、預產期 EDD、產後護理、事前藥／葉酸、婦科回診），自動安排週期、倒數與追蹤提醒；主畫面頂欄 **`🌸健康`** 可一鍵臨時只檢視女性健康類別並隨時一鍵恢復全部。
 
 #### 8. ✅ Google 行事曆／Tasks 雙向同步 ＋ 自訂裝置名稱雲端硬碟備份 ＋ 雙指紋隱私日曆
 - **Google 生態與自動時區**：防抖即時監聽 Google 行事曆（含語音助理新增）、支援多組 Gmail 帳號並以官方藍色圓圈打勾圖示同步呈現 Google Tasks（新增交由官方 Google Tasks App，預設個人日曆採奢華金鮮明區隔）、標準 `.ics` 匯出入與 URL 訂閱、自動判定所在地時區與 1900–2100 區域農曆黃曆。
@@ -90,14 +91,14 @@
 - **Android App**: Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) (includes built-in **GitHub Update Checker** with confirmation dialog and live progress bar).
 - **Cross-Platform Desktop Companion (Chrome / Edge / Brave Extension)**: Replaces the former Windows-only desktop app plan so **Windows, macOS, Linux, and Chromebook** users all get the full companion experience in [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) (`chrome://extensions/` → Developer Mode → Load unpacked).
 
-### ✨ Shipped Highlights (`Android v2.0.0` + `Chrome Extension v2.1.0`)
+### ✨ Shipped Highlights (`Android v2.0.3` + `Chrome Extension v2.1.0`)
 - **🎙️ 100% Offline Natural-Language & Voice Quick Add** (zero LLM API cost / zero extra OAuth): Type or speak phrases like *"Tomorrow 3:30pm dentist remind 15m early"* or *"Lunar 1st & 15th offering"* for instant zero-latency parsing.
 - **🎬 Spring Animations, Drag & Drop Rescheduling & Adaptive Multi-Pane UI**: Unified bouncy transitions, 1:1 vertical month-to-agenda swipe gesture, drag-to-reschedule on Month cells & 15-min snap dragging on 24h timelines, plus dual-pane / 3-pane layouts for foldables, tablets, and Chromebooks.
 - **🎨 Luxury Gold Auto Theme & Dynamic 1–31 Day Icons**: Automatic Gold-on-White (Light) / Gold-on-Graphite-Black (Dark) themes and 31 dynamic day-of-month adaptive vector icons.
 - **🌤️ Built-in 7-Day Weather & Expanded High-DPI Widgets**: Zero-API-key Open-Meteo 7-day forecast on Month view & widgets, **2,400,000 px** transparent Month Widget with 60fps week-expand + direct event tap, Schedule Widget, **Next Event + Weather Bar (4×1)**, and **Countdown + Weather Widget (2×2)**.
 - **🏷️ Shift Stamping, Countdowns/Age Tracker, Attachments, Maps & Family Comments**: One-tap shift template stamping, automatic birthday age / anniversary year calculation, photo attachments, one-tap Google Maps navigation, and synced family/couple event comments.
 - **🌙 Lunar Recurrences, Dual-Timezone Timeline & Task Time-Blocking + Pomodoro**: Native Lunar Monthly / Lunar 1st & 15th / Lunar Yearly / Every-N-Weeks recurrences, side-by-side dual-timezone 24h scale, one-tap task time-blocking, and focus Pomodoro timer.
-- **🔄 Clutter-Free Routine Hub, Escalating Alarms & International Android 16+ Live Updates**: Per-item hide-from-month-grid control (even for external Google Calendar series), multi-call burst alarms, native Clock sync, and standard Android 16+ Live Updates.
+- **🔄 Clutter-Free Routine Hub, Custom Multi-Reminders & Women's Health Tracking**: Per-item hide-from-month-grid control (even for external Google Calendar series), custom **days / hours / minutes before** stacked reminders, multi-call burst alarms, native Clock sync, standard Android 16+ Live Updates, plus a built-in **Women's Health** category (Period, Ovulation, Pregnancy, Prenatal Checkup, Due Date EDD, Postpartum, Daily Pill/Supplements, Gynecology) with a 1-tap temporary "Women's Health Only" filter view.
 - **☁️ Lossless Android ⇄ Chrome Backup Sync & Dual-Fingerprint Privacy Vault**: Named-device `.dxbackup.json` (Schema v2) with direct Google Drive app upload and lossless smart-merge in Chrome Extension (`Popup`, `Side Panel`, and standalone dual-pane `App Window` modes), plus hardware `AES-256-GCM` Dual-Fingerprint Privacy Vault with instant auto-lock on screen off or app switch.
 
 ---

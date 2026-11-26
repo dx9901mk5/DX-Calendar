@@ -61,7 +61,8 @@ data class UnifiedCalendarItem(
     val useAlarmStream: Boolean,
     val syncSystemAlarm: Boolean,
     val recurrenceLabel: String = "",
-    val externalOverrideKey: String? = null
+    val externalOverrideKey: String? = null,
+    val categoryId: Long = 0L
 )
 
 class CalendarRepository(private val context: Context) {
@@ -407,7 +408,8 @@ class CalendarRepository(private val context: Context) {
             multiCallIntervalMinutes = ev.multiCallIntervalMinutes,
             useAlarmStream = ev.useAlarmStream,
             syncSystemAlarm = ev.syncSystemAlarm,
-            recurrenceLabel = recLabel
+            recurrenceLabel = recLabel,
+            categoryId = ev.categoryId
         )
     }
 

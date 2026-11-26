@@ -41,6 +41,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -1256,8 +1259,8 @@ private fun DxSettingsSectionContent(
 
                 fun formatRemList(list: List<Int>): String {
                     if (list.isEmpty()) return "無提醒"
-                    return list.sorted().joinToString("、") { m ->
-                        REMINDER_PRESET_OPTIONS.firstOrNull { it.first == m }?.second ?: "${m} 分鐘前"
+                    return list.distinct().sorted().joinToString("、") { m ->
+                        com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(m)
                     }
                 }
 
@@ -1612,7 +1615,10 @@ private fun DxSettingsSectionContent(
                     val isTask = showDefaultTaskRemDialog
                     val initSet = (if (isTask) settings.defaultTaskReminders else settings.defaultEventReminders).toMutableSet()
                     var picked by remember(isTask) { mutableStateOf(initSet.toSet()) }
-                    val quickOptions = listOf(0, 5, 10, 15, 30, 60, 1440)
+                    var customD by remember(isTask) { mutableStateOf("0") }
+                    var customH by remember(isTask) { mutableStateOf("0") }
+                    var customM by remember(isTask) { mutableStateOf("10") }
+                    val quickOptions = (listOf(0, 5, 10, 15, 30, 60, 1440) + picked).distinct().sorted()
                     AlertDialog(
                         onDismissRequest = {
                             showDefaultEventRemDialog = false
@@ -1620,9 +1626,12 @@ private fun DxSettingsSectionContent(
                         },
                         title = { Text(if (isTask) "預設待辦事項提醒時間" else "預設日程提醒時間") },
                         text = {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.verticalScroll(rememberScrollState())
+                            ) {
                                 quickOptions.forEach { m ->
-                                    val lbl = REMINDER_PRESET_OPTIONS.firstOrNull { it.first == m }?.second ?: "${m} 分鐘前"
+                                    val lbl = com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(m)
                                     val checked = picked.contains(m)
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
@@ -1631,13 +1640,57 @@ private fun DxSettingsSectionContent(
                                             .clickable {
                                                 picked = if (checked) picked - m else picked + m
                                             }
-                                            .padding(vertical = 4.dp)
+                                            .padding(vertical = 3.dp)
                                     ) {
                                         Checkbox(
                                             checked = checked,
                                             onCheckedChange = { c -> picked = if (c) picked + m else picked - m }
                                         )
                                         Text(lbl, color = tokens.primaryTextColor, fontSize = 14.sp)
+                                    }
+                                }
+                                HorizontalDivider(color = tokens.gridLineColor)
+                                Text("新增自訂預設提示（天 / 時 / 分前）：", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    OutlinedTextField(
+                                        value = customD,
+                                        onValueChange = { customD = it.filter { ch -> ch.isDigit() }.take(3) },
+                                        label = { Text("天", fontSize = 11.sp) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    OutlinedTextField(
+                                        value = customH,
+                                        onValueChange = { customH = it.filter { ch -> ch.isDigit() }.take(2) },
+                                        label = { Text("時", fontSize = 11.sp) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    OutlinedTextField(
+                                        value = customM,
+                                        onValueChange = { customM = it.filter { ch -> ch.isDigit() }.take(2) },
+                                        label = { Text("分", fontSize = 11.sp) },
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    TextButton(
+                                        onClick = {
+                                            val total = com.dx.calendar.util.ReminderTimeFormatter.computeOffsetMinutes(
+                                                customD.toIntOrNull() ?: 0,
+                                                customH.toIntOrNull() ?: 0,
+                                                customM.toIntOrNull() ?: 0
+                                            )
+                                            picked = picked + total
+                                        }
+                                    ) {
+                                        Text("加入", color = tokens.accentColor, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }

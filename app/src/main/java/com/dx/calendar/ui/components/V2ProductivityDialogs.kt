@@ -186,7 +186,7 @@ fun QuickNaturalLanguageDialog(
                                 )
                                 val recText = RecurrenceCodec.formatLabel(p.recurrenceType, p.recurrenceIntervalWeeks)
                                 Text(
-                                    text = "🔁 $recText · ⏰ 提醒：${p.reminderMinutes.joinToString("/") { if (it == 0) "準時" else "${it}分前" }}",
+                                    text = "🔁 $recText · ⏰ 提醒：${p.reminderMinutes.sorted().joinToString("/") { com.dx.calendar.util.ReminderTimeFormatter.formatCompactChipLabel(it) }}",
                                     color = tokens.secondaryTextColor,
                                     fontSize = 11.sp
                                 )
@@ -542,6 +542,7 @@ fun FeatureGuideDialog(
     onOpenVoiceQuickAdd: () -> Unit,
     onOpenShiftStamp: () -> Unit,
     onOpenPomodoro: () -> Unit,
+    onToggleWomensHealthFilter: () -> Unit = {},
     onImportContactBirthdays: () -> Unit,
     onOpenWeekTimeline: () -> Unit,
     onOpenSettings: () -> Unit
@@ -568,6 +569,9 @@ fun FeatureGuideDialog(
                 GuideActionRow("🎙️ 離線語音／一句話快記", "主畫面底部 + 旁麥克風、或編輯頁標題欄右側麥克風", "立即說", tokens.accentColor) {
                     onDismiss(); onOpenVoiceQuickAdd()
                 }
+                GuideActionRow("🌸 女性健康追蹤與臨時檢視", "支援生理期/排卵期/懷孕/產檢/預產期/產後預設追蹤，頂欄「🌸健康」一鍵臨時只看健康", "僅看健康", Color(0xFFEC407A)) {
+                    onDismiss(); onToggleWomensHealthFilter()
+                }
                 GuideActionRow("🏷️ 輪班範本連點排班", "主畫面「排班」鈕，點選早/小夜/大夜班後連點日期蓋章", "開啟排班", tokens.accentColor) {
                     onDismiss(); onOpenShiftStamp()
                 }
@@ -587,7 +591,7 @@ fun FeatureGuideDialog(
                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("💡 手勢與編輯頁內建技巧", color = tokens.accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Text("• 月檢視：上下滑壓縮月曆；長按行程改期；再點已選日開 24h 浮動卡。", color = tokens.primaryTextColor, fontSize = 11.sp)
-                        Text("• 編輯頁：含「農曆每月／初一十五／農曆每年」、倒數出生年、圖片附件與「存為範本」。", color = tokens.primaryTextColor, fontSize = 11.sp)
+                        Text("• 編輯頁：含「＋自訂幾天幾時幾分前多提示」、女性健康追蹤範本、農曆重複、圖片附件與「存為範本」。", color = tokens.primaryTextColor, fontSize = 11.sp)
                         Text("• 詳情頁：地點附「🗺️ 導航」直開 Google Maps，底部附「💬 共用協作留言板」。", color = tokens.primaryTextColor, fontSize = 11.sp)
                         Text("• 桌面小工具：提供月曆(now+7天天氣)、時間表(now)、下一行程(4×1)、倒數日(2×2)與單週天氣(4×2)。", color = tokens.primaryTextColor, fontSize = 11.sp)
                     }

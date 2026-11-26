@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -72,6 +73,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dx.calendar.data.model.CalendarCategoryEntity
@@ -79,10 +81,13 @@ import com.dx.calendar.data.model.CalendarEventEntity
 import com.dx.calendar.data.model.EventTitleHistoryEntity
 import com.dx.calendar.data.model.RecurrenceType
 import com.dx.calendar.data.model.TaskItemEntity
+import com.dx.calendar.data.model.WomensHealthPresets
+import com.dx.calendar.data.model.WomensHealthSubtypePreset
 import com.dx.calendar.data.sync.SystemCalendarAccountInfo
 import com.dx.calendar.data.sync.SystemCalendarBridge
 import com.dx.calendar.ui.theme.LocalBrandTokens
 import com.dx.calendar.util.PrivacyCryptoManager
+import com.dx.calendar.util.ReminderTimeFormatter
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -176,6 +181,7 @@ fun EventEditorScreen(
     presetRoutine: Boolean,
     presetPrivacy: Boolean,
     presetTaskMode: Boolean,
+    presetWomensHealth: Boolean = false,
     privacyFeatureEnabled: Boolean = false,
     allowPrivacyEditing: Boolean = false,
     routineDefaultHideFromMonth: Boolean,
@@ -201,14 +207,22 @@ fun EventEditorScreen(
     val context = LocalContext.current
     val zone = ZoneId.systemDefault()
 
+    val womensHealthCategoryId = remember(categories) {
+        categories.firstOrNull { WomensHealthPresets.isWomensHealthCategory(it) }?.id ?: WomensHealthPresets.CATEGORY_ID
+    }
+    val initIsWomensHealth = presetWomensHealth ||
+        editingEvent?.categoryId == womensHealthCategoryId ||
+        editingEvent?.categoryId == WomensHealthPresets.CATEGORY_ID
+
     var entryMode by remember {
         mutableIntStateOf(
             when {
+                initIsWomensHealth -> 3
                 editingEvent?.isRoutine == true || presetRoutine -> 2
                 else -> 0
             }
         )
-    } // 0: 日曆活動, 2: 例行事務(Routine)（已移除直接新增 Google Tasks，改由 Google Tasks App 新增後同步呈現）
+    } // 0: 日曆活動, 2: 例行事務(Routine), 3: 女性健康追蹤（已移除直接新增 Google Tasks，改由 Google Tasks App 新增後同步呈現）
 
     val initStartZdt = editingEvent?.let { Instant.ofEpochMilli(it.startEpochMillis).atZone(zone) }
         ?: editingSystemEvent?.let { Instant.ofEpochMilli(it.startMillis).atZone(zone) }
@@ -226,17 +240,25 @@ fun EventEditorScreen(
         )
     }
     var categoryId by remember {
-        mutableLongStateOf(editingEvent?.categoryId ?: categories.firstOrNull { !it.isTaskCategory }?.id ?: 1L)
+        mutableLongStateOf(
+            when {
+                editingEvent != null -> editingEvent.categoryId
+                presetWomensHealth -> womensHealthCategoryId
+                else -> categories.firstOrNull { !it.isTaskCategory && !WomensHealthPresets.isWomensHealthCategory(it) }?.id ?: 1L
+            }
+        )
     }
-    val isNewRegularEvent = editingEvent == null && editingTask == null && editingSystemEvent == null && !presetPrivacy && !presetTaskMode && !presetRoutine
+    val isNewRegularEvent = editingEvent == null && editingTask == null && editingSystemEvent == null &&
+        !presetPrivacy && !presetTaskMode && !presetRoutine && !presetWomensHealth
     val defaultGoogleCal = remember(writableSystemCalendars, defaultGoogleEmail) {
         SystemCalendarBridge.pickDefaultGoogleCalendar(writableSystemCalendars, defaultGoogleEmail)
     }
-    var userManuallyPickedCalendar by remember { mutableStateOf(editingSystemEvent != null) }
+    var userManuallyPickedCalendar by remember { mutableStateOf(editingSystemEvent != null || presetWomensHealth) }
     var selectedSystemCalId by remember {
         mutableStateOf<Long?>(
             when {
                 editingSystemEvent != null -> editingSystemCalendarId ?: defaultGoogleCal?.id
+                presetWomensHealth -> null
                 isNewRegularEvent -> defaultGoogleCal?.id
                 else -> null
             }
@@ -348,18 +370,53 @@ fun EventEditorScreen(
     var showHistoryMenu by remember { mutableStateOf(false) }
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showMultiReminderDialog by remember { mutableStateOf(false) }
+    var showCustomReminderDialog by remember { mutableStateOf(false) }
     var showRecurrenceDialog by remember { mutableStateOf(false) }
     var showExtraDatesDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var isCountdown by remember { mutableStateOf(initialRichMeta?.isCountdown ?: false) }
     var isBirthday by remember { mutableStateOf(initialRichMeta?.isBirthday ?: false) }
     var anniversaryYearText by remember { mutableStateOf(initialRichMeta?.anniversaryStartYear?.toString().orEmpty()) }
+    var selectedWomensHealthPresetId by remember {
+        mutableStateOf<String?>(if (presetWomensHealth && editingEvent == null) WomensHealthPresets.SUBTYPES.first().id else null)
+    }
     val attachmentUris = remember {
         androidx.compose.runtime.mutableStateListOf<String>().apply {
             initialRichMeta?.attachmentUris?.let { addAll(it) }
         }
     }
     val isEditingExisting = editingEvent != null || editingTask != null || editingSystemEvent != null
+    val womensHealthAccent = Color(WomensHealthPresets.CATEGORY_COLOR_ARGB)
+
+    fun applyWomensHealthPreset(preset: WomensHealthSubtypePreset, forceOverwriteTitle: Boolean) {
+        entryMode = 3
+        categoryId = womensHealthCategoryId
+        selectedSystemCalId = null
+        userManuallyPickedCalendar = true
+        selectedWomensHealthPresetId = preset.id
+        if (forceOverwriteTitle || title.isBlank() || WomensHealthPresets.SUBTYPES.any { it.defaultTitle == title }) {
+            title = preset.defaultTitle
+        }
+        isAllDay = preset.isAllDay
+        endDate = startDate.plusDays((preset.durationDays - 1).coerceAtLeast(0).toLong())
+        recurrence = preset.defaultRecurrence
+        recurrenceIntervalWeeks = preset.recurrenceIntervalWeeks.coerceAtLeast(2)
+        selectedReminders.clear()
+        selectedReminders.addAll(preset.defaultReminderMinutes)
+        isCountdown = preset.defaultIsCountdown
+        isRoutine = preset.defaultIsRoutine
+        enableMultiCall = preset.defaultEnableMultiCall
+        showInMonthGrid = true
+        if (notes.isBlank() || WomensHealthPresets.SUBTYPES.any { it.defaultNotes == notes }) {
+            notes = preset.defaultNotes
+        }
+    }
+
+    LaunchedEffect(presetWomensHealth) {
+        if (presetWomensHealth && !isEditingExisting && title.isBlank()) {
+            applyWomensHealthPreset(WomensHealthPresets.SUBTYPES.first(), forceOverwriteTitle = true)
+        }
+    }
 
     Surface(color = tokens.backgroundColor, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -444,22 +501,80 @@ fun EventEditorScreen(
             }
 
             val leftEditorSection: @Composable () -> Unit = {
-                // 模式快速切換：一般活動 / 例行事務（新增待辦由 Google Tasks App 負責，此處專注日曆活動）
+                // 模式快速切換：一般活動 / 例行事務 / 女性健康（新增待辦由 Google Tasks App 負責）
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(0 to "一般活動", 2 to "例行事務").forEachIndexed { idx, (modeValue, label) ->
+                    listOf(0 to "一般活動", 2 to "例行事務", 3 to "🌸 女性健康").forEachIndexed { idx, (modeValue, label) ->
                         SegmentedButton(
                             selected = entryMode == modeValue,
                             onClick = {
                                 entryMode = modeValue
-                                if (modeValue == 2) {
-                                    isRoutine = true
-                                    if (routineDefaultHideFromMonth) showInMonthGrid = false
-                                    if (recurrence == RecurrenceType.NONE) recurrence = RecurrenceType.DAILY
+                                when (modeValue) {
+                                    0 -> {
+                                        if (categoryId == womensHealthCategoryId) {
+                                            categoryId = categories.firstOrNull {
+                                                !it.isTaskCategory && !WomensHealthPresets.isWomensHealthCategory(it)
+                                            }?.id ?: 1L
+                                        }
+                                    }
+                                    2 -> {
+                                        isRoutine = true
+                                        if (routineDefaultHideFromMonth) showInMonthGrid = false
+                                        if (recurrence == RecurrenceType.NONE) recurrence = RecurrenceType.DAILY
+                                    }
+                                    3 -> {
+                                        val picked = WomensHealthPresets.SUBTYPES.firstOrNull { it.id == selectedWomensHealthPresetId }
+                                            ?: WomensHealthPresets.SUBTYPES.first()
+                                        applyWomensHealthPreset(picked, forceOverwriteTitle = false)
+                                    }
                                 }
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = 2)
+                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = 3)
                         ) {
-                            Text(label, fontSize = 13.sp)
+                            Text(label, fontSize = 12.sp, maxLines = 1)
+                        }
+                    }
+                }
+
+                // 女性健康專屬追蹤類型面板（選擇生理期／排卵期／懷孕／產檢／預產期／產後／事前藥／婦科回診自動套用追蹤提醒）
+                val isWomensHealthActive = entryMode == 3 || (selectedSystemCalId == null && categoryId == womensHealthCategoryId)
+                if (isWomensHealthActive) {
+                    val activePreset = WomensHealthPresets.SUBTYPES.firstOrNull { it.id == selectedWomensHealthPresetId }
+                    Surface(
+                        color = tokens.surfaceCardColor,
+                        shape = RoundedCornerShape(tokens.cardCorner),
+                        modifier = Modifier.border(1.2.dp, womensHealthAccent.copy(alpha = 0.55f), RoundedCornerShape(tokens.cardCorner))
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Box(modifier = Modifier.size(9.dp).background(womensHealthAccent, CircleShape))
+                                Text(
+                                    text = "🌸 女性健康追蹤項目（點擊自動安排追蹤提醒）",
+                                    color = womensHealthAccent,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                WomensHealthPresets.SUBTYPES.forEach { preset ->
+                                    val picked = selectedWomensHealthPresetId == preset.id
+                                    FilterChip(
+                                        selected = picked,
+                                        onClick = { applyWomensHealthPreset(preset, forceOverwriteTitle = true) },
+                                        label = { Text("${preset.emoji} ${preset.shortLabel}", fontSize = 12.sp) }
+                                    )
+                                }
+                            }
+                            Text(
+                                text = activePreset?.let {
+                                    "已套用「${it.shortLabel}」：${it.trackingSummary}。可在下方微調日期、週期或新增自訂幾天幾時幾分前提示，並於主畫面「🌸健康」一鍵臨時只檢視此類別。"
+                                } ?: "已歸類至「女性健康」，保存後可由主畫面頂欄「🌸健康」一鍵單獨臨時檢視，不影響其他日曆設定。",
+                                color = tokens.secondaryTextColor,
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp
+                            )
                         }
                     }
                 }
@@ -688,8 +803,9 @@ fun EventEditorScreen(
                                                 context,
                                                 { _, y, m, d ->
                                                     val picked = LocalDate.of(y, m + 1, d)
+                                                    val oldSpan = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate).coerceAtLeast(0L)
                                                     startDate = picked
-                                                    if (endDate.isBefore(picked)) endDate = picked
+                                                    endDate = picked.plusDays(oldSpan)
                                                 },
                                                 startDate.year, startDate.monthValue - 1, startDate.dayOfMonth
                                             ).show()
@@ -833,8 +949,8 @@ fun EventEditorScreen(
                         val remSummary = if (selectedReminders.isEmpty()) {
                             "無"
                         } else {
-                            selectedReminders.sorted().joinToString(", ") { min ->
-                                REMINDER_PRESET_OPTIONS.find { it.first == min }?.second ?: "${min}分鐘前"
+                            selectedReminders.distinct().sorted().joinToString("、") { min ->
+                                ReminderTimeFormatter.formatBeforeLabel(min)
                             }
                         }
 
@@ -855,8 +971,12 @@ fun EventEditorScreen(
                             )
                         }
 
-                        // 提早通知快捷多選晶片
-                        Text("提早通知快捷多選：", color = tokens.secondaryTextColor, fontSize = 11.sp)
+                        // 提早通知快捷多選晶片 + 自訂幾天幾時幾分前提示
+                        Text("提早通知快捷多選（可再加任意自訂時間）：", color = tokens.secondaryTextColor, fontSize = 11.sp)
+                        val customSelectedReminders = selectedReminders
+                            .distinct()
+                            .filter { m -> QUICK_EARLY_REMINDER_CHIPS.none { it.first == m } }
+                            .sorted()
                         FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -873,6 +993,25 @@ fun EventEditorScreen(
                                     label = { Text(label, fontSize = 12.sp) }
                                 )
                             }
+                            customSelectedReminders.forEach { mins ->
+                                FilterChip(
+                                    selected = true,
+                                    onClick = { selectedReminders.remove(mins) },
+                                    label = { Text("⏰ ${ReminderTimeFormatter.formatCompactChipLabel(mins)} ✕", fontSize = 12.sp) }
+                                )
+                            }
+                            FilterChip(
+                                selected = false,
+                                onClick = { showCustomReminderDialog = true },
+                                label = {
+                                    Text(
+                                        "＋ 自訂幾天幾時幾分前",
+                                        fontSize = 12.sp,
+                                        color = tokens.accentColor,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            )
                         }
                     }
                 }
@@ -1271,22 +1410,65 @@ fun EventEditorScreen(
         )
     }
 
-    // === 截圖 3：提醒「可多選。」對話框 ===
+    // === 截圖 3：提醒「可多選。」對話框（含自訂幾天幾時幾分前） ===
     if (showMultiReminderDialog) {
+        val customOnlyOffsets = selectedReminders
+            .distinct()
+            .filter { m -> REMINDER_PRESET_OPTIONS.none { it.first == m } }
+            .sorted()
         AlertDialog(
             onDismissRequest = { showMultiReminderDialog = false },
             title = {
                 Column {
                     Text("提醒", fontWeight = FontWeight.Bold)
-                    Text("可多選。", fontSize = 13.sp, color = tokens.secondaryTextColor)
+                    Text("可多選預設與多組自訂時間。", fontSize = 13.sp, color = tokens.secondaryTextColor)
                 }
             },
             text = {
                 Column(
                     modifier = Modifier
-                        .height(380.dp)
+                        .height(400.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
+                    OutlinedButton(
+                        onClick = { showCustomReminderDialog = true },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        Text(
+                            "＋ 自訂幾天幾時幾分前新增提示",
+                            color = tokens.accentColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                    if (customOnlyOffsets.isNotEmpty()) {
+                        Text(
+                            "已新增的自訂提示（點擊移除）：",
+                            fontSize = 11.sp,
+                            color = tokens.accentColor,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
+                        )
+                        customOnlyOffsets.forEach { minutes ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedReminders.remove(minutes) }
+                                    .padding(vertical = 10.dp, horizontal = 4.dp)
+                            ) {
+                                Text(
+                                    "⏰ ${ReminderTimeFormatter.formatBeforeLabel(minutes)}",
+                                    fontSize = 15.sp,
+                                    color = tokens.accentColor,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Icon(Icons.Filled.Check, contentDescription = "已選自訂", tint = tokens.accentColor)
+                            }
+                            HorizontalDivider(color = tokens.gridLineColor)
+                        }
+                    }
                     REMINDER_PRESET_OPTIONS.forEach { (minutes, label) ->
                         val checked = selectedReminders.contains(minutes)
                         Row(
@@ -1314,6 +1496,128 @@ fun EventEditorScreen(
             },
             dismissButton = {
                 TextButton(onClick = { selectedReminders.clear() }) { Text("清空無提醒") }
+            }
+        )
+    }
+
+    // === 自訂多提示提前時間對話框（幾天幾小時幾分鐘前） ===
+    if (showCustomReminderDialog) {
+        var daysText by remember { mutableStateOf("0") }
+        var hoursText by remember { mutableStateOf("0") }
+        var minsText by remember { mutableStateOf("10") }
+        val dVal = (daysText.toIntOrNull() ?: 0).coerceIn(0, ReminderTimeFormatter.MAX_CUSTOM_DAYS)
+        val hVal = (hoursText.toIntOrNull() ?: 0).coerceIn(0, 23)
+        val mVal = (minsText.toIntOrNull() ?: 0).coerceIn(0, 59)
+        val previewTotalMin = ReminderTimeFormatter.computeOffsetMinutes(dVal, hVal, mVal)
+
+        AlertDialog(
+            onDismissRequest = { showCustomReminderDialog = false },
+            title = { Text("自訂提前提示時間", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "輸入「幾天、幾小時、幾分鐘前」提醒，可重複新增多組自訂提示（最多 365 天前）：",
+                        color = tokens.secondaryTextColor,
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = daysText,
+                            onValueChange = { s ->
+                                val clean = s.filter { it.isDigit() }.take(3)
+                                daysText = clean
+                            },
+                            label = { Text("天 (0-365)", fontSize = 11.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = hoursText,
+                            onValueChange = { s ->
+                                val clean = s.filter { it.isDigit() }.take(2)
+                                val num = clean.toIntOrNull()
+                                hoursText = if (num != null && num > 23) "23" else clean
+                            },
+                            label = { Text("時 (0-23)", fontSize = 11.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = minsText,
+                            onValueChange = { s ->
+                                val clean = s.filter { it.isDigit() }.take(2)
+                                val num = clean.toIntOrNull()
+                                minsText = if (num != null && num > 59) "59" else clean
+                            },
+                            label = { Text("分 (0-59)", fontSize = 11.sp) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Text("快捷填入：", color = tokens.secondaryTextColor, fontSize = 11.sp)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(
+                            Triple(0, 0, 30) to "30 分前",
+                            Triple(0, 2, 0) to "2 小時前",
+                            Triple(1, 12, 0) to "1 天 12 時前",
+                            Triple(5, 0, 0) to "5 天前",
+                            Triple(14, 0, 0) to "14 天前"
+                        ).forEach { (dhm, lbl) ->
+                            FilterChip(
+                                selected = dVal == dhm.first && hVal == dhm.second && mVal == dhm.third,
+                                onClick = {
+                                    daysText = dhm.first.toString()
+                                    hoursText = dhm.second.toString()
+                                    minsText = dhm.third.toString()
+                                },
+                                label = { Text(lbl, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+                    Surface(
+                        color = tokens.accentColor.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "將新增提示：${ReminderTimeFormatter.formatBeforeLabel(previewTotalMin)}",
+                            color = tokens.accentColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (!selectedReminders.contains(previewTotalMin)) {
+                            selectedReminders.add(previewTotalMin)
+                        }
+                        android.widget.Toast.makeText(
+                            context,
+                            "已新增提示：${ReminderTimeFormatter.formatBeforeLabel(previewTotalMin)}",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        showCustomReminderDialog = false
+                    }
+                ) {
+                    Text("加入提示", color = tokens.accentColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomReminderDialog = false }) { Text("取消") }
             }
         )
     }
@@ -1436,7 +1740,7 @@ fun EventEditorScreen(
                                         .clickable {
                                             userManuallyPickedCalendar = true
                                             selectedSystemCalId = sc.id
-                                            if (entryMode == 1) entryMode = 0
+                                            if (entryMode == 1 || entryMode == 3) entryMode = 0
                                             showCategoryDialog = false
                                         }
                                         .padding(vertical = 10.dp)
@@ -1467,6 +1771,13 @@ fun EventEditorScreen(
                                     categoryId = cat.id
                                     selectedSystemCalId = null
                                     if (cat.isPrivacyCategory) isPrivacy = true
+                                    if (WomensHealthPresets.isWomensHealthCategory(cat)) {
+                                        val picked = WomensHealthPresets.SUBTYPES.firstOrNull { it.id == selectedWomensHealthPresetId }
+                                            ?: WomensHealthPresets.SUBTYPES.first()
+                                        applyWomensHealthPreset(picked, forceOverwriteTitle = false)
+                                    } else if (entryMode == 3) {
+                                        entryMode = 0
+                                    }
                                     showCategoryDialog = false
                                 }
                                 .padding(vertical = 10.dp)

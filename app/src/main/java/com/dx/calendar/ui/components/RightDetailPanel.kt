@@ -581,8 +581,8 @@ private fun FocusedItemDetailCard(
                 val remDesc = if (item.reminderMinutes.isEmpty()) {
                     "無提醒"
                 } else {
-                    item.reminderMinutes.joinToString(", ") { m ->
-                        if (m == 0) "活動時間" else "${m}分鐘前"
+                    item.reminderMinutes.sorted().joinToString("、") { m ->
+                        com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(m)
                     } + if (item.enableMultiCall) " (連段追擊 ${item.multiCallCount} 次)" else ""
                 }
                 Row(

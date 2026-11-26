@@ -348,4 +348,43 @@ class LunarAndCalendarTest {
         assertTrue(fileName.startsWith("DX-Calendar_我的_vivo_X_Fold_"))
         assertTrue(fileName.endsWith(".dxbackup.json"))
     }
+
+    @Test
+    fun customReminderDurationFormatter_andWomensHealthPresets_workAccurately() {
+        // 1. 自訂幾天幾時幾分前換算與格式化驗證
+        assertEquals(0, com.dx.calendar.util.ReminderTimeFormatter.computeOffsetMinutes(0, 0, 0))
+        assertEquals("活動時間", com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(0))
+        assertEquals("活動現在開始", com.dx.calendar.util.ReminderTimeFormatter.formatCountdownSubtitle(0, "活動"))
+
+        val customMin = com.dx.calendar.util.ReminderTimeFormatter.computeOffsetMinutes(2, 3, 15)
+        assertEquals(2 * 1440 + 3 * 60 + 15, customMin)
+        assertEquals(Triple(2, 3, 15), com.dx.calendar.util.ReminderTimeFormatter.decomposeOffsetMinutes(customMin))
+        assertEquals("2 天 3 小時 15 分鐘前", com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(customMin))
+        assertEquals("2天3時15分前", com.dx.calendar.util.ReminderTimeFormatter.formatCompactChipLabel(customMin))
+        assertEquals("2 天 3 小時 15 分鐘後開始", com.dx.calendar.util.ReminderTimeFormatter.formatCountdownSubtitle(customMin, "行程"))
+        assertEquals("1 週前", com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(10080))
+        assertEquals("14 天前", com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(20160))
+
+        // 邊界夾緊驗證（最多 365 天 23 時 59 分，不溢位）
+        val maxOffset = com.dx.calendar.util.ReminderTimeFormatter.computeOffsetMinutes(999, 99, 99)
+        assertEquals(365 * 1440 + 23 * 60 + 59, maxOffset)
+
+        // 2. 女性健康內建分類與預設追蹤項目驗證
+        val cat = com.dx.calendar.data.model.WomensHealthPresets.createCategoryEntity()
+        assertEquals(9L, cat.id)
+        assertEquals("女性健康", cat.name)
+        assertTrue(com.dx.calendar.data.model.WomensHealthPresets.isWomensHealthCategory(cat))
+
+        val subtypes = com.dx.calendar.data.model.WomensHealthPresets.SUBTYPES
+        assertEquals(8, subtypes.size)
+        val period = subtypes.first { it.id == "MENSTRUATION" }
+        assertEquals(5, period.durationDays)
+        assertEquals(RecurrenceType.CUSTOM_WEEKS, period.defaultRecurrence)
+        assertEquals(4, period.recurrenceIntervalWeeks)
+        assertEquals(listOf(2880, 1440, 0), period.defaultReminderMinutes)
+
+        val edd = subtypes.first { it.id == "DUE_DATE" }
+        assertTrue(edd.defaultIsCountdown)
+        assertTrue(edd.defaultReminderMinutes.contains(20160))
+    }
 }

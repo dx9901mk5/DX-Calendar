@@ -69,7 +69,8 @@ abstract class AppDatabase : RoomDatabase() {
                 CalendarCategoryEntity(id = 5, name = "倒數天數", colorArgb = 0xFF00C853.toInt(), accountName = "本機時間表", isBuiltIn = true),
                 CalendarCategoryEntity(id = 6, name = "Google Tasks", colorArgb = 0xFF1A73E8.toInt(), accountName = "待辦事項", isTaskCategory = true, isBuiltIn = true),
                 CalendarCategoryEntity(id = 7, name = "例行事務", colorArgb = 0xFF26A69A.toInt(), accountName = "例行中心", isBuiltIn = true),
-                CalendarCategoryEntity(id = 8, name = "隱私密件", colorArgb = 0xFFE91E63.toInt(), accountName = "隱私日曆", isPrivacyCategory = true, isBuiltIn = true)
+                CalendarCategoryEntity(id = 8, name = "隱私密件", colorArgb = 0xFFE91E63.toInt(), accountName = "隱私日曆", isPrivacyCategory = true, isBuiltIn = true),
+                com.dx.calendar.data.model.WomensHealthPresets.createCategoryEntity()
             )
             defaultCategories.forEach { dao.upsertCategory(it) }
 
