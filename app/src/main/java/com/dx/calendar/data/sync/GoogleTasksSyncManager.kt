@@ -55,6 +55,13 @@ class GoogleTasksSyncManager(
                     throw GoogleTasksConsentRequiredException(intent)
                 }
                 throw recoverable
+            } catch (e: Exception) {
+                if (e.message?.contains("UnregisteredOnApiConsole", ignoreCase = true) == true) {
+                    throw IllegalStateException(
+                        "尚未於 Google Cloud Console 登記 Android OAuth (套件 com.dx.calendar / SHA-1: 54:4E:D3:50:5A:9E:54:4A:5A:AC:3B:D2:3D:48:4E:F1:E7:FA:6E:74) 並啟用 Google Tasks API"
+                    )
+                }
+                throw e
             }
 
             var syncedCount = 0

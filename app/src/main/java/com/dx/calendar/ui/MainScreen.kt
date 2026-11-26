@@ -280,6 +280,7 @@ fun DXCalendarRootApp(
                     onSelectViewMode = { viewModel.setViewMode(it) },
                     onOpenSearch = { showSearchDialog = true },
                     onOpenSettings = { viewModel.openSettings(true) },
+                    onJumpToToday = { viewModel.jumpToToday() },
                     onJumpToDate = {
                         runCatching {
                             DatePickerDialog(
@@ -1105,6 +1106,7 @@ private fun AdaptiveTopHeaderBar(
     onSelectViewMode: (CalendarViewMode) -> Unit,
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
+    onJumpToToday: () -> Unit = {},
     onJumpToDate: () -> Unit,
     onOpenAlmanacDiscovery: () -> Unit,
     onQuickPrivacyAccess: () -> Unit
@@ -1161,6 +1163,25 @@ private fun AdaptiveTopHeaderBar(
             if (!compact && mainSection == MainSection.CALENDAR) {
                 ViewModeSegmentedPill(current = viewMode, onSelect = onSelectViewMode)
                 Spacer(modifier = Modifier.weight(1f))
+            }
+
+            // 頂部固定預留「now」快速回到今天按鈕
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .padding(end = 2.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(tokens.accentColor.copy(alpha = 0.16f))
+                    .border(1.dp, tokens.accentColor.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+                    .clickable { onJumpToToday() }
+                    .padding(horizontal = if (narrow) 7.dp else 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "now",
+                    color = tokens.accentColor,
+                    fontSize = if (narrow) 11.sp else 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             // 唯有在設定頁建立隱私日曆後，才於月曆頂欄顯示「眼睛」按鈕（點擊閃爍並提示使用指紋，不透露雙指紋機制）

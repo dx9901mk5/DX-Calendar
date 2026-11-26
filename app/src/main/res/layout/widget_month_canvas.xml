@@ -141,7 +141,43 @@
                     <TextView android:id="@+id/widget_cell_05" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_06" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <TextView android:id="@+id/widget_row_expand_0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+                <LinearLayout android:id="@+id/widget_row_expand_0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:orientation="horizontal" android:visibility="gone">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r0_c0_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c0_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c0_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r0_c1_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c1_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c1_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r0_c2_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c2_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c2_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r0_c3_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c3_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c3_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r0_c4_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c4_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c4_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r0_c5_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c5_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c5_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r0_c6_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c6_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r0_c6_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <LinearLayout android:id="@+id/widget_row_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_07" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -152,7 +188,43 @@
                     <TextView android:id="@+id/widget_cell_12" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_13" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <TextView android:id="@+id/widget_row_expand_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+                <LinearLayout android:id="@+id/widget_row_expand_1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:orientation="horizontal" android:visibility="gone">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r1_c0_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c0_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c0_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r1_c1_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c1_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c1_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r1_c2_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c2_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c2_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r1_c3_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c3_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c3_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r1_c4_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c4_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c4_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r1_c5_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c5_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c5_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r1_c6_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c6_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r1_c6_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <LinearLayout android:id="@+id/widget_row_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_14" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -163,7 +235,43 @@
                     <TextView android:id="@+id/widget_cell_19" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_20" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <TextView android:id="@+id/widget_row_expand_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+                <LinearLayout android:id="@+id/widget_row_expand_2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:orientation="horizontal" android:visibility="gone">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r2_c0_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c0_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c0_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r2_c1_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c1_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c1_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r2_c2_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c2_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c2_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r2_c3_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c3_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c3_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r2_c4_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c4_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c4_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r2_c5_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c5_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c5_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r2_c6_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c6_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r2_c6_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <LinearLayout android:id="@+id/widget_row_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_21" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -174,7 +282,43 @@
                     <TextView android:id="@+id/widget_cell_26" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_27" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <TextView android:id="@+id/widget_row_expand_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+                <LinearLayout android:id="@+id/widget_row_expand_3" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:orientation="horizontal" android:visibility="gone">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r3_c0_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c0_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c0_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r3_c1_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c1_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c1_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r3_c2_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c2_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c2_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r3_c3_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c3_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c3_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r3_c4_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c4_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c4_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r3_c5_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c5_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c5_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r3_c6_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c6_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r3_c6_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <LinearLayout android:id="@+id/widget_row_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_28" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -185,7 +329,43 @@
                     <TextView android:id="@+id/widget_cell_33" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_34" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <TextView android:id="@+id/widget_row_expand_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+                <LinearLayout android:id="@+id/widget_row_expand_4" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:orientation="horizontal" android:visibility="gone">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r4_c0_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c0_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c0_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r4_c1_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c1_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c1_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r4_c2_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c2_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c2_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r4_c3_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c3_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c3_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r4_c4_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c4_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c4_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r4_c5_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c5_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c5_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r4_c6_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c6_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r4_c6_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                </LinearLayout>
 
                 <LinearLayout android:id="@+id/widget_row_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
                     <TextView android:id="@+id/widget_cell_35" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
@@ -196,7 +376,43 @@
                     <TextView android:id="@+id/widget_cell_40" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                     <TextView android:id="@+id/widget_cell_41" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:background="@android:color/transparent" />
                 </LinearLayout>
-                <TextView android:id="@+id/widget_row_expand_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:background="@android:color/transparent" android:visibility="gone" />
+                <LinearLayout android:id="@+id/widget_row_expand_5" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="3" android:orientation="horizontal" android:visibility="gone">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r5_c0_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c0_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c0_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r5_c1_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c1_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c1_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r5_c2_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c2_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c2_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r5_c3_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c3_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c3_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r5_c4_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c4_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c4_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r5_c5_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c5_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c5_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:id="@+id/widget_exp_r5_c6_s0" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c6_s1" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                        <TextView android:id="@+id/widget_exp_r5_c6_s2" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:background="@android:color/transparent" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
             <!-- 單週展開模式：上方 7 天透明點擊列，點擊任一天直接跳至當日呈現 -->

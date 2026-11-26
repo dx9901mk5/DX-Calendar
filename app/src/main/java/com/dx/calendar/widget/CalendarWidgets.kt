@@ -600,7 +600,16 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
 
             views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
             views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
-            bindVivoAccordionWeekTapRows(context, views, id, numWeeks, expandedRow)
+            bindVivoAccordionWeekTapRows(
+                context = context,
+                views = views,
+                widgetId = id,
+                yearMonth = ym,
+                startMonday = startMonday,
+                items = items,
+                numWeeks = numWeeks,
+                expandedWeekRow = expandedRow
+            )
 
             views.setOnClickPendingIntent(R.id.btn_widget_config, buildWidgetConfigPi(context, id, 8))
             views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(context, id * 10 + 4, quickAdd = true))
@@ -1674,9 +1683,17 @@ private fun bindVivoAccordionWeekTapRows(
     context: Context,
     views: RemoteViews,
     widgetId: Int,
+    yearMonth: YearMonth,
+    startMonday: Boolean,
+    items: List<UnifiedCalendarItem>,
     numWeeks: Int,
     expandedWeekRow: Int
 ) {
+    val firstOfMonth = yearMonth.atDay(1)
+    val shift = if (startMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
+    val startDate = firstOfMonth.minusDays(shift.toLong())
+    val itemsByDate = items.groupBy { it.date }
+
     for (r in 0 until 6) {
         val rowVisible = r < numWeeks
         views.setViewVisibility(MONTH_ROW_VIEW_IDS[r], if (rowVisible) android.view.View.VISIBLE else android.view.View.GONE)
@@ -1689,10 +1706,62 @@ private fun bindVivoAccordionWeekTapRows(
                 views.setOnClickPendingIntent(MONTH_CELL_VIEW_IDS[r * 7 + c], rowTogglePi)
             }
             if (expandVisible) {
-                views.setOnClickPendingIntent(MONTH_ROW_EXPAND_VIEW_IDS[r], rowTogglePi)
+                // 展開週次的 7 天 × 3 個事件槽：點擊事件直接開啟 App 並跳至該當下事件詳情！
+                for (c in 0 until 7) {
+                    val cellDate = startDate.plusDays((r * 7 + c).toLong())
+                    val dayEvents = itemsByDate[cellDate] ?: emptyList()
+                    for (s in 0 until 3) {
+                        val slotId = context.resources.getIdentifier(
+                            "widget_exp_r${r}_c${c}_s${s}",
+                            "id",
+                            context.packageName
+                        )
+                        if (slotId == 0) continue
+                        val reqCode = widgetId * 1000 + 300 + r * 21 + c * 3 + s
+                        val ev = dayEvents.getOrNull(s)
+                        val pi = if (ev != null) {
+                            buildOpenEventPi(
+                                context = context,
+                                reqCode = reqCode,
+                                epochDay = cellDate.toEpochDay(),
+                                rawId = ev.rawId,
+                                isTask = ev.isTask
+                            )
+                        } else if (dayEvents.isNotEmpty() && s == 2) {
+                            buildOpenDatePi(context, reqCode, cellDate.toEpochDay())
+                        } else if (dayEvents.isEmpty()) {
+                            rowTogglePi
+                        } else {
+                            buildOpenDatePi(context, reqCode, cellDate.toEpochDay())
+                        }
+                        views.setOnClickPendingIntent(slotId, pi)
+                    }
+                }
             }
         }
     }
+}
+
+private fun buildOpenEventPi(
+    context: Context,
+    reqCode: Int,
+    epochDay: Long,
+    rawId: Long,
+    isTask: Boolean
+): PendingIntent {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        action = "${WidgetRefreshHelper.ACTION_CLICK_ITEM}.${epochDay}.${rawId}.${if (isTask) 1 else 0}"
+        setPackage(context.packageName)
+        addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        )
+        putExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY, epochDay)
+        putExtra(WidgetRefreshHelper.EXTRA_OPEN_ITEM_RAW_ID, rawId)
+        putExtra(WidgetRefreshHelper.EXTRA_CLICK_IS_TASK, isTask)
+    }
+    return buildSafeActivityPi(context, reqCode, intent, mutable = false)
 }
 
 private fun buildWeekRowTogglePi(context: Context, widgetId: Int, weekRow: Int): PendingIntent {

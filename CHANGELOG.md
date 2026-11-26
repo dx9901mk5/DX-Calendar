@@ -5,6 +5,20 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.9.6] - 2026-11-26 (`versionCode = 23`)
+
+### ✨ 新增功能與體驗優化 / Added & Improved
+- **📅 桌面月曆小工具展開週次後支援「點擊事件直達 APP 詳情」**：
+  - 於月曆小工具展開任一週次後，點擊該週任一天中的事件卡片即可直接開啟 DX日曆並聚焦顯示該筆事件詳情（點擊日期列標頭仍維持展開／收合週次）。
+- **⚡ APP 頂部常駐 `"now"` 快捷按鈕**：
+  - 於主畫面頂部導覽列預留醒目 `now` 膠囊按鈕，無論切換至任何年份或月份皆可一鍵回到今天。
+- **🔆 月曆檢視「今日」特別醒目標記**：
+  - 今日日期與農曆／節日改以圓角高亮膠囊包覆並加上粗體強調色底部指示條，一眼鎖定今天。
+- **📋 Google Tasks `UnregisteredOnApiConsole` 明確中文引導提示**：
+  - 當偵測到 Google Cloud Console 尚未登記 Android OAuth 時，明確提示所需套件名 `com.dx.calendar` 與正式版 `SHA-1` 指紋。
+
+---
+
 ## [v1.9.5] - 2026-11-26 (`versionCode = 22`)
 
 ### 🐛 圖示修復與微調 / Fixed

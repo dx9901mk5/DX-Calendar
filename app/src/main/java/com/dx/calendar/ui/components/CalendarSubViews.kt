@@ -554,27 +554,57 @@ private fun MonthDayCell(
                     }
                 }
             } else {
-                // vivo / OPPO / 小米 / 三星 風格：上國曆大字、下農曆/節氣
+                // vivo / OPPO / 小米 / 三星 風格：上國曆大字、下農曆/節氣；今日使用醒目圓角高亮膠囊＋底部強調色指示條
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (isToday) {
+                                Modifier
+                                    .padding(horizontal = 2.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(tokens.elevatedSurfaceColor.copy(alpha = 0.92f))
+                                    .border(
+                                        width = 1.dp,
+                                        color = tokens.accentColor.copy(alpha = 0.55f),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .padding(horizontal = 2.dp, vertical = 3.dp)
+                            } else Modifier
+                        ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = date.dayOfMonth.toString(),
-                        color = dayNumberColor,
-                        fontSize = 15.sp,
-                        fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
-                        lineHeight = 16.sp
+                        color = if (isToday) tokens.primaryTextColor else dayNumberColor,
+                        fontSize = if (isToday) 16.sp else 15.sp,
+                        fontWeight = if (isToday || isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                        lineHeight = 17.sp
                     )
                     if (showLunar && compactSheetProgress < 0.72f) {
                         Text(
                             text = lunarShort,
-                            color = if (isHoliday) tokens.holidayBadgeColor else tokens.secondaryTextColor,
+                            color = when {
+                                isToday -> tokens.primaryTextColor.copy(alpha = 0.9f)
+                                isHoliday -> tokens.holidayBadgeColor
+                                else -> tokens.secondaryTextColor
+                            },
                             fontSize = 9.sp,
+                            fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
                             lineHeight = 11.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.alpha((1f - compactSheetProgress * 1.4f).coerceIn(0f, 1f))
+                        )
+                    }
+                    if (isToday) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(20.dp)
+                                .height(3.dp)
+                                .clip(CircleShape)
+                                .background(tokens.accentColor)
                         )
                     }
                 }
