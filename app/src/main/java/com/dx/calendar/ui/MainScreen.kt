@@ -5,10 +5,18 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -64,9 +72,11 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,6 +103,7 @@ import com.dx.calendar.ui.adaptive.computeAdaptiveLayoutSpec
 import com.dx.calendar.ui.components.AgendaScheduleListView
 import com.dx.calendar.ui.components.MonthGridView
 import com.dx.calendar.ui.components.RightDetailPanel
+import com.dx.calendar.ui.components.SamsungDayTimelinePopupCard
 import com.dx.calendar.ui.components.WeekOrDayTimelineView
 import com.dx.calendar.ui.components.YearGridView
 import com.dx.calendar.ui.screens.EventEditorScreen
@@ -141,7 +152,11 @@ fun DXCalendarRootApp(
     var showSearchDialog by remember { mutableStateOf(false) }
     var showAlmanacDiscoveryDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
-    var showCompactBottomDayPanel by remember { mutableStateOf(true) }
+    // 仿三星日曆手勢動畫狀態：手機月檢視預設滿版月曆 (false)，上滑平滑壓縮月曆並拉起下方時間表 (true)；再點已選日期彈出 24h 浮動時間軸卡片
+    var showCompactBottomDayPanel by remember { mutableStateOf(false) }
+    var sheetDragFraction by remember { mutableFloatStateOf(0f) }
+    var isDraggingSheet by remember { mutableStateOf(false) }
+    var floatingTimelinePopupDate by remember { mutableStateOf<LocalDate?>(null) }
 
     DXCalendarTheme(
         brandStyle = settings.brandStyle,
@@ -233,14 +248,21 @@ fun DXCalendarRootApp(
             return@DXCalendarTheme
         }
 
-        // 主畫面階層式返回鍵邏輯：詳情面板 → 返回日曆分頁 → 返回月檢視 → 最後才退出 App
+        // 主畫面階層式返回鍵邏輯：浮動時間軸彈窗 → 詳情面板 → 收合手機時間表 → 返回日曆分頁 → 返回月檢視 → 最後才退出 App
         BackHandler(
-            enabled = focusedItem != null ||
+            enabled = floatingTimelinePopupDate != null ||
+                focusedItem != null ||
+                showCompactBottomDayPanel ||
                 mainSection != MainSection.CALENDAR ||
                 viewMode != CalendarViewMode.MONTH
         ) {
             when {
+                floatingTimelinePopupDate != null -> floatingTimelinePopupDate = null
                 focusedItem != null -> viewModel.setFocusedItem(null)
+                showCompactBottomDayPanel -> {
+                    showCompactBottomDayPanel = false
+                    sheetDragFraction = 0f
+                }
                 mainSection != MainSection.CALENDAR -> viewModel.setMainSection(MainSection.CALENDAR)
                 viewMode != CalendarViewMode.MONTH -> viewModel.setViewMode(CalendarViewMode.MONTH)
             }
@@ -416,6 +438,7 @@ fun DXCalendarRootApp(
                                                 viewModel.setViewMode(CalendarViewMode.MONTH)
                                             },
                                             onSelectDate = { viewModel.selectDate(it) },
+                                            onTapAlreadySelectedDate = { floatingTimelinePopupDate = it },
                                             onSelectItem = { viewModel.setFocusedItem(it) },
                                             onSwipePrevMonth = { viewModel.shiftMonth(-1) },
                                             onSwipeNextMonth = { viewModel.shiftMonth(1) },
@@ -449,79 +472,161 @@ fun DXCalendarRootApp(
                                     }
                                 }
                             } else {
-                                // 手機直向 / 小視窗緊湊單欄模式（完美還原截圖 1 標註 1 + 標註 2 可開關下方當日行程面板！）
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    val showBottomSheetInMonth = viewMode == CalendarViewMode.MONTH &&
-                                        showCompactBottomDayPanel &&
-                                        spec.heightDp >= 480.dp
+                                // 手機直向 / 小視窗模式：完整實作仿三星日曆「上下滑動手勢連動動畫（滿版月曆 ⇄ 壓縮彩條月曆＋下方當日時間表）」！
+                                val sheetActive = viewMode == CalendarViewMode.MONTH &&
+                                    (showCompactBottomDayPanel || focusedItem != null) &&
+                                    spec.heightDp >= 440.dp
+                                val targetProgress = if (isDraggingSheet) {
+                                    sheetDragFraction.coerceIn(0f, 1f)
+                                } else {
+                                    if (sheetActive) 1f else 0f
+                                }
+                                val animatedSheetProgress by animateFloatAsState(
+                                    targetValue = targetProgress,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    ),
+                                    label = "samsungMonthSheetProgress"
+                                )
 
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(if (showBottomSheetInMonth) 0.58f else 1f)
-                                            .fillMaxWidth()
-                                    ) {
-                                        CalendarPrimaryViewport(
-                                            viewMode = viewMode,
-                                            currentYm = currentYm,
-                                            selectedDate = selectedDate,
-                                            today = today,
-                                            itemsByDate = itemsByDate,
-                                            allRangeItems = rangeItems,
-                                            focusedItem = focusedItem,
-                                            settings = settings,
-                                            maxEventsInCell = spec.maxEventsInMonthCell,
-                                            yearColumns = 3,
-                                            onSelectMonthFromYear = { ym ->
-                                                viewModel.selectDate(ym.atDay(1))
-                                                viewModel.setViewMode(CalendarViewMode.MONTH)
-                                            },
-                                            onSelectDate = {
-                                                viewModel.selectDate(it)
-                                                showCompactBottomDayPanel = true
-                                            },
-                                            onSelectItem = {
-                                                viewModel.setFocusedItem(it)
-                                                showCompactBottomDayPanel = true
-                                            },
-                                            onSwipePrevMonth = { viewModel.shiftMonth(-1) },
-                                            onSwipeNextMonth = { viewModel.shiftMonth(1) },
-                                            onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) }
-                                        )
-                                    }
+                                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                    val totalH = maxHeight
+                                    val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 420.dp
+                                    val progress = if (canSplitVertically) animatedSheetProgress else 0f
+                                    // 月曆從 100% 滿版平滑壓縮至 44%（同時日期下方的行程標籤淡出轉為彩色細條），下方時間表由 0% 平滑滑升至 56%！
+                                    val calendarHeight = totalH * (1f - 0.56f * progress)
+                                    val sheetHeight = (totalH - calendarHeight).coerceAtLeast(0.dp)
 
-                                    AnimatedVisibility(visible = showBottomSheetInMonth || focusedItem != null) {
-                                        Column(
+                                    Column(modifier = Modifier.fillMaxSize()) {
+                                        Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(if (spec.heightDp < 560.dp) 185.dp else 265.dp)
-                                                .background(tokens.surfaceCardColor.copy(alpha = 0.96f))
+                                                .height(if (canSplitVertically) calendarHeight else totalH)
                                         ) {
-                                            HorizontalDivider(color = tokens.accentColor.copy(alpha = 0.5f), thickness = 1.5.dp)
-                                            RightDetailPanel(
+                                            CalendarPrimaryViewport(
+                                                viewMode = viewMode,
+                                                currentYm = currentYm,
                                                 selectedDate = selectedDate,
                                                 today = today,
-                                                dayItems = selectedDayItems,
+                                                itemsByDate = itemsByDate,
+                                                allRangeItems = rangeItems,
                                                 focusedItem = focusedItem,
-                                                onClearFocusedItem = { viewModel.setFocusedItem(null) },
-                                                onSelectItem = { viewModel.setFocusedItem(it) },
-                                                onAddEventForDate = { viewModel.openNewEditor(date = it) },
-                                                onEditItem = { viewModel.openEditForUnifiedItem(it) },
-                                                onDeleteItem = { viewModel.deleteUnifiedItem(it) },
-                                                onShareItem = { item ->
-                                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                        type = "text/plain"
-                                                        putExtra(Intent.EXTRA_TEXT, "【${item.title}】 ${item.date}")
-                                                    }
-                                                    context.startActivity(Intent.createChooser(shareIntent, "分享行程"))
+                                                settings = settings,
+                                                maxEventsInCell = spec.maxEventsInMonthCell,
+                                                yearColumns = 3,
+                                                compactSheetProgress = progress,
+                                                onSelectMonthFromYear = { ym ->
+                                                    viewModel.selectDate(ym.atDay(1))
+                                                    viewModel.setViewMode(CalendarViewMode.MONTH)
                                                 },
-                                                onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
-                                                onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) },
-                                                showCloseDayHeaderButton = true,
-                                                onCloseDayPanel = {
-                                                    viewModel.setFocusedItem(null)
-                                                    showCompactBottomDayPanel = false
-                                                }
+                                                onSelectDate = {
+                                                    viewModel.selectDate(it)
+                                                },
+                                                onTapAlreadySelectedDate = { tappedDate ->
+                                                    // 仿三星 0:18–0:20：再次點擊已選日期即彈出 24h 浮動時間軸卡片！
+                                                    floatingTimelinePopupDate = tappedDate
+                                                },
+                                                onSelectItem = {
+                                                    viewModel.setFocusedItem(it)
+                                                    showCompactBottomDayPanel = true
+                                                    sheetDragFraction = 1f
+                                                },
+                                                onSwipePrevMonth = { viewModel.shiftMonth(-1) },
+                                                onSwipeNextMonth = { viewModel.shiftMonth(1) },
+                                                onVerticalDragDelta = if (canSplitVertically) { deltaY ->
+                                                    if (!isDraggingSheet) {
+                                                        isDraggingSheet = true
+                                                        sheetDragFraction = if (showCompactBottomDayPanel || focusedItem != null) 1f else 0f
+                                                    }
+                                                    // 往上滑 (deltaY < 0) 展開時間表；往下滑 (deltaY > 0) 收合回滿版月曆
+                                                    sheetDragFraction = (sheetDragFraction - deltaY / 520f).coerceIn(0f, 1f)
+                                                } else null,
+                                                onVerticalDragEnd = if (canSplitVertically) {
+                                                    {
+                                                        val shouldOpen = sheetDragFraction >= 0.36f
+                                                        showCompactBottomDayPanel = shouldOpen
+                                                        if (!shouldOpen) viewModel.setFocusedItem(null)
+                                                        sheetDragFraction = if (shouldOpen) 1f else 0f
+                                                        isDraggingSheet = false
+                                                    }
+                                                } else null,
+                                                onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) }
                                             )
+                                        }
+
+                                        if (canSplitVertically && sheetHeight > 2.dp) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(sheetHeight)
+                                                    .background(tokens.surfaceCardColor.copy(alpha = 0.98f))
+                                            ) {
+                                                // 可直接上下拖曳收合／展開的握把列
+                                                Box(
+                                                    contentAlignment = Alignment.Center,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .pointerInput(Unit) {
+                                                            detectVerticalDragGestures(
+                                                                onDragStart = {
+                                                                    isDraggingSheet = true
+                                                                    sheetDragFraction = if (showCompactBottomDayPanel || focusedItem != null) 1f else 0f
+                                                                },
+                                                                onDragEnd = {
+                                                                    val shouldOpen = sheetDragFraction >= 0.45f
+                                                                    showCompactBottomDayPanel = shouldOpen
+                                                                    if (!shouldOpen) viewModel.setFocusedItem(null)
+                                                                    sheetDragFraction = if (shouldOpen) 1f else 0f
+                                                                    isDraggingSheet = false
+                                                                },
+                                                                onDragCancel = {
+                                                                    isDraggingSheet = false
+                                                                },
+                                                                onVerticalDrag = { _, dragY ->
+                                                                    sheetDragFraction = (sheetDragFraction - dragY / 520f).coerceIn(0f, 1f)
+                                                                }
+                                                            )
+                                                        }
+                                                        .padding(top = 6.dp, bottom = 4.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(38.dp)
+                                                            .height(4.dp)
+                                                            .clip(RoundedCornerShape(2.dp))
+                                                            .background(tokens.accentColor.copy(alpha = 0.55f))
+                                                    )
+                                                }
+                                                RightDetailPanel(
+                                                    selectedDate = selectedDate,
+                                                    today = today,
+                                                    dayItems = selectedDayItems,
+                                                    focusedItem = focusedItem,
+                                                    onClearFocusedItem = { viewModel.setFocusedItem(null) },
+                                                    onSelectItem = { viewModel.setFocusedItem(it) },
+                                                    onAddEventForDate = { viewModel.openNewEditor(date = it) },
+                                                    onEditItem = { viewModel.openEditForUnifiedItem(it) },
+                                                    onDeleteItem = { viewModel.deleteUnifiedItem(it) },
+                                                    onShareItem = { item ->
+                                                        runCatching {
+                                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                                type = "text/plain"
+                                                                putExtra(Intent.EXTRA_TEXT, "【${item.title}】 ${item.date}")
+                                                            }
+                                                            context.startActivity(Intent.createChooser(shareIntent, "分享行程"))
+                                                        }
+                                                    },
+                                                    onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
+                                                    onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) },
+                                                    showCloseDayHeaderButton = true,
+                                                    onCloseDayPanel = {
+                                                        viewModel.setFocusedItem(null)
+                                                        showCompactBottomDayPanel = false
+                                                        sheetDragFraction = 0f
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -576,6 +681,31 @@ fun DXCalendarRootApp(
                                 presetTaskMode = mainSection == MainSection.TASKS
                             )
                         }
+                    )
+                }
+            }
+
+            // 仿三星日曆 0:18–0:20 浮動 24 小時時間軸卡片彈窗（縮放＋淡入平滑動畫）
+            AnimatedVisibility(
+                visible = floatingTimelinePopupDate != null,
+                enter = fadeIn() + scaleIn(initialScale = 0.88f),
+                exit = fadeOut() + scaleOut(targetScale = 0.90f),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                floatingTimelinePopupDate?.let { popupDate ->
+                    SamsungDayTimelinePopupCard(
+                        date = popupDate,
+                        dayItems = itemsByDate[popupDate] ?: emptyList(),
+                        onDismiss = { floatingTimelinePopupDate = null },
+                        onSelectItem = { item ->
+                            viewModel.setFocusedItem(item)
+                            if (!spec.showDualPane) {
+                                showCompactBottomDayPanel = true
+                                sheetDragFraction = 1f
+                            }
+                        },
+                        onAddEventForDate = { d -> viewModel.openNewEditor(date = d) },
+                        onToggleTaskComplete = { viewModel.toggleUnifiedItemComplete(it) }
                     )
                 }
             }
@@ -976,11 +1106,15 @@ private fun CalendarPrimaryViewport(
     settings: com.dx.calendar.data.local.UserSettings,
     maxEventsInCell: Int,
     yearColumns: Int,
+    compactSheetProgress: Float = 0f,
     onSelectMonthFromYear: (java.time.YearMonth) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onTapAlreadySelectedDate: ((LocalDate) -> Unit)? = null,
     onSelectItem: (com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit,
     onSwipePrevMonth: () -> Unit,
     onSwipeNextMonth: () -> Unit,
+    onVerticalDragDelta: ((Float) -> Unit)? = null,
+    onVerticalDragEnd: (() -> Unit)? = null,
     onToggleComplete: (com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit
 ) {
     when (viewMode) {
@@ -999,9 +1133,13 @@ private fun CalendarPrimaryViewport(
             itemsByDate = itemsByDate,
             settings = settings,
             maxEventsPerCell = maxEventsInCell,
+            compactSheetProgress = compactSheetProgress,
             onSelectDate = onSelectDate,
+            onTapAlreadySelectedDate = onTapAlreadySelectedDate,
             onSwipePrevMonth = onSwipePrevMonth,
             onSwipeNextMonth = onSwipeNextMonth,
+            onVerticalDragDelta = onVerticalDragDelta,
+            onVerticalDragEnd = onVerticalDragEnd,
             onToggleTaskQuick = onToggleComplete
         )
 

@@ -5,7 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,16 +31,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -210,13 +218,19 @@ fun MonthGridView(
     itemsByDate: Map<LocalDate, List<UnifiedCalendarItem>>,
     settings: UserSettings,
     maxEventsPerCell: Int,
+    compactSheetProgress: Float = 0f,
     onSelectDate: (LocalDate) -> Unit,
+    onTapAlreadySelectedDate: ((LocalDate) -> Unit)? = null,
     onSwipePrevMonth: () -> Unit,
     onSwipeNextMonth: () -> Unit,
+    onVerticalDragDelta: ((Float) -> Unit)? = null,
+    onVerticalDragEnd: (() -> Unit)? = null,
     onToggleTaskQuick: (UnifiedCalendarItem) -> Unit
 ) {
     val tokens = LocalBrandTokens.current
-    var dragAccum by remember { mutableFloatStateOf(0f) }
+    var dragAccumX by remember { mutableFloatStateOf(0f) }
+    var dragAccumY by remember { mutableFloatStateOf(0f) }
+    var lockedAxis by remember { mutableStateOf(0) } // 0=未定, 1=水平翻月, 2=垂直展開/收合時間表
 
     val datesGrid = remember(yearMonth, settings.startWeekOnMonday) {
         buildSixWeekGrid(yearMonth, settings.startWeekOnMonday)
@@ -231,15 +245,43 @@ fun MonthGridView(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(yearMonth) {
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        if (dragAccum > 90f) onSwipePrevMonth()
-                        else if (dragAccum < -90f) onSwipeNextMonth()
-                        dragAccum = 0f
+            .pointerInput(yearMonth, onVerticalDragDelta != null) {
+                detectDragGestures(
+                    onDragStart = {
+                        dragAccumX = 0f
+                        dragAccumY = 0f
+                        lockedAxis = 0
                     },
-                    onHorizontalDrag = { _, dragAmount ->
-                        dragAccum += dragAmount
+                    onDragEnd = {
+                        if (lockedAxis == 1) {
+                            if (dragAccumX > 90f) onSwipePrevMonth()
+                            else if (dragAccumX < -90f) onSwipeNextMonth()
+                        } else if (lockedAxis == 2) {
+                            onVerticalDragEnd?.invoke()
+                        }
+                        dragAccumX = 0f
+                        dragAccumY = 0f
+                        lockedAxis = 0
+                    },
+                    onDragCancel = {
+                        if (lockedAxis == 2) onVerticalDragEnd?.invoke()
+                        dragAccumX = 0f
+                        dragAccumY = 0f
+                        lockedAxis = 0
+                    },
+                    onDrag = { _, dragAmount ->
+                        dragAccumX += dragAmount.x
+                        dragAccumY += dragAmount.y
+                        if (lockedAxis == 0) {
+                            val absX = kotlin.math.abs(dragAccumX)
+                            val absY = kotlin.math.abs(dragAccumY)
+                            if (absX > 14f || absY > 14f) {
+                                lockedAxis = if (onVerticalDragDelta != null && absY > absX * 1.15f) 2 else 1
+                            }
+                        }
+                        if (lockedAxis == 2) {
+                            onVerticalDragDelta?.invoke(dragAmount.y)
+                        }
                     }
                 )
             }
@@ -334,9 +376,16 @@ fun MonthGridView(
                             lunarShort = lunar.shortDisplay,
                             isHoliday = lunar.isTaiwanHoliday || lunar.solarTerm != null,
                             showGridLine = settings.showMonthGridLines,
+                            compactSheetProgress = compactSheetProgress,
                             items = visibleCellItems,
                             maxVisible = maxEventsPerCell,
-                            onClick = { onSelectDate(cellDate) },
+                            onClick = {
+                                if (isSelected && onTapAlreadySelectedDate != null) {
+                                    onTapAlreadySelectedDate(cellDate)
+                                } else {
+                                    onSelectDate(cellDate)
+                                }
+                            },
                             onToggleTaskQuick = onToggleTaskQuick
                         )
                     }
@@ -357,6 +406,7 @@ private fun MonthDayCell(
     lunarShort: String,
     isHoliday: Boolean,
     showGridLine: Boolean,
+    compactSheetProgress: Float,
     items: List<UnifiedCalendarItem>,
     maxVisible: Int,
     onClick: () -> Unit,
@@ -449,72 +499,99 @@ private fun MonthDayCell(
                         fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
                         lineHeight = 16.sp
                     )
-                    if (showLunar) {
+                    if (showLunar && compactSheetProgress < 0.72f) {
                         Text(
                             text = lunarShort,
                             color = if (isHoliday) tokens.holidayBadgeColor else tokens.secondaryTextColor,
                             fontSize = 9.sp,
                             lineHeight = 11.sp,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.alpha((1f - compactSheetProgress * 1.4f).coerceIn(0f, 1f))
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(if (compactSheetProgress > 0.5f) 1.dp else 2.dp))
 
-            // 活動與 Google Tasks 彩色膠囊條
-            val shown = items.take(maxVisible)
-            shown.forEach { item ->
-                val chipColor = Color(item.colorArgb)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 0.8.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(
-                            if (item.isTask) chipColor.copy(alpha = 0.22f)
-                            else chipColor.copy(alpha = 0.30f)
-                        )
-                        .then(
-                            if (item.isTask) Modifier.clickable { onToggleTaskQuick(item) }
-                            else Modifier
-                        )
-                        .padding(horizontal = 3.dp, vertical = 1.dp)
-                ) {
-                    if (item.isTask) {
-                        Text(
-                            text = if (item.isCompleted) "✓" else "○",
-                            color = chipColor,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                    } else if (item.isPrivacy) {
-                        Text("🔒", fontSize = 7.sp)
+            // 仿三星日曆手勢壓縮動畫：月曆上滑壓縮時，行程文字膠囊平滑淡出，轉為日期下方的彩色細條指示列！
+            if (compactSheetProgress >= 0.45f) {
+                val barAlpha = ((compactSheetProgress - 0.38f) / 0.62f).coerceIn(0f, 1f)
+                if (items.isNotEmpty()) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                            .alpha(barAlpha)
+                    ) {
+                        items.take(2).forEach { ev ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(Color(ev.colorArgb))
+                            )
+                        }
                     }
+                }
+            } else {
+                // 一般全高月檢視：顯示活動與 Google Tasks 彩色文字膠囊條
+                val chipAlpha = (1f - compactSheetProgress * 2.1f).coerceIn(0f, 1f)
+                val shown = items.take(maxVisible)
+                shown.forEach { item ->
+                    val chipColor = Color(item.colorArgb)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .alpha(chipAlpha)
+                            .padding(vertical = 0.8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(
+                                if (item.isTask) chipColor.copy(alpha = 0.22f)
+                                else chipColor.copy(alpha = 0.30f)
+                            )
+                            .then(
+                                if (item.isTask) Modifier.clickable { onToggleTaskQuick(item) }
+                                else Modifier
+                            )
+                            .padding(horizontal = 3.dp, vertical = 1.dp)
+                    ) {
+                        if (item.isTask) {
+                            Text(
+                                text = if (item.isCompleted) "✓" else "○",
+                                color = chipColor,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                        } else if (item.isPrivacy) {
+                            Text("🔒", fontSize = 7.sp)
+                        }
+                        Text(
+                            text = item.title,
+                            color = tokens.primaryTextColor,
+                            fontSize = 9.sp,
+                            lineHeight = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textDecoration = if (item.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                        )
+                    }
+                }
+
+                val overflow = items.size - shown.size
+                if (overflow > 0) {
                     Text(
-                        text = item.title,
-                        color = tokens.primaryTextColor,
+                        text = "+$overflow",
+                        color = tokens.secondaryTextColor,
                         fontSize = 9.sp,
-                        lineHeight = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textDecoration = if (item.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                        modifier = Modifier.padding(start = 3.dp).alpha(chipAlpha)
                     )
                 }
-            }
-
-            val overflow = items.size - shown.size
-            if (overflow > 0) {
-                Text(
-                    text = "+$overflow",
-                    color = tokens.secondaryTextColor,
-                    fontSize = 9.sp,
-                    modifier = Modifier.padding(start = 3.dp)
-                )
             }
         }
     }
@@ -903,4 +980,303 @@ fun buildSixWeekGrid(yearMonth: YearMonth, startMonday: Boolean): List<LocalDate
     }
     val gridStart = firstOfMonth.minusDays(shift.toLong())
     return (0 until 42).map { gridStart.plusDays(it.toLong()) }
+}
+
+/**
+ * 5. 仿三星日曆 0:18–0:20「再點日期彈出之 24 小時浮動時間軸／清單卡片」
+ * - 圓角毛玻璃風格卡片浮於微暗月曆上方，右上角可一鍵切換「24h 時間軸 ⇄ 清單視圖」
+ * - 內建 24 小時平滑捲動時間軸（自動對齊當日第一個行程時刻），底部附「於 M月d日 新增 ＋」膠囊按鈕
+ */
+@Composable
+fun SamsungDayTimelinePopupCard(
+    date: LocalDate,
+    dayItems: List<UnifiedCalendarItem>,
+    onDismiss: () -> Unit,
+    onSelectItem: (UnifiedCalendarItem) -> Unit,
+    onAddEventForDate: (LocalDate) -> Unit,
+    onToggleTaskComplete: (UnifiedCalendarItem) -> Unit
+) {
+    val tokens = LocalBrandTokens.current
+    val zone = ZoneId.systemDefault()
+    val lunar = remember(date) { LunarCalendarEngine.getLunarInfo(date) }
+    val dowNames = arrayOf("週一", "週二", "週三", "週四", "週五", "週六", "週日")
+    var showTimelineMode by remember(date) { mutableStateOf(true) }
+
+    val timedItems = remember(dayItems) { dayItems.filter { !it.isAllDay } }
+    val allDayItems = remember(dayItems) { dayItems.filter { it.isAllDay } }
+
+    val initialHour = remember(date, timedItems) {
+        timedItems.firstOrNull()?.let {
+            (Instant.ofEpochMilli(it.startMillis).atZone(zone).toLocalTime().hour - 1).coerceIn(0, 20)
+        } ?: 8
+    }
+    val hourHeight = 52.dp
+    val scrollState = rememberScrollState(initial = initialHour * 140)
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.56f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            )
+            .padding(horizontal = 18.dp, vertical = 44.dp)
+    ) {
+        Surface(
+            color = tokens.surfaceCardColor,
+            shape = RoundedCornerShape(26.dp),
+            tonalElevation = 8.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.76f)
+                .border(1.dp, tokens.gridLineColor, RoundedCornerShape(26.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                )
+        ) {
+            Column(modifier = Modifier.fillMaxSize().padding(18.dp)) {
+                // 頂部標題：13 週四  +  切換時間軸/清單鈕  +  關閉
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = "${date.dayOfMonth}",
+                            color = tokens.primaryTextColor,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = dowNames[date.dayOfWeek.value - 1],
+                            color = tokens.primaryTextColor,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { showTimelineMode = !showTimelineMode }) {
+                            Icon(
+                                imageVector = if (showTimelineMode) Icons.Filled.FormatListBulleted else Icons.Filled.Schedule,
+                                contentDescription = "切換時間軸或清單",
+                                tint = tokens.accentColor
+                            )
+                        }
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Filled.Close, contentDescription = "關閉", tint = tokens.secondaryTextColor)
+                        }
+                    }
+                }
+
+                Text(
+                    text = "農 ${lunar.fullLunarText}" + (lunar.festival?.let { " · $it" } ?: lunar.solarTerm?.let { " · $it" } ?: ""),
+                    color = tokens.secondaryTextColor,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+                )
+
+                // 全天行程橫條
+                if (allDayItems.isNotEmpty()) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    ) {
+                        allDayItems.forEach { ev ->
+                            val c = Color(ev.colorArgb)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(c.copy(alpha = 0.22f))
+                                    .clickable {
+                                        onSelectItem(ev)
+                                        onDismiss()
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Box(modifier = Modifier.width(3.5.dp).height(16.dp).background(c, RoundedCornerShape(2.dp)))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = (if (ev.isTask) "○ " else "") + ev.title,
+                                    color = tokens.primaryTextColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = tokens.gridLineColor)
+
+                // 中間主體：24 小時可捲動時間軸 OR 清單模式
+                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(vertical = 8.dp)) {
+                    if (showTimelineMode) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                        ) {
+                            val totalH = hourHeight * 24
+                            Row(modifier = Modifier.fillMaxWidth().height(totalH)) {
+                                Column(modifier = Modifier.width(30.dp).fillMaxHeight()) {
+                                    for (h in 0..23) {
+                                        Box(modifier = Modifier.height(hourHeight).fillMaxWidth()) {
+                                            Text(
+                                                text = "$h",
+                                                color = tokens.secondaryTextColor,
+                                                fontSize = 11.sp,
+                                                modifier = Modifier.padding(top = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                    Canvas(modifier = Modifier.fillMaxSize()) {
+                                        val step = size.height / 24f
+                                        for (h in 0..23) {
+                                            drawLine(
+                                                color = tokens.gridLineColor,
+                                                start = Offset(0f, h * step),
+                                                end = Offset(size.width, h * step),
+                                                strokeWidth = 1f
+                                            )
+                                        }
+                                    }
+                                    timedItems.forEach { ev ->
+                                        val sLocal = Instant.ofEpochMilli(ev.startMillis).atZone(zone).toLocalTime()
+                                        val eLocal = Instant.ofEpochMilli(ev.endMillis).atZone(zone).toLocalTime()
+                                        val sMin = sLocal.hour * 60 + sLocal.minute
+                                        val eMinRaw = eLocal.hour * 60 + eLocal.minute
+                                        val dur = (if (eMinRaw > sMin) eMinRaw - sMin else 60).coerceAtLeast(35)
+                                        val topOff = hourHeight * (sMin / 60f)
+                                        val blkH = hourHeight * (dur / 60f)
+                                        val baseColor = Color(ev.colorArgb)
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 4.dp)
+                                                .offset(y = topOff)
+                                                .height(blkH)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(baseColor.copy(alpha = 0.85f))
+                                                .clickable {
+                                                    onSelectItem(ev)
+                                                    onDismiss()
+                                                }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = (if (ev.isTask) "○ " else "") + ev.title,
+                                                    color = Color.White,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = "${sLocal.format(TIME_FMT)} - ${eLocal.format(TIME_FMT)}",
+                                                    color = Color.White.copy(alpha = 0.86f),
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if (dayItems.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("當日無行程安排", color = tokens.secondaryTextColor, fontSize = 14.sp)
+                            }
+                        } else {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(dayItems, key = { it.uniqueKey }) { ev ->
+                                    val timeStr = if (ev.isAllDay) "全天" else {
+                                        val s = Instant.ofEpochMilli(ev.startMillis).atZone(zone).toLocalTime().format(TIME_FMT)
+                                        val e = Instant.ofEpochMilli(ev.endMillis).atZone(zone).toLocalTime().format(TIME_FMT)
+                                        "$s - $e"
+                                    }
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(tokens.elevatedSurfaceColor.copy(alpha = 0.7f))
+                                            .clickable {
+                                                onSelectItem(ev)
+                                                onDismiss()
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                                    ) {
+                                        if (ev.isTask) {
+                                            Icon(
+                                                imageVector = if (ev.isCompleted) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                                                contentDescription = null,
+                                                tint = Color(ev.colorArgb),
+                                                modifier = Modifier
+                                                    .size(20.dp)
+                                                    .clickable { onToggleTaskComplete(ev) }
+                                            )
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(4.dp)
+                                                    .height(28.dp)
+                                                    .background(Color(ev.colorArgb), RoundedCornerShape(2.dp))
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(ev.title, color = tokens.primaryTextColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(timeStr, color = tokens.secondaryTextColor, fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 底部仿三星「於 M月d日 新增 ＋」膠囊按鈕
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(tokens.elevatedSurfaceColor)
+                        .clickable {
+                            onDismiss()
+                            onAddEventForDate(date)
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "於 ${date.monthValue}月${date.dayOfMonth}日 新增",
+                        color = tokens.secondaryTextColor,
+                        fontSize = 14.sp
+                    )
+                    Icon(Icons.Filled.Add, contentDescription = "新增", tint = tokens.accentColor, modifier = Modifier.size(20.dp))
+                }
+            }
+        }
+    }
 }
