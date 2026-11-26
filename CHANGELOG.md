@@ -5,6 +5,17 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.8.2] - 2026-11-26 (`versionCode = 13`)
+
+### 🛠️ 重要修復 / Fixed
+- **✏️ 修復點進 Google 行事曆活動無法編輯與刪除的問題**：
+  - 詳情頁全面開放 Google / 系統同步行事曆活動顯示「編輯」按鈕；點擊即可直接於編輯器修改標題、日期時間、地點、備註、重複規則、多組提醒分鐘數與連段鬧鐘，並即時雙向同步回寫至 Google 行事曆（同時支援直接刪除 Google 行事曆活動）。
+- **⏰ 修復 Google 行事曆同步「只同步標題、未同步鬧鐘提醒」的問題**：
+  - `SystemCalendarBridge` 批次讀取 `CalendarContract.Reminders`，讓所有 Google 行事曆活動完整顯示並同步真實的提醒分鐘數（無論是在 Google 日曆或 DX日曆設定的提醒）。
+  - 新增 `SystemEventAlarmPrefs` 持久化 Google 行事曆活動之「連段追擊鬧鐘」與「鬧鐘聲道全螢幕強響鈴」設定，`MultiCallAlarmScheduler` 依每筆 Google 活動的真實提醒分鐘數與連段設定精準排程響鈴與原子島通知。
+
+---
+
 ## [v1.8.1] - 2026-11-26 (`versionCode = 12`)
 
 ### 🛠️ 穩定性修復與多視窗強化 / Fixed & Improved

@@ -371,16 +371,14 @@ private fun FocusedItemDetailCard(
             TextButton(onClick = onBack) {
                 Text("← 返回當日總覽", color = tokens.secondaryTextColor)
             }
-            if (item.sourceType != UnifiedSourceType.SYSTEM_EVENT) {
-                Button(
-                    onClick = onEdit,
-                    colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("編輯")
-                }
+            Button(
+                onClick = onEdit,
+                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("編輯")
             }
         }
 

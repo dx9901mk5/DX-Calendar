@@ -81,6 +81,8 @@ data class EditorLaunchState(
     val initialDate: LocalDate = LocalDate.now(),
     val editingEvent: CalendarEventEntity? = null,
     val editingTask: TaskItemEntity? = null,
+    val editingSystemEvent: UnifiedCalendarItem? = null,
+    val editingSystemCalendarId: Long? = null,
     val presetRoutine: Boolean = false,
     val presetPrivacy: Boolean = false,
     val presetTaskMode: Boolean = false
@@ -388,7 +390,18 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                     val tk = repo.dao.getTaskById(item.rawId) ?: return@launch
                     _editorState.value = EditorLaunchState(isOpen = true, initialDate = item.date, editingTask = tk, presetTaskMode = true)
                 }
-                UnifiedSourceType.SYSTEM_EVENT -> Unit
+                UnifiedSourceType.SYSTEM_EVENT -> {
+                    refreshSystemCalendars()
+                    val calId = withContext(Dispatchers.IO) {
+                        repo.systemBridge.queryEventCalendarId(item.rawId)
+                    }
+                    _editorState.value = EditorLaunchState(
+                        isOpen = true,
+                        initialDate = item.date,
+                        editingSystemEvent = item,
+                        editingSystemCalendarId = calId
+                    )
+                }
             }
         }
     }
@@ -405,6 +418,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         val state = _editorState.value
         val ev = state.editingEvent
         val tk = state.editingTask
+        val sysEv = state.editingSystemEvent
         viewModelScope.launch {
             if (ev != null) {
                 repo.dao.deleteEvent(ev)
@@ -412,6 +426,17 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             } else if (tk != null) {
                 repo.dao.deleteTaskById(tk.id)
                 toast("已刪除待辦事項")
+            } else if (sysEv != null) {
+                val ok = withContext(Dispatchers.IO) {
+                    repo.systemBridge.deleteEventInSystemCalendar(sysEv.rawId)
+                }
+                if (ok) {
+                    com.dx.calendar.data.sync.SystemEventAlarmPrefs.remove(getApplication(), sysEv.rawId)
+                    _refreshTick.value += 1
+                    toast("已刪除 Google 行事曆活動")
+                } else {
+                    toast("刪除失敗，請確認日曆寫入權限")
+                }
             }
             _focusedItem.value = null
             _editorState.value = EditorLaunchState(isOpen = false)
@@ -484,8 +509,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         .coerceAtLeast(startMs + 1_800_000L)
                 }
 
-                // 若使用者選擇寫入已登記之 Google / 同步行事曆（支援重複規則與多日期）
-                if (payload.writeToSystemCalendarId != null && !payload.isPrivacy) {
+                // 若使用者編輯既有 Google / 系統行事曆，或新增至已登記之 Google / 同步行事曆（含提醒與連段鬧鐘完整同步）
+                if ((payload.editingSystemEventId != null || payload.writeToSystemCalendarId != null) && !payload.isPrivacy) {
                     val rrule = when (payload.recurrenceType) {
                         com.dx.calendar.data.model.RecurrenceType.DAILY -> "FREQ=DAILY"
                         com.dx.calendar.data.model.RecurrenceType.WEEKDAYS -> "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
@@ -495,73 +520,112 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         com.dx.calendar.data.model.RecurrenceType.YEARLY -> "FREQ=YEARLY"
                         else -> null
                     }
-                    val insertedId = withContext(Dispatchers.IO) {
-                        val mainId = repo.systemBridge.insertEventToSystemCalendar(
-                            systemCalendarId = payload.writeToSystemCalendarId,
-                            title = payload.title,
-                            description = payload.notes,
-                            location = payload.location,
-                            startMillis = startMs,
-                            endMillis = endMs,
-                            isAllDay = payload.isAllDay,
-                            reminderMinutes = payload.reminderMinutes,
-                            rrule = rrule
-                        )
-                        if (mainId != null && rrule == null) {
-                            val spanMillis = (endMs - startMs).coerceAtLeast(1_800_000L)
-                            payload.extraDates.forEach { exDate ->
-                                if (exDate != payload.startDate) {
-                                    val exStart = if (payload.isAllDay) {
-                                        exDate.atStartOfDay(zone).toInstant().toEpochMilli()
-                                    } else {
-                                        exDate.atTime(payload.startTime).atZone(zone).toInstant().toEpochMilli()
+                    val alarmMeta = com.dx.calendar.data.sync.SystemEventAlarmMeta(
+                        enableMultiCall = payload.enableMultiCall,
+                        multiCallCount = payload.multiCallCount,
+                        multiCallIntervalMinutes = payload.multiCallIntervalMinutes,
+                        useAlarmStream = payload.useAlarmStream,
+                        syncSystemAlarm = payload.syncSystemAlarm
+                    )
+                    if (payload.editingSystemEventId != null) {
+                        val updated = withContext(Dispatchers.IO) {
+                            repo.systemBridge.updateEventInSystemCalendar(
+                                eventId = payload.editingSystemEventId,
+                                systemCalendarId = payload.writeToSystemCalendarId,
+                                title = payload.title,
+                                description = payload.notes,
+                                location = payload.location,
+                                startMillis = startMs,
+                                endMillis = endMs,
+                                isAllDay = payload.isAllDay,
+                                reminderMinutes = payload.reminderMinutes,
+                                rrule = rrule
+                            )
+                        }
+                        if (updated) {
+                            com.dx.calendar.data.sync.SystemEventAlarmPrefs.save(app, payload.editingSystemEventId, alarmMeta)
+                            MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
+                            _refreshTick.value += 1
+                            toast("已更新 Google 行事曆與鬧鐘提醒")
+                        } else {
+                            toast("更新失敗，請確認日曆寫入權限")
+                        }
+                    } else {
+                        val targetCalId = payload.writeToSystemCalendarId!!
+                        val insertedId = withContext(Dispatchers.IO) {
+                            val mainId = repo.systemBridge.insertEventToSystemCalendar(
+                                systemCalendarId = targetCalId,
+                                title = payload.title,
+                                description = payload.notes,
+                                location = payload.location,
+                                startMillis = startMs,
+                                endMillis = endMs,
+                                isAllDay = payload.isAllDay,
+                                reminderMinutes = payload.reminderMinutes,
+                                rrule = rrule
+                            )
+                            if (mainId != null) {
+                                com.dx.calendar.data.sync.SystemEventAlarmPrefs.save(app, mainId, alarmMeta)
+                            }
+                            if (mainId != null && rrule == null) {
+                                val spanMillis = (endMs - startMs).coerceAtLeast(1_800_000L)
+                                payload.extraDates.forEach { exDate ->
+                                    if (exDate != payload.startDate) {
+                                        val exStart = if (payload.isAllDay) {
+                                            exDate.atStartOfDay(zone).toInstant().toEpochMilli()
+                                        } else {
+                                            exDate.atTime(payload.startTime).atZone(zone).toInstant().toEpochMilli()
+                                        }
+                                        val exId = repo.systemBridge.insertEventToSystemCalendar(
+                                            systemCalendarId = targetCalId,
+                                            title = payload.title,
+                                            description = payload.notes,
+                                            location = payload.location,
+                                            startMillis = exStart,
+                                            endMillis = exStart + spanMillis,
+                                            isAllDay = payload.isAllDay,
+                                            reminderMinutes = payload.reminderMinutes
+                                        )
+                                        if (exId != null) {
+                                            com.dx.calendar.data.sync.SystemEventAlarmPrefs.save(app, exId, alarmMeta)
+                                        }
                                     }
-                                    repo.systemBridge.insertEventToSystemCalendar(
-                                        systemCalendarId = payload.writeToSystemCalendarId,
-                                        title = payload.title,
-                                        description = payload.notes,
-                                        location = payload.location,
-                                        startMillis = exStart,
-                                        endMillis = exStart + spanMillis,
-                                        isAllDay = payload.isAllDay,
-                                        reminderMinutes = payload.reminderMinutes
-                                    )
                                 }
                             }
+                            mainId
                         }
-                        mainId
-                    }
-                    if (insertedId != null) {
-                        MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
-                        _refreshTick.value += 1
-                    } else {
-                        // 若系統尚未授予寫入日曆權限，改以本機安全備援保存不遺失資料
-                        val fallbackEvent = CalendarEventEntity(
-                            id = payload.editingEventId ?: 0L,
-                            categoryId = payload.categoryId,
-                            title = encTitle,
-                            location = encLoc,
-                            url = payload.url,
-                            notes = encNotes,
-                            startEpochMillis = startMs,
-                            endEpochMillis = endMs,
-                            isAllDay = payload.isAllDay,
-                            extraDatesJson = repo.toDateStringsJson(payload.extraDates),
-                            recurrenceType = payload.recurrenceType.name,
-                            isRoutine = payload.isRoutine,
-                            showInMonthGrid = payload.showInMonthGrid,
-                            showInAgendaAndWidget = payload.showInAgendaAndWidget,
-                            isPrivacy = false,
-                            reminderMinutesJson = remJson,
-                            enableMultiCall = payload.enableMultiCall,
-                            multiCallCount = payload.multiCallCount,
-                            multiCallIntervalMinutes = payload.multiCallIntervalMinutes,
-                            useAlarmStream = payload.useAlarmStream,
-                            syncSystemAlarm = payload.syncSystemAlarm
-                        )
-                        val newId = repo.dao.upsertEvent(fallbackEvent)
-                        MultiCallAlarmScheduler.scheduleForEvent(app, fallbackEvent.copy(id = newId))
-                        toast("尚未授予系統日曆寫入權限，已先為您保存至本機行事曆")
+                        if (insertedId != null) {
+                            MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
+                            _refreshTick.value += 1
+                        } else {
+                            // 若系統尚未授予寫入日曆權限，改以本機安全備援保存不遺失資料
+                            val fallbackEvent = CalendarEventEntity(
+                                id = payload.editingEventId ?: 0L,
+                                categoryId = payload.categoryId,
+                                title = encTitle,
+                                location = encLoc,
+                                url = payload.url,
+                                notes = encNotes,
+                                startEpochMillis = startMs,
+                                endEpochMillis = endMs,
+                                isAllDay = payload.isAllDay,
+                                extraDatesJson = repo.toDateStringsJson(payload.extraDates),
+                                recurrenceType = payload.recurrenceType.name,
+                                isRoutine = payload.isRoutine,
+                                showInMonthGrid = payload.showInMonthGrid,
+                                showInAgendaAndWidget = payload.showInAgendaAndWidget,
+                                isPrivacy = false,
+                                reminderMinutesJson = remJson,
+                                enableMultiCall = payload.enableMultiCall,
+                                multiCallCount = payload.multiCallCount,
+                                multiCallIntervalMinutes = payload.multiCallIntervalMinutes,
+                                useAlarmStream = payload.useAlarmStream,
+                                syncSystemAlarm = payload.syncSystemAlarm
+                            )
+                            val newId = repo.dao.upsertEvent(fallbackEvent)
+                            MultiCallAlarmScheduler.scheduleForEvent(app, fallbackEvent.copy(id = newId))
+                            toast("尚未授予系統日曆寫入權限，已先為您保存至本機行事曆")
+                        }
                     }
                 } else {
                     val event = CalendarEventEntity(
@@ -730,7 +794,18 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             when (item.sourceType) {
                 UnifiedSourceType.LOCAL_EVENT -> repo.dao.deleteEventById(item.rawId)
                 UnifiedSourceType.TASK -> repo.dao.deleteTaskById(item.rawId)
-                UnifiedSourceType.SYSTEM_EVENT -> Unit
+                UnifiedSourceType.SYSTEM_EVENT -> {
+                    val ok = withContext(Dispatchers.IO) {
+                        repo.systemBridge.deleteEventInSystemCalendar(item.rawId)
+                    }
+                    if (ok) {
+                        com.dx.calendar.data.sync.SystemEventAlarmPrefs.remove(getApplication(), item.rawId)
+                        _refreshTick.value += 1
+                        toast("已刪除 Google 行事曆活動")
+                    } else {
+                        toast("刪除失敗，請確認日曆寫入權限")
+                    }
+                }
             }
             _focusedItem.value = null
             WidgetRefreshHelper.refreshAllWidgets(getApplication())

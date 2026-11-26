@@ -314,6 +314,7 @@ class CalendarRepository(private val context: Context) {
                         .atZone(zone).toLocalDate()
                 }
 
+                val alarmMeta = com.dx.calendar.data.sync.SystemEventAlarmPrefs.get(context, inst.eventId)
                 var d = if (instStartDate.isBefore(rangeStart)) rangeStart else instStartDate
                 val endClamp = if (instEndDate.isAfter(rangeEnd)) rangeEnd else instEndDate
                 while (!d.isAfter(endClamp)) {
@@ -339,12 +340,12 @@ class CalendarRepository(private val context: Context) {
                             showInAgendaAndWidget = ov?.showInAgendaAndWidget ?: true,
                             isPaused = false,
                             isPrivacy = ov?.isPrivacy ?: false,
-                            reminderMinutes = emptyList(),
-                            enableMultiCall = false,
-                            multiCallCount = 1,
-                            multiCallIntervalMinutes = 5,
-                            useAlarmStream = false,
-                            syncSystemAlarm = false,
+                            reminderMinutes = inst.reminderMinutes,
+                            enableMultiCall = alarmMeta?.enableMultiCall ?: false,
+                            multiCallCount = alarmMeta?.multiCallCount ?: 3,
+                            multiCallIntervalMinutes = alarmMeta?.multiCallIntervalMinutes ?: 3,
+                            useAlarmStream = alarmMeta?.useAlarmStream ?: false,
+                            syncSystemAlarm = alarmMeta?.syncSystemAlarm ?: false,
                             recurrenceLabel = if (!inst.rrule.isNullOrBlank()) "系統重複活動" else "",
                             externalOverrideKey = sigKey
                         )

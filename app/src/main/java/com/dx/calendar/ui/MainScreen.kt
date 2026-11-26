@@ -173,6 +173,8 @@ fun DXCalendarRootApp(
                 initialDate = editorState.initialDate,
                 editingEvent = editorState.editingEvent,
                 editingTask = editorState.editingTask,
+                editingSystemEvent = editorState.editingSystemEvent,
+                editingSystemCalendarId = editorState.editingSystemCalendarId,
                 presetRoutine = editorState.presetRoutine,
                 presetPrivacy = editorState.presetPrivacy,
                 presetTaskMode = editorState.presetTaskMode,
@@ -187,7 +189,7 @@ fun DXCalendarRootApp(
                 parseDateList = { viewModel.repo.parseDateStrings(it) },
                 onCancel = { viewModel.closeEditor() },
                 onSave = { payload -> viewModel.saveFromEditor(payload) },
-                onDelete = if (editorState.editingEvent != null || editorState.editingTask != null) {
+                onDelete = if (editorState.editingEvent != null || editorState.editingTask != null || editorState.editingSystemEvent != null) {
                     { viewModel.deleteEditingItem() }
                 } else null
             )

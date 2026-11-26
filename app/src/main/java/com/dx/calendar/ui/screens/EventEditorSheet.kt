@@ -115,6 +115,7 @@ data class EditorSavePayload(
     val isTaskMode: Boolean,
     val editingEventId: Long?,
     val editingTaskId: Long?,
+    val editingSystemEventId: Long? = null,
     val categoryId: Long,
     val writeToSystemCalendarId: Long?,
     val title: String,
@@ -149,6 +150,8 @@ fun EventEditorScreen(
     initialDate: LocalDate,
     editingEvent: CalendarEventEntity?,
     editingTask: TaskItemEntity?,
+    editingSystemEvent: com.dx.calendar.data.repository.UnifiedCalendarItem? = null,
+    editingSystemCalendarId: Long? = null,
     presetRoutine: Boolean,
     presetPrivacy: Boolean,
     presetTaskMode: Boolean,
@@ -180,13 +183,16 @@ fun EventEditorScreen(
     } // 0: 日曆活動, 1: 待辦事項(Task), 2: 例行事務(Routine)
 
     val initStartZdt = editingEvent?.let { Instant.ofEpochMilli(it.startEpochMillis).atZone(zone) }
+        ?: editingSystemEvent?.let { Instant.ofEpochMilli(it.startMillis).atZone(zone) }
     val initEndZdt = editingEvent?.let { Instant.ofEpochMilli(it.endEpochMillis).atZone(zone) }
+        ?: editingSystemEvent?.let { Instant.ofEpochMilli(it.endMillis).atZone(zone) }
 
     var title by remember {
         mutableStateOf(
             when {
                 editingEvent != null -> PrivacyCryptoManager.decryptIfNeeded(editingEvent.title)
                 editingTask != null -> PrivacyCryptoManager.decryptIfNeeded(editingTask.title)
+                editingSystemEvent != null -> editingSystemEvent.title
                 else -> ""
             }
         )
@@ -194,13 +200,19 @@ fun EventEditorScreen(
     var categoryId by remember {
         mutableLongStateOf(editingEvent?.categoryId ?: categories.firstOrNull { !it.isTaskCategory }?.id ?: 1L)
     }
-    val isNewRegularEvent = editingEvent == null && editingTask == null && !presetPrivacy && !presetTaskMode && !presetRoutine
+    val isNewRegularEvent = editingEvent == null && editingTask == null && editingSystemEvent == null && !presetPrivacy && !presetTaskMode && !presetRoutine
     val defaultGoogleCal = remember(writableSystemCalendars, defaultGoogleEmail) {
         SystemCalendarBridge.pickDefaultGoogleCalendar(writableSystemCalendars, defaultGoogleEmail)
     }
-    var userManuallyPickedCalendar by remember { mutableStateOf(false) }
+    var userManuallyPickedCalendar by remember { mutableStateOf(editingSystemEvent != null) }
     var selectedSystemCalId by remember {
-        mutableStateOf<Long?>(if (isNewRegularEvent) defaultGoogleCal?.id else null)
+        mutableStateOf<Long?>(
+            when {
+                editingSystemEvent != null -> editingSystemCalendarId ?: defaultGoogleCal?.id
+                isNewRegularEvent -> defaultGoogleCal?.id
+                else -> null
+            }
+        )
     }
 
     // 若進入新增頁時系統剛載入完裝置已登記的 Gmail Google 行事曆，且使用者尚未手動切換，自動設為預設！
@@ -210,7 +222,7 @@ fun EventEditorScreen(
         }
     }
 
-    var isAllDay by remember { mutableStateOf(editingEvent?.isAllDay ?: false) }
+    var isAllDay by remember { mutableStateOf(editingEvent?.isAllDay ?: editingSystemEvent?.isAllDay ?: false) }
     var startDate by remember {
         mutableStateOf(
             initStartZdt?.toLocalDate()
@@ -247,6 +259,7 @@ fun EventEditorScreen(
             val raw = when {
                 editingEvent != null -> parseIntList(editingEvent.reminderMinutesJson)
                 editingTask != null -> parseIntList(editingTask.reminderMinutesJson)
+                editingSystemEvent != null -> editingSystemEvent.reminderMinutes
                 else -> listOf(0, 5) // 截圖2預設：活動時間, 5 分鐘前
             }
             addAll(raw)
@@ -254,11 +267,21 @@ fun EventEditorScreen(
     }
 
     // 多重連段呼叫與連動鬧鐘
-    var enableMultiCall by remember { mutableStateOf(editingEvent?.enableMultiCall ?: editingTask?.enableMultiCall ?: false) }
-    var multiCallCount by remember { mutableIntStateOf(editingEvent?.multiCallCount ?: editingTask?.multiCallCount ?: 3) }
-    var multiCallInterval by remember { mutableIntStateOf(editingEvent?.multiCallIntervalMinutes ?: editingTask?.multiCallIntervalMinutes ?: 3) }
-    var useAlarmStream by remember { mutableStateOf(editingEvent?.useAlarmStream ?: editingTask?.useAlarmStream ?: false) }
-    var syncSystemAlarm by remember { mutableStateOf(editingEvent?.syncSystemAlarm ?: editingTask?.syncSystemAlarm ?: false) }
+    var enableMultiCall by remember {
+        mutableStateOf(editingEvent?.enableMultiCall ?: editingTask?.enableMultiCall ?: editingSystemEvent?.enableMultiCall ?: false)
+    }
+    var multiCallCount by remember {
+        mutableIntStateOf(editingEvent?.multiCallCount ?: editingTask?.multiCallCount ?: editingSystemEvent?.multiCallCount ?: 3)
+    }
+    var multiCallInterval by remember {
+        mutableIntStateOf(editingEvent?.multiCallIntervalMinutes ?: editingTask?.multiCallIntervalMinutes ?: editingSystemEvent?.multiCallIntervalMinutes ?: 3)
+    }
+    var useAlarmStream by remember {
+        mutableStateOf(editingEvent?.useAlarmStream ?: editingTask?.useAlarmStream ?: editingSystemEvent?.useAlarmStream ?: false)
+    }
+    var syncSystemAlarm by remember {
+        mutableStateOf(editingEvent?.syncSystemAlarm ?: editingTask?.syncSystemAlarm ?: editingSystemEvent?.syncSystemAlarm ?: false)
+    }
 
     // 細緻顯示控制按鈕狀態（核心需求！）
     var isRoutine by remember { mutableStateOf(editingEvent?.isRoutine ?: editingTask?.isRoutine ?: presetRoutine) }
@@ -274,13 +297,20 @@ fun EventEditorScreen(
     }
     var isPrivacy by remember { mutableStateOf(editingEvent?.isPrivacy ?: editingTask?.isPrivacy ?: presetPrivacy) }
 
-    var location by remember { mutableStateOf(editingEvent?.let { PrivacyCryptoManager.decryptIfNeeded(it.location) } ?: "") }
+    var location by remember {
+        mutableStateOf(
+            editingEvent?.let { PrivacyCryptoManager.decryptIfNeeded(it.location) }
+                ?: editingSystemEvent?.location
+                ?: ""
+        )
+    }
     var url by remember { mutableStateOf(editingEvent?.url ?: "") }
     var notes by remember {
         mutableStateOf(
             when {
                 editingEvent != null -> PrivacyCryptoManager.decryptIfNeeded(editingEvent.notes)
                 editingTask != null -> PrivacyCryptoManager.decryptIfNeeded(editingTask.notes)
+                editingSystemEvent != null -> editingSystemEvent.notes
                 else -> ""
             }
         )
@@ -292,7 +322,7 @@ fun EventEditorScreen(
     var showRecurrenceDialog by remember { mutableStateOf(false) }
     var showExtraDatesDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    val isEditingExisting = editingEvent != null || editingTask != null
+    val isEditingExisting = editingEvent != null || editingTask != null || editingSystemEvent != null
 
     Surface(color = tokens.backgroundColor, modifier = Modifier.fillMaxSize()) {
         Column(
@@ -338,6 +368,7 @@ fun EventEditorScreen(
                                     isTaskMode = entryMode == 1,
                                     editingEventId = editingEvent?.id,
                                     editingTaskId = editingTask?.id,
+                                    editingSystemEventId = editingSystemEvent?.rawId,
                                     categoryId = categoryId,
                                     writeToSystemCalendarId = if (isPrivacy) null else selectedSystemCalId,
                                     title = finalTitle,
