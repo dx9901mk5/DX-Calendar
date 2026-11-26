@@ -868,6 +868,11 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         _pendingGoogleTasksConsentIntent.value = null
     }
 
+    fun removeGoogleAccountEmail(email: String) = viewModelScope.launch {
+        repo.prefs.removeGoogleAccountEmail(email)
+        toast("已移除帳號：$email")
+    }
+
     // === 設定與匯入匯出操作 ===
     fun setBrandStyle(style: BrandStyle) = viewModelScope.launch {
         repo.prefs.setBrandStyle(style)

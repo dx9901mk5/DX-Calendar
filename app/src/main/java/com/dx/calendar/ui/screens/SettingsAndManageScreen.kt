@@ -154,6 +154,10 @@ fun SettingsAndManageScreen(
     onOpenPrivacyVault: () -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
     onSyncGoogleTasks: () -> Unit,
+    onSyncGoogleTasksForEmail: (String) -> Unit = { onSyncGoogleTasks() },
+    onAddGoogleAccount: () -> Unit = onSyncGoogleTasks,
+    onAddSystemGoogleAccount: () -> Unit = onSyncGoogleTasks,
+    onRemoveGoogleAccount: (String) -> Unit = {},
     onPickWallpaper: () -> Unit,
     onClearWallpaper: () -> Unit,
     onChangeWallpaperAlpha: (Float) -> Unit,
@@ -400,6 +404,10 @@ fun SettingsAndManageScreen(
                                     onOpenPrivacyVault = onOpenPrivacyVault,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
+                                    onSyncGoogleTasksForEmail = onSyncGoogleTasksForEmail,
+                                    onAddGoogleAccount = onAddGoogleAccount,
+                                    onAddSystemGoogleAccount = onAddSystemGoogleAccount,
+                                    onRemoveGoogleAccount = onRemoveGoogleAccount,
                                     onPickWallpaper = onPickWallpaper,
                                     onClearWallpaper = onClearWallpaper,
                                     onChangeWallpaperAlpha = onChangeWallpaperAlpha,
@@ -476,6 +484,10 @@ fun SettingsAndManageScreen(
                                     onOpenPrivacyVault = onOpenPrivacyVault,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
+                                    onSyncGoogleTasksForEmail = onSyncGoogleTasksForEmail,
+                                    onAddGoogleAccount = onAddGoogleAccount,
+                                    onAddSystemGoogleAccount = onAddSystemGoogleAccount,
+                                    onRemoveGoogleAccount = onRemoveGoogleAccount,
                                     onPickWallpaper = onPickWallpaper,
                                     onClearWallpaper = onClearWallpaper,
                                     onChangeWallpaperAlpha = onChangeWallpaperAlpha,
@@ -612,6 +624,10 @@ private fun DxSettingsSectionContent(
     onOpenPrivacyVault: () -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
     onSyncGoogleTasks: () -> Unit,
+    onSyncGoogleTasksForEmail: (String) -> Unit = { onSyncGoogleTasks() },
+    onAddGoogleAccount: () -> Unit = onSyncGoogleTasks,
+    onAddSystemGoogleAccount: () -> Unit = onSyncGoogleTasks,
+    onRemoveGoogleAccount: (String) -> Unit = {},
     onPickWallpaper: () -> Unit,
     onClearWallpaper: () -> Unit,
     onChangeWallpaperAlpha: (Float) -> Unit,
@@ -635,59 +651,229 @@ private fun DxSettingsSectionContent(
     Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
         when (section) {
             DxSettingsSection.ACCOUNTS_AND_TASKS -> {
-                // 專屬 Google Tasks 整合與日曆顯示控制卡
+                // 1. Gmail 帳號與同步行事曆（清楚顯示各 Gmail 帳號、支援添加多個 Gmail 帳號；Google Tasks 排在 Gmail 帳號最下面並附打勾與初步啟動鈕！）
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Filled.TaskAlt, contentDescription = null, tint = Color(0xFFFFAB00))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Google Tasks 待辦與日曆整合", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Text(
-                            text = if (settings.googleAccountEmail.isNotBlank()) {
-                                "已連結自動同步：每次開啟／切回 App 皆會於背景自動判讀並同步 Google Tasks 至月曆與小工具。"
-                            } else {
-                                "只需首次點選下方按鈕連結授權一次，之後每次開啟 App 即會自動判讀同步 Google Tasks！"
-                            },
-                            color = tokens.secondaryTextColor,
-                            fontSize = 12.sp
-                        )
-                        Button(
-                            onClick = onSyncGoogleTasks,
-                            enabled = !isSyncingTasks,
-                            colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            if (isSyncingTasks) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = Color.White)
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Filled.AccountCircle, contentDescription = null, tint = tokens.accentColor)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("正在同步 Google Tasks...")
-                            } else {
-                                Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    if (settings.googleAccountEmail.isNotBlank()) "立即同步 Google Tasks"
-                                    else "連結 Google 帳號並啟用 Google Tasks"
-                                )
+                                Text("Gmail 帳號與同步行事曆", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
+                            TextButton(
+                                onClick = onAddGoogleAccount,
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = tokens.accentColor)
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Text("添加 Gmail", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.accentColor)
                             }
                         }
 
-                        if (taskCategory != null) {
-                            SettingSwitchRow(
-                                label = "於日曆月檢視與時間表顯示 Google Tasks",
-                                checked = taskCategory.isVisible,
-                                onCheckedChange = { onToggleCategoryVisible(taskCategory) }
-                            )
+                        // 支援直接添加多個 Gmail 帳號（挑選裝置既有 Gmail 或新增登入全新 Google 帳號）
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = onAddGoogleAccount,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("選擇／添加 Gmail", fontSize = 12.sp)
+                            }
+                            OutlinedButton(
+                                onClick = onAddSystemGoogleAccount,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.AccountCircle, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("登入新 Google 帳號", fontSize = 12.sp)
+                            }
                         }
+
+                        if (!hasCalendarPermission) {
+                            Text("授權日曆權限即可載入裝置上所有 Gmail 帳號的行事曆", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                            Button(
+                                onClick = onRequestCalendarPermission,
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
+                            ) {
+                                Text("授權讀取與同步行事曆")
+                            }
+                        }
+
+                        // 彙整所有 Gmail／Google 帳號（包含裝置同步行事曆偵測到的與手動添加的多組 Gmail）
+                        val groupedSysCals = systemCalendars.groupBy { it.accountName.trim().ifBlank { "其他同步行事曆" } }
+                        val allGmailAccounts = buildList {
+                            settings.googleAccountEmails.forEach { if (it.isNotBlank() && !contains(it)) add(it) }
+                            systemCalendars.filter { it.isGoogleAccount && it.accountName.isNotBlank() }
+                                .map { it.accountName.trim() }
+                                .forEach { if (!contains(it)) add(it) }
+                        }
+
+                        if (allGmailAccounts.isEmpty()) {
+                            Text(
+                                text = "尚未連結 Gmail 帳號，請點擊上方「選擇／添加 Gmail」新增一或多個 Gmail 帳號。",
+                                color = tokens.secondaryTextColor,
+                                fontSize = 12.sp
+                            )
+                        } else {
+                            allGmailAccounts.forEach { gmail ->
+                                val calsForGmail = groupedSysCals[gmail].orEmpty()
+                                val isTasksLinked = settings.googleAccountEmails.any { it.equals(gmail, ignoreCase = true) }
+
+                                Column(
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(tokens.elevatedSurfaceColor.copy(alpha = 0.55f))
+                                        .padding(horizontal = 10.dp, vertical = 10.dp)
+                                ) {
+                                    // 清楚顯示 Gmail 帳號標題（支援移除手動添加的額外帳號）
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                            Icon(
+                                                Icons.Filled.AccountCircle,
+                                                contentDescription = null,
+                                                tint = tokens.accentColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = gmail,
+                                                color = tokens.primaryTextColor,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        if (isTasksLinked && allGmailAccounts.size > 1) {
+                                            TextButton(
+                                                onClick = { onRemoveGoogleAccount(gmail) },
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                                            ) {
+                                                Text("移除", fontSize = 11.sp, color = tokens.secondaryTextColor)
+                                            }
+                                        }
+                                    }
+
+                                    // 該 Gmail 帳號底下的所有同步行事曆
+                                    calsForGmail.forEach { sc ->
+                                        val isVis = !settings.hiddenSystemCalIds.contains(sc.id.toString())
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { onToggleSystemCalendarVisible(sc.id, !isVis) }
+                                                .padding(vertical = 2.dp)
+                                        ) {
+                                            Checkbox(
+                                                checked = isVis,
+                                                onCheckedChange = { onToggleSystemCalendarVisible(sc.id, it) }
+                                            )
+                                            Box(modifier = Modifier.size(11.dp).background(Color(sc.colorArgb), CircleShape))
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
+                                        }
+                                    }
+
+                                    // Google Tasks 排在該 Gmail 帳號最下面：給予打勾與初步啟動／同步按鈕！
+                                    HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.6f), modifier = Modifier.padding(vertical = 2.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                if (taskCategory != null) onToggleCategoryVisible(taskCategory)
+                                            }
+                                            .padding(vertical = 2.dp)
+                                    ) {
+                                        Checkbox(
+                                            checked = taskCategory?.isVisible ?: true,
+                                            onCheckedChange = {
+                                                if (taskCategory != null) onToggleCategoryVisible(taskCategory)
+                                            }
+                                        )
+                                        Icon(
+                                            Icons.Filled.TaskAlt,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFFAB00),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text("Google Tasks", color = tokens.primaryTextColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                            Text(
+                                                text = if (isTasksLinked) "已啟動自動同步" else "點擊右側啟動授權同步",
+                                                color = tokens.secondaryTextColor,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                        Button(
+                                            onClick = { onSyncGoogleTasksForEmail(gmail) },
+                                            enabled = !isSyncingTasks,
+                                            colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                            modifier = Modifier.height(30.dp)
+                                        ) {
+                                            Text(
+                                                text = when {
+                                                    isSyncingTasks -> "同步中..."
+                                                    isTasksLinked -> "立即同步"
+                                                    else -> "初步啟動"
+                                                },
+                                                fontSize = 11.sp,
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 非 Google 的其他同步行事曆（若有）
+                        val otherCals = systemCalendars.filter { !it.isGoogleAccount }
+                        if (otherCals.isNotEmpty()) {
+                            HorizontalDivider(color = tokens.gridLineColor)
+                            Text("其他同步行事曆", color = tokens.secondaryTextColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            otherCals.forEach { sc ->
+                                val isVis = !settings.hiddenSystemCalIds.contains(sc.id.toString())
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onToggleSystemCalendarVisible(sc.id, !isVis) }
+                                        .padding(vertical = 2.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = isVis,
+                                        onCheckedChange = { onToggleSystemCalendarVisible(sc.id, it) }
+                                    )
+                                    Box(modifier = Modifier.size(11.dp).background(Color(sc.colorArgb), CircleShape))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
+                                }
+                            }
+                        }
+
                         SettingSwitchRow(
-                            label = "於日曆中顯示已完成的待辦任務",
+                            label = "於日曆中顯示已完成的 Google Tasks 任務",
                             checked = settings.showCompletedTasks,
                             onCheckedChange = onToggleShowCompletedTasks
                         )
                     }
                 }
 
-                // 本機行事曆 + 雲端同步行事曆簡潔管理（不顯示繁雜帳號，且已移除內建 vivo 日曆）
+                // 2. 本機行事曆管理
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
@@ -702,7 +888,7 @@ private fun DxSettingsSectionContent(
                             }
                         }
 
-                        categories.filter { !it.isPrivacyCategory }.forEach { cat ->
+                        categories.filter { !it.isPrivacyCategory && !it.isTaskCategory }.forEach { cat ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -717,39 +903,6 @@ private fun DxSettingsSectionContent(
                                 Box(modifier = Modifier.size(12.dp).background(Color(cat.colorArgb), CircleShape))
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(cat.name, color = tokens.primaryTextColor, fontSize = 14.sp)
-                            }
-                        }
-
-                        HorizontalDivider(color = tokens.gridLineColor)
-                        Text("同步行事曆", color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        if (!hasCalendarPermission) {
-                            Text("授權日曆權限即可載入裝置上的 Google 行事曆（主要行事曆、家庭、節慶假日等）", color = tokens.secondaryTextColor, fontSize = 12.sp)
-                            Button(
-                                onClick = onRequestCalendarPermission,
-                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
-                            ) {
-                                Text("授權讀取與同步行事曆")
-                            }
-                        } else if (systemCalendars.isEmpty()) {
-                            Text("目前尚無可顯示的同步行事曆", color = tokens.secondaryTextColor, fontSize = 12.sp)
-                        } else {
-                            systemCalendars.forEach { sc ->
-                                val isVis = !settings.hiddenSystemCalIds.contains(sc.id.toString())
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onToggleSystemCalendarVisible(sc.id, !isVis) }
-                                        .padding(vertical = 3.dp)
-                                ) {
-                                    Checkbox(
-                                        checked = isVis,
-                                        onCheckedChange = { onToggleSystemCalendarVisible(sc.id, it) }
-                                    )
-                                    Box(modifier = Modifier.size(11.dp).background(Color(sc.colorArgb), CircleShape))
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
-                                }
                             }
                         }
                     }

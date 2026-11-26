@@ -536,14 +536,35 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_month_canvas)
             applyMonthContainerThemeAndOpacity(views, darkStyle, opacity, accentArgb)
 
-            views.setTextViewText(
-                R.id.widget_month_title,
-                if (expandedRow >= 0) "%d/%02d · 第%d週".format(ym.year, ym.monthValue, expandedRow + 1)
-                else "%d/%02d".format(ym.year, ym.monthValue)
+            val titleText = "%d/%02d".format(ym.year, ym.monthValue)
+            val titleSpan = android.text.SpannableString(titleText).apply {
+                val slashIdx = titleText.indexOf('/')
+                if (slashIdx > 0) {
+                    val slashColor = if (darkStyle) 0x88FFFFFF.toInt() else 0x88000000.toInt()
+                    setSpan(
+                        android.text.style.ForegroundColorSpan(slashColor),
+                        slashIdx,
+                        slashIdx + 1,
+                        android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                    setSpan(
+                        android.text.style.ForegroundColorSpan(accentArgb or 0xFF000000.toInt()),
+                        slashIdx + 1,
+                        titleText.length,
+                        android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
+            }
+            views.setTextViewText(R.id.widget_month_title, titleSpan)
+            // 完全對齊 vivo 簡潔大字頂欄：隱藏多餘的「全月」與「＋」鈕，非當月才顯示「今」快捷返回鈕
+            views.setViewVisibility(R.id.btn_widget_mode, android.view.View.GONE)
+            views.setViewVisibility(R.id.btn_widget_add, android.view.View.GONE)
+            val isNotCurrentMonth = ym != YearMonth.now()
+            views.setViewVisibility(
+                R.id.btn_widget_today,
+                if (isNotCurrentMonth) android.view.View.VISIBLE else android.view.View.GONE
             )
-            views.setViewVisibility(R.id.btn_widget_mode, android.view.View.VISIBLE)
-            views.setTextViewText(R.id.btn_widget_mode, if (expandedRow >= 0) "全月" else "單週")
-            views.setTextViewText(R.id.btn_widget_today, "now")
+            views.setTextViewText(R.id.btn_widget_today, "今")
             views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
 
             views.setOnClickPendingIntent(
@@ -1304,29 +1325,29 @@ internal object MonthCanvasRenderer {
         val textFlags = Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG or Paint.LINEAR_TEXT_FLAG
         val headerPaint = Paint(textFlags).apply {
             color = secondaryText
-            textSize = 11.2f * density
+            textSize = 11.6f * density
             textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         }
         val dayPaint = Paint(textFlags).apply {
-            textSize = (if (hPx < 420) 12.2f else 14.2f) * density
+            textSize = (if (hPx < 420) 13.4f else 15.6f) * density
             textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         }
         val lunarPaint = Paint(textFlags).apply {
-            textSize = 9.0f * density
+            textSize = 9.8f * density
             textAlign = Paint.Align.CENTER
         }
         val chipPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         val chipTextPaint = Paint(textFlags).apply {
             color = primaryText
-            textSize = 9.0f * density
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textSize = 9.6f * density
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         }
         val cardTitlePaint = Paint(textFlags).apply {
             color = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF141418.toInt()
-            textSize = 9.4f * density
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textSize = 10.6f * density
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = gridLineColor
@@ -1376,33 +1397,17 @@ internal object MonthCanvasRenderer {
 
             if (googleGridStyle) {
                 canvas.drawLine(0f, cellTop, wPx.toFloat(), cellTop, linePaint)
-            } else if (rowExpandFrac > 0.04f) {
-                // 類 vivo 展開單週的柔和底色強調帶 + 展開瞬間微縮放與光暈邊框動畫特效！
+            } else if (rowExpandFrac > 0.04f && isAnimating && r == expandedWeekRow) {
+                // 僅在展開瞬間帶有一抹細緻主題色微光邊框，定格後完全通透自然融入背景（對齊 vivo 簡潔無灰框排版！）
                 val insetX = (1f - rowExpandFrac) * 6f * density + 1f * density
-                val baseBandAlpha = if (darkStyle) 0x18 else 0x0E
-                val animBoostAlpha = if (isAnimating && r == expandedWeekRow) {
-                    (sin(tProgress * PI) * 18.0).roundToInt()
-                } else 0
-                val bandAlpha = (baseBandAlpha * rowExpandFrac + animBoostAlpha).roundToInt().coerceIn(0, 56)
-                chipPaint.color = (if (darkStyle) 0x00FFFFFF else 0x00000000) or (bandAlpha shl 24)
                 val bandRect = RectF(insetX, cellTop + 1f * density, wPx - insetX, cellTop + rowH - 1f * density)
-                canvas.drawRoundRect(bandRect, 10f * density, 10f * density, chipPaint)
-
-                // 展開動畫期間帶有一抹細緻主題色微光邊框，定格後轉為柔和玻璃細線
-                if (isAnimating && r == expandedWeekRow) {
-                    val glowAlpha = (sin(tProgress * PI) * 125.0).roundToInt().coerceIn(30, 140)
-                    linePaint.color = (accentArgb and 0x00FFFFFF) or (glowAlpha shl 24)
-                    linePaint.strokeWidth = 1.4f * density
-                    linePaint.style = Paint.Style.STROKE
-                    canvas.drawRoundRect(bandRect, 10f * density, 10f * density, linePaint)
-                    linePaint.style = Paint.Style.FILL
-                    linePaint.strokeWidth = 1f
-                } else {
-                    val borderAlpha = ((if (darkStyle) 0x32 else 0x22) * rowExpandFrac).roundToInt().coerceIn(0, 64)
-                    linePaint.color = (if (darkStyle) 0x00FFFFFF else 0x00000000) or (borderAlpha shl 24)
-                    canvas.drawLine(4f * density, cellTop + 1f * density, wPx - 4f * density, cellTop + 1f * density, linePaint)
-                    canvas.drawLine(4f * density, cellTop + rowH - 1f * density, wPx - 4f * density, cellTop + rowH - 1f * density, linePaint)
-                }
+                val glowAlpha = (sin(tProgress * PI) * 110.0).roundToInt().coerceIn(20, 120)
+                linePaint.color = (accentArgb and 0x00FFFFFF) or (glowAlpha shl 24)
+                linePaint.strokeWidth = 1.3f * density
+                linePaint.style = Paint.Style.STROKE
+                canvas.drawRoundRect(bandRect, 10f * density, 10f * density, linePaint)
+                linePaint.style = Paint.Style.FILL
+                linePaint.strokeWidth = 1f
                 linePaint.color = gridLineColor
             }
 
@@ -1425,18 +1430,18 @@ internal object MonthCanvasRenderer {
                 val alphaFactor = if (inMonth) 255 else 95
 
                 val cx = cellLeft + colW / 2f
-                val dayBaseline = cellTop + (if (anyWeekAccordionMode && rowExpandFrac < 0.3f) 13.5f else 14.5f) * density
+                val dayBaseline = cellTop + (if (anyWeekAccordionMode && rowExpandFrac < 0.3f) 14.8f else 15.8f) * density
                 val lunar = if (showLunar) LunarCalendarEngine.getLunarInfo(d) else null
 
                 if (isToday) {
                     if (!googleGridStyle) {
-                        val pillW = (colW - 6f * density).coerceAtMost(32f * density)
-                        val pillH = if (showLunar) 26f * density else 18f * density
+                        val pillW = (colW - 4f * density).coerceAtMost(38f * density)
+                        val pillH = if (showLunar) 30f * density else 20f * density
                         chipPaint.color = accentArgb
                         canvas.drawRoundRect(
-                            RectF(cx - pillW / 2f, cellTop + 2f * density, cx + pillW / 2f, cellTop + 2f * density + pillH),
-                            7f * density,
-                            7f * density,
+                            RectF(cx - pillW / 2f, cellTop + 1.5f * density, cx + pillW / 2f, cellTop + 1.5f * density + pillH),
+                            8f * density,
+                            8f * density,
                             chipPaint
                         )
                     } else {
@@ -1449,6 +1454,7 @@ internal object MonthCanvasRenderer {
                     }
                 }
 
+                dayPaint.typeface = Typeface.create(Typeface.DEFAULT, if (isToday) Typeface.BOLD else Typeface.NORMAL)
                 dayPaint.color = when {
                     isToday && !googleGridStyle -> 0xFFFFFFFF.toInt()
                     isToday -> accentArgb
@@ -1457,25 +1463,25 @@ internal object MonthCanvasRenderer {
                 dayPaint.alpha = if (isToday) 255 else alphaFactor
                 canvas.drawText(d.dayOfMonth.toString(), cx, dayBaseline, dayPaint)
 
-                var contentStartY = dayBaseline + 3f * density
+                var contentStartY = dayBaseline + 3.5f * density
                 if (showLunar && lunar != null && rowH >= 24f * density) {
                     lunarPaint.color = when {
-                        isToday && !googleGridStyle -> 0xFFEFEFEF.toInt()
+                        isToday && !googleGridStyle -> 0xFFF5F5F7.toInt()
                         lunar.isTaiwanHoliday || lunar.solarTerm != null -> accentArgb
                         else -> secondaryText
                     }
                     lunarPaint.alpha = if (isToday) 255 else alphaFactor
-                    val lunarBaseline = dayBaseline + 9.2f * density
+                    val lunarBaseline = dayBaseline + 10.6f * density
                     canvas.drawText(lunar.shortDisplay.take(4), cx, lunarBaseline, lunarPaint)
-                    contentStartY = lunarBaseline + 3.5f * density
+                    contentStartY = lunarBaseline + 4.2f * density
                 }
 
                 val dayEvents = byDate[d] ?: emptyList()
 
                 if (rowExpandFrac >= 0.22f) {
-                    // 類 vivo 單週展開模式（含展開滑入與收合淡出微動畫裁切區！）
-                    val cardAreaTop = maxOf(contentStartY + 1f * density, cellTop + unitH * 0.92f)
-                    val cardAreaBottom = cellTop + rowH - 3.5f * density
+                    // 完全對齊 vivo 展開週卡片排版：大字清晰靠左對齊、無左側冗餘色條、依行數動態自適應高度！
+                    val cardAreaTop = maxOf(contentStartY + 2f * density, cellTop + unitH * 0.86f)
+                    val cardAreaBottom = cellTop + rowH - 3f * density
                     if (cardAreaBottom > cardAreaTop + 6f * density) {
                         val cardOpacity = ((rowExpandFrac - 0.18f) / 0.82f).coerceIn(0f, 1f)
                         val slideOffsetY = -(1f - rowExpandFrac) * 7f * density
@@ -1484,48 +1490,39 @@ internal object MonthCanvasRenderer {
                         canvas.clipRect(cellLeft, cardAreaTop, cellLeft + colW, cardAreaBottom)
 
                         var yCursor = cardAreaTop + slideOffsetY
-                        val lineH = 9.8f * density
-                        val cardGap = 2.5f * density
-                        val padX = 2.2f * density
-                        val innerMaxW = (colW - padX * 2f - 5f * density).coerceAtLeast(12f * density)
+                        val lineH = 12.2f * density
+                        val cardGap = 2.6f * density
+                        val padX = 1.6f * density
+                        val textPadX = 3.2f * density
+                        val innerMaxW = (colW - padX * 2f - textPadX * 2f).coerceAtLeast(14f * density)
                         var drawnCount = 0
 
                         for (ev in dayEvents) {
                             val remainH = cardAreaBottom - yCursor
-                            if (remainH < lineH + 4f * density) break
+                            if (remainH < lineH + 5f * density) break
                             val label = (if (ev.isTask) "○" else "") + ev.title
                             val maxLinesForCard = when {
-                                dayEvents.size <= 2 && remainH >= lineH * 3 + 8f * density -> 3
+                                remainH >= lineH * 3 + 8f * density -> 3
                                 remainH >= lineH * 2 + 6f * density -> 2
                                 else -> 1
                             }
                             val lines = wrapTextToLines(label, cardTitlePaint, innerMaxW, maxLinesForCard)
-                            val cardH = lines.size * lineH + 5f * density
+                            val cardH = lines.size * lineH + 6.4f * density
                             if (yCursor + cardH > cardAreaBottom + 4f * density && drawnCount > 0) break
 
-                            val bgBaseAlpha = if (darkStyle) 0x8A else 0x3D
+                            val bgBaseAlpha = if (darkStyle) 0xA6 else 0x44
                             val bgScaledAlpha = (bgBaseAlpha * cardOpacity).roundToInt().coerceIn(0, 255)
                             chipPaint.color = (ev.colorArgb and 0x00FFFFFF) or (bgScaledAlpha shl 24)
                             val cardRect = RectF(cellLeft + padX, yCursor, cellLeft + colW - padX, yCursor + cardH)
-                            canvas.drawRoundRect(cardRect, 4.5f * density, 4.5f * density, chipPaint)
+                            canvas.drawRoundRect(cardRect, 6f * density, 6f * density, chipPaint)
 
-                            chipPaint.color = ev.colorArgb
-                            chipPaint.alpha = (255 * cardOpacity).roundToInt().coerceIn(0, 255)
-                            canvas.drawRoundRect(
-                                RectF(cellLeft + padX, yCursor + 1.5f * density, cellLeft + padX + 2.2f * density, yCursor + cardH - 1.5f * density),
-                                1.5f * density,
-                                1.5f * density,
-                                chipPaint
-                            )
-                            chipPaint.alpha = 255
-
-                            val textBaseAlpha = if (inMonth) 255 else 175
+                            val textBaseAlpha = if (inMonth) 255 else 185
                             cardTitlePaint.alpha = (textBaseAlpha * cardOpacity).roundToInt().coerceIn(0, 255)
                             lines.forEachIndexed { lIdx, lineText ->
                                 canvas.drawText(
                                     lineText,
-                                    cellLeft + padX + 4f * density,
-                                    yCursor + 2.2f * density + (lIdx + 1) * lineH - 1.5f * density,
+                                    cellLeft + padX + textPadX,
+                                    yCursor + 3.0f * density + (lIdx + 1) * lineH - 2.0f * density,
                                     cardTitlePaint
                                 )
                             }
@@ -1542,16 +1539,24 @@ internal object MonthCanvasRenderer {
                         canvas.restore()
                     }
                 } else if (anyWeekAccordionMode) {
-                    // 其他收合週列：以精巧彩色圓點提示當天有行程，點擊該週即可展開！
+                    // 其他收合週列：完全對齊 vivo 樣式，在農曆下方繪製精簡彩色短橫條！
                     if (dayEvents.isNotEmpty() && contentStartY + 3f * density <= cellTop + rowH) {
-                        val dots = dayEvents.take(3)
-                        val dotR = 1.7f * density
-                        val dotGap = 4.6f * density
-                        val totalDotW = (dots.size - 1) * dotGap
-                        dots.forEachIndexed { idx, ev ->
+                        val bars = dayEvents.take(3)
+                        val barH = 2.4f * density
+                        val barGap = 2.0f * density
+                        val totalBarsW = (colW * 0.46f).coerceAtMost(20f * density)
+                        val segW = ((totalBarsW - (bars.size - 1) * barGap) / bars.size).coerceAtLeast(3f * density)
+                        val startX = cx - totalBarsW / 2f
+                        bars.forEachIndexed { idx, ev ->
                             chipPaint.color = ev.colorArgb
                             chipPaint.alpha = alphaFactor
-                            canvas.drawCircle(cx - totalDotW / 2f + idx * dotGap, contentStartY + 1.2f * density, dotR, chipPaint)
+                            val left = startX + idx * (segW + barGap)
+                            canvas.drawRoundRect(
+                                RectF(left, contentStartY, left + segW, contentStartY + barH),
+                                barH / 2f,
+                                barH / 2f,
+                                chipPaint
+                            )
                         }
                         chipPaint.alpha = 255
                     }

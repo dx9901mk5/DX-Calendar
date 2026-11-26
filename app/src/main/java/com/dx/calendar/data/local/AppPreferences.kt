@@ -36,6 +36,7 @@ data class UserSettings(
     val requireDualFingerprint: Boolean = true,
     val privacyPinHash: String = "",
     val googleAccountEmail: String = "",
+    val googleAccountEmails: Set<String> = emptySet(),
     val hiddenSystemCalIds: Set<String> = emptySet(),
     val widgetDarkStyle: Boolean = false,
     val widgetFollowSystemDark: Boolean = true,
@@ -68,6 +69,7 @@ class AppPreferences(context: Context) {
         private val KEY_DUAL_FINGERPRINT = booleanPreferencesKey("require_dual_fingerprint")
         private val KEY_PRIVACY_PIN_HASH = stringPreferencesKey("privacy_pin_hash")
         private val KEY_GOOGLE_EMAIL = stringPreferencesKey("google_account_email")
+        private val KEY_GOOGLE_EMAILS = stringSetPreferencesKey("google_account_emails")
         private val KEY_HIDDEN_SYS_CALS = stringSetPreferencesKey("hidden_sys_cals")
         private val KEY_WIDGET_DARK = booleanPreferencesKey("widget_dark")
         private val KEY_WIDGET_OPACITY = floatPreferencesKey("widget_opacity")
@@ -111,6 +113,10 @@ class AppPreferences(context: Context) {
                 requireDualFingerprint = prefs[KEY_DUAL_FINGERPRINT] ?: true,
                 privacyPinHash = prefs[KEY_PRIVACY_PIN_HASH] ?: "",
                 googleAccountEmail = prefs[KEY_GOOGLE_EMAIL] ?: "",
+                googleAccountEmails = buildSet {
+                    prefs[KEY_GOOGLE_EMAILS]?.filter { it.isNotBlank() }?.let { addAll(it) }
+                    prefs[KEY_GOOGLE_EMAIL]?.takeIf { it.isNotBlank() }?.let { add(it) }
+                },
                 hiddenSystemCalIds = prefs[KEY_HIDDEN_SYS_CALS] ?: emptySet(),
                 widgetDarkStyle = prefs[KEY_WIDGET_DARK] ?: false,
                 widgetFollowSystemDark = prefs[KEY_WIDGET_DARK] == null,
@@ -211,7 +217,27 @@ class AppPreferences(context: Context) {
     }
 
     suspend fun setGoogleAccountEmail(email: String) {
-        appContext.dataStore.edit { it[KEY_GOOGLE_EMAIL] = email }
+        val clean = email.trim()
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_GOOGLE_EMAIL] = clean
+            if (clean.isNotBlank()) {
+                val cur = prefs[KEY_GOOGLE_EMAILS]?.toMutableSet() ?: mutableSetOf()
+                cur.add(clean)
+                prefs[KEY_GOOGLE_EMAILS] = cur
+            }
+        }
+    }
+
+    suspend fun removeGoogleAccountEmail(email: String) {
+        val clean = email.trim()
+        appContext.dataStore.edit { prefs ->
+            val cur = prefs[KEY_GOOGLE_EMAILS]?.toMutableSet() ?: mutableSetOf()
+            cur.remove(clean)
+            prefs[KEY_GOOGLE_EMAILS] = cur
+            if (prefs[KEY_GOOGLE_EMAIL] == clean) {
+                prefs[KEY_GOOGLE_EMAIL] = cur.firstOrNull() ?: ""
+            }
+        }
     }
 
     suspend fun toggleSystemCalendarVisibility(calId: String, visible: Boolean) {

@@ -155,16 +155,20 @@ class MainActivity : AppCompatActivity() {
                     if (savedEmail.isNotBlank()) {
                         viewModel.syncGoogleTasksWithEmail(savedEmail)
                     } else {
-                        runCatching {
-                            val pickerIntent = AccountPicker.newChooseAccountIntent(
-                                AccountPicker.AccountChooserOptions.Builder()
-                                    .setAllowableAccountsTypes(listOf("com.google"))
-                                    .build()
-                            )
-                            googleAccountPickerLauncher.launch(pickerIntent)
-                        }.onFailure {
-                            Toast.makeText(this, "無法開啟 Google 帳號選擇器，請確認 Google 服務狀態", Toast.LENGTH_SHORT).show()
+                        launchGoogleAccountChooser()
+                    }
+                },
+                onAddGoogleAccount = {
+                    launchGoogleAccountChooser()
+                },
+                onAddSystemGoogleAccount = {
+                    runCatching {
+                        val intent = Intent(android.provider.Settings.ACTION_ADD_ACCOUNT).apply {
+                            putExtra(android.provider.Settings.EXTRA_ACCOUNT_TYPES, arrayOf("com.google"))
                         }
+                        startActivity(intent)
+                    }.onFailure {
+                        launchGoogleAccountChooser()
                     }
                 },
                 onTriggerDualBiometric = {
@@ -194,6 +198,20 @@ class MainActivity : AppCompatActivity() {
                     runCatching { icsFilePickerLauncher.launch(arrayOf("text/calendar", "*/*")) }
                 }
             )
+        }
+    }
+
+    private fun launchGoogleAccountChooser() {
+        runCatching {
+            val pickerIntent = AccountPicker.newChooseAccountIntent(
+                AccountPicker.AccountChooserOptions.Builder()
+                    .setAllowableAccountsTypes(listOf("com.google"))
+                    .setAlwaysShowAccountPicker(true)
+                    .build()
+            )
+            googleAccountPickerLauncher.launch(pickerIntent)
+        }.onFailure {
+            Toast.makeText(this, "無法開啟 Google 帳號選擇器，請確認 Google 服務狀態", Toast.LENGTH_SHORT).show()
         }
     }
 
