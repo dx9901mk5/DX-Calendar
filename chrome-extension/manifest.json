@@ -2,15 +2,15 @@
   "manifest_version": 3,
   "name": "DX日曆 (DX-Calendar) — 智慧月曆與跨裝置同步",
   "short_name": "DX日曆",
-  "version": "2.0.0",
-  "description": "奢華金白／金色黑底雙主題 Chrome 智慧日曆：1900–2100 農曆節氣、7天月曆天氣、離線自然語言與語音快記、輪班排班、番茄鐘、倒數日，並相容 Android DX日曆 v2.0 .dxbackup.json 跨系統同步！",
+  "version": "2.1.0",
+  "description": "奢華金雙主題三形態日曆（彈窗／側邊欄／獨立視窗）：農曆節氣、7天天氣、離線語音快記、24h雙時區、拖曳改期、輪班排班與背景番茄鐘，100% 互通 Android DX日曆備份！",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "DX日曆 (點擊開啟月曆)",
+    "default_title": "DX日曆 (Alt+Shift+D 快速開啟)",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -23,6 +23,14 @@
   },
   "background": {
     "service_worker": "background.js"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+D"
+      },
+      "description": "快速開啟 DX日曆月曆視窗"
+    }
   },
   "permissions": [
     "storage",

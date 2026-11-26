@@ -19,3 +19,4 @@ keystore_backup/
 play_publish_kit/
 DEV_RECORD.md
 .agents/
+chrome-extension/dist/

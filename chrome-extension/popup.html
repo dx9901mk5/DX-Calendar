@@ -9,14 +9,15 @@
 <body>
   <header class="topbar">
     <div class="ym-nav">
-      <button id="btnPrev" class="icon-btn" title="上一月">‹</button>
+      <button id="btnPrev" class="icon-btn" title="上一月 (←)">‹</button>
       <div id="ymTitle" class="ym-title">2026/<span class="accent">11</span></div>
-      <button id="btnNext" class="icon-btn" title="下一月">›</button>
+      <button id="btnNext" class="icon-btn" title="下一月 (→)">›</button>
     </div>
     <div class="top-actions">
       <button id="btnNow" class="now-pill" title="回到今天">now</button>
       <button id="btnTheme" class="icon-btn" title="切換亮／暗色主題">🌓</button>
-      <button id="btnSidePanel" class="icon-btn" title="在 Chrome 側邊欄開啟">◫</button>
+      <button id="btnSidePanel" class="icon-btn" title="常駐於 Chrome 側邊欄">◫</button>
+      <button id="btnAppWindow" class="icon-btn" title="獨立桌面雙欄大視窗">⛶</button>
     </div>
   </header>
 
@@ -35,30 +36,56 @@
   </div>
 
   <main class="main-scroll">
-    <!-- Tab 1: 月曆 -->
+    <!-- Tab 1: 月曆 ＋ 當日詳情 / 24h雙時區時間軸 -->
     <section id="tabCalendar" class="tab-panel active">
-      <div class="weekdays">
-        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
-      </div>
-      <div id="monthGrid" class="month-grid"></div>
-
-      <div class="section-card">
-        <div class="day-header-row">
-          <div>
-            <div id="selectedDateTitle" class="day-header-title">今日</div>
-            <div id="selectedDateSub" class="day-header-sub">農曆與天氣載入中...</div>
+      <div class="calendar-layout">
+        <div class="calendar-left">
+          <div class="weekdays">
+            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
           </div>
-          <button id="btnQuickEventOnDate" class="btn-outline">＋ 行程</button>
+          <div id="monthGrid" class="month-grid"></div>
         </div>
-        <div id="dayEventsList"></div>
+
+        <div class="section-card day-detail-card">
+          <div class="day-header-row">
+            <div>
+              <div id="selectedDateTitle" class="day-header-title">今日</div>
+              <div id="selectedDateSub" class="day-header-sub">農曆與天氣載入中...</div>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <button id="btnViewList" class="btn-outline active" style="padding:4px 7px;font-size:11px;">清單</button>
+              <button id="btnViewTimeline" class="btn-outline" style="padding:4px 7px;font-size:11px;">24h軸</button>
+              <button id="btnQuickEventOnDate" class="btn-gold" style="padding:4px 8px;font-size:11px;">＋ 新增</button>
+            </div>
+          </div>
+
+          <div id="dayEventsList"></div>
+
+          <div id="dayTimelineWrap" class="hidden">
+            <div class="timeline-toolbar">
+              <span>🌐 第二時區對照：</span>
+              <select id="dualTzSelect" class="nlp-input" style="padding:3px 6px;font-size:11px;">
+                <option value="">關閉雙時區</option>
+                <option value="Asia/Tokyo">東京 (JST)</option>
+                <option value="Asia/Seoul">首爾 (KST)</option>
+                <option value="Asia/Singapore">新加坡 (SGT)</option>
+                <option value="America/Los_Angeles">美西洛杉磯 (PT)</option>
+                <option value="America/New_York">美東紐約 (ET)</option>
+                <option value="Europe/London">倫敦 (UK)</option>
+                <option value="Australia/Sydney">雪梨 (AEST)</option>
+              </select>
+            </div>
+            <div id="dayTimelineGrid" class="timeline-grid"></div>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Tab 2: 待辦與番茄鐘 -->
+    <!-- Tab 2: 待辦與背景番茄鐘 -->
     <section id="tabTasks" class="tab-panel">
       <div class="section-card" style="margin-top:0;">
         <div class="pomodoro-box">
-          <div style="font-size:13px;font-weight:800;">🍅 番茄鐘專注計時</div>
+          <div id="pomoTaskLabel" style="font-size:13px;font-weight:800;">🍅 番茄鐘專注計時（關閉視窗仍於背景倒數）</div>
           <div id="pomoDisplay" class="pomodoro-time">25:00</div>
           <div class="chip-row">
             <button class="chip active" data-pomo="25">25分</button>
@@ -75,11 +102,11 @@
 
       <div class="section-card">
         <div class="day-header-row">
-          <div class="day-header-title">✅ 待辦清單</div>
+          <div class="day-header-title">✅ 待辦清單（支援 ⏰ 一鍵排時段 ＋ 🍅 專注）</div>
           <span id="taskCountLabel" class="day-header-sub">0 項未完成</span>
         </div>
         <div class="nlp-input-row" style="margin-bottom:8px;">
-          <input id="taskInput" class="nlp-input" type="text" placeholder="新增今日待辦事項..." />
+          <input id="taskInput" class="nlp-input" type="text" placeholder="新增待辦事項（歸於目前選取日期）..." />
           <button id="btnAddTask" class="btn-gold">新增</button>
         </div>
         <div id="tasksList"></div>
@@ -92,17 +119,23 @@
         <div class="day-header-row">
           <div class="day-header-title">🏷️ 輪班與常用範本（點選後回月曆連點排班）</div>
         </div>
-        <div id="templatesChipRow" class="chip-row" style="margin-bottom:8px;"></div>
-        <div class="nlp-input-row">
-          <input id="newTplName" class="nlp-input" type="text" placeholder="自訂範本名稱（如：白班）" />
-          <input id="newTplTime" class="nlp-input" type="time" value="08:00" style="max-width:95px;" />
-          <button id="btnAddTpl" class="btn-gold">新增</button>
+        <div id="templatesChipRow" class="chip-row" style="margin-bottom:10px;"></div>
+        <div class="nlp-input-row" style="margin-bottom:6px;">
+          <input id="newTplName" class="nlp-input" type="text" placeholder="範本名稱（如：白班）" />
+          <input id="newTplTime" class="nlp-input" type="time" value="08:00" style="max-width:96px;" />
+          <input id="newTplDuration" class="nlp-input" type="number" value="480" min="15" max="1440" style="max-width:68px;" title="時長(分鐘)" />
+        </div>
+        <div class="nlp-input-row" style="justify-content:space-between;">
+          <label style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--subtext);">
+            <input id="newTplAllDay" type="checkbox" /> 全天行程範本
+          </label>
+          <button id="btnAddTpl" class="btn-gold">＋ 新增範本</button>
         </div>
       </div>
 
       <div class="section-card">
         <div class="day-header-row">
-          <div class="day-header-title">⏳ 倒數日與紀念日</div>
+          <div class="day-header-title">⏳ 倒數日、紀念日與生日歲數</div>
         </div>
         <div id="countdownList"></div>
       </div>
@@ -111,21 +144,33 @@
     <!-- Tab 4: 跨系統同步與備份 -->
     <section id="tabSync" class="tab-panel">
       <div class="section-card" style="margin-top:0;">
-        <div class="day-header-title" style="margin-bottom:6px;">☁️ Android ⇄ Chrome 跨系統備份同步</div>
-        <p class="day-header-sub" style="line-height:1.5;margin-bottom:10px;">
-          採用與 Android DX日曆 v2.0 <strong>100% 相同 Schema</strong>（<code>.dxbackup.json</code>）。<br/>
-          可直接匯入你從手機上傳至 Google 雲端硬碟的備份檔，或將電腦新增的行程匯出至 Google 雲端硬碟供手機還原，0 伺服器費用、隱私完全自控！
+        <div class="day-header-title" style="margin-bottom:6px;">☁️ Android ⇄ Chrome 跨系統無損備份同步</div>
+        <p class="day-header-sub" style="line-height:1.5;margin-bottom:8px;">
+          採用與 Android DX日曆 v2.0 <strong>100% 相同 Schema v2</strong>（<code>.dxbackup.json</code>）。完整保留 Android 分類、例行打卡與加密隱私紀錄，0 伺服器費用、隱私完全自控！
         </p>
+        <div id="syncStatsText" class="day-header-sub" style="margin-bottom:8px;color:var(--accent);font-weight:700;"></div>
         <div style="margin-bottom:8px;">
-          <div class="day-header-sub" style="margin-bottom:4px;">裝置名稱（寫入備份檔名）</div>
+          <label class="form-label" for="deviceNameInput">裝置名稱（寫入備份檔名與協作留言署名）</label>
           <input id="deviceNameInput" class="nlp-input" style="width:100%;" type="text" placeholder="例如：Chrome-PC" />
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
           <button id="btnExportBackup" class="btn-gold" style="flex:1;padding:9px;">💾 匯出 .dxbackup.json</button>
-          <button id="btnImportBackup" class="btn-outline" style="flex:1;padding:9px;">📥 匯入還原備份</button>
-          <input id="backupFileInput" type="file" accept=".json,application/json" style="display:none;" />
+          <button id="btnImportMerge" class="btn-outline" style="flex:1;padding:9px;">🔀 智慧合併匯入</button>
         </div>
-        <button id="btnOpenDrive" class="btn-outline" style="width:100%;padding:8px;">📂 開啟 Google 雲端硬碟上傳／下載備份檔</button>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button id="btnImportOverwrite" class="btn-outline" style="flex:1;padding:7px;font-size:11px;">📥 完整覆蓋還原</button>
+          <button id="btnOpenDrive" class="btn-outline" style="flex:1;padding:7px;font-size:11px;">📂 開啟 Google 雲端硬碟</button>
+        </div>
+        <input id="backupFileInput" type="file" accept=".json,application/json" style="display:none;" />
+      </div>
+
+      <div class="section-card">
+        <div class="day-header-title" style="margin-bottom:6px;">📅 標準 .ics 行事曆匯入／匯出</div>
+        <div style="display:flex;gap:6px;">
+          <button id="btnExportIcs" class="btn-outline" style="flex:1;">匯出 .ics</button>
+          <button id="btnImportIcs" class="btn-outline" style="flex:1;">匯入 .ics</button>
+          <input id="icsFileInput" type="file" accept=".ics,text/calendar" style="display:none;" />
+        </div>
       </div>
 
       <div class="section-card">
@@ -143,9 +188,114 @@
     <button class="nav-btn" data-tab="tabSync">☁️ 同步備份</button>
   </nav>
 
+  <!-- 行程新增／編輯／倒數／協作留言彈窗 -->
+  <div id="eventModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="day-header-row" style="margin-bottom:2px;">
+        <div id="modalTitleHeader" class="day-header-title">編輯行程</div>
+        <button id="btnCloseModal" class="icon-btn" title="關閉">✕</button>
+      </div>
+
+      <div>
+        <label class="form-label" for="evTitle">行程標題</label>
+        <input id="evTitle" class="nlp-input" style="width:100%;" type="text" placeholder="輸入行程名稱" />
+      </div>
+
+      <div class="form-row">
+        <div style="flex:1;">
+          <label class="form-label" for="evDate">日期</label>
+          <input id="evDate" class="nlp-input" style="width:100%;" type="date" />
+        </div>
+        <label style="font-size:12px;display:flex;align-items:center;gap:5px;padding-top:14px;">
+          <input id="evAllDay" type="checkbox" /> 全天
+        </label>
+      </div>
+
+      <div id="evTimeRow" class="form-row">
+        <div style="flex:1;">
+          <label class="form-label" for="evStartTime">開始時間</label>
+          <input id="evStartTime" class="nlp-input" style="width:100%;" type="time" value="09:00" />
+        </div>
+        <div style="flex:1;">
+          <label class="form-label" for="evEndTime">結束時間</label>
+          <input id="evEndTime" class="nlp-input" style="width:100%;" type="time" value="10:00" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div style="flex:1;">
+          <label class="form-label" for="evLocation">地點（可一鍵 Google Maps 導航）</label>
+          <input id="evLocation" class="nlp-input" style="width:100%;" type="text" placeholder="例如：台北 101" />
+        </div>
+        <button id="btnModalNavMaps" class="btn-outline" style="margin-top:14px;" title="開啟 Google Maps 導航">🗺️ 導航</button>
+      </div>
+
+      <div class="form-row">
+        <div style="flex:1;">
+          <label class="form-label" for="evRecurrence">重複規則（含農曆初一十五）</label>
+          <select id="evRecurrence" class="nlp-input" style="width:100%;">
+            <option value="NONE">不重複</option>
+            <option value="DAILY">每天</option>
+            <option value="WEEKDAYS">每週一至週五</option>
+            <option value="WEEKLY">每週</option>
+            <option value="BIWEEKLY">每兩週</option>
+            <option value="EVERY_N_WEEKS:3">隔 3 週</option>
+            <option value="EVERY_N_WEEKS:4">隔 4 週</option>
+            <option value="MONTHLY">每月</option>
+            <option value="YEARLY">每年</option>
+            <option value="LUNAR_MONTHLY">農曆每月</option>
+            <option value="LUNAR_FIRST_FIFTEENTH">農曆初一與十五</option>
+            <option value="LUNAR_YEARLY">農曆每年（生日／祭祀）</option>
+          </select>
+        </div>
+        <div style="width:70px;">
+          <label class="form-label" for="evColor">顏色</label>
+          <input id="evColor" class="nlp-input" style="width:100%;height:31px;padding:2px;" type="color" value="#c8962e" />
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label" for="evReminder">提前提醒分鐘（逗號分隔，如 0,15,60）</label>
+        <input id="evReminder" class="nlp-input" style="width:100%;" type="text" value="0,15" />
+      </div>
+
+      <div class="form-row" style="flex-wrap:wrap;padding:4px 0;">
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;">
+          <input id="evIsCountdown" type="checkbox" /> ⏳ 倒數日
+        </label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:4px;">
+          <input id="evIsBirthday" type="checkbox" /> 🎂 生日自動算歲數
+        </label>
+        <input id="evBirthYear" class="nlp-input" style="max-width:110px;padding:4px 8px;" type="number" placeholder="起始西元年" min="1900" max="2100" />
+      </div>
+
+      <div>
+        <label class="form-label" for="evNotes">備註</label>
+        <textarea id="evNotes" class="nlp-input" style="width:100%;min-height:48px;resize:vertical;" placeholder="補充說明..."></textarea>
+      </div>
+
+      <div id="commentsSection" class="hidden" style="border-top:1px solid var(--grid);padding-top:8px;">
+        <div class="form-label">💬 家庭／情侶協作留言板（隨備份同步至 Android）</div>
+        <div id="commentsList"></div>
+        <div class="nlp-input-row">
+          <input id="commentInput" class="nlp-input" type="text" placeholder="輸入留言給家人或另一半..." />
+          <button id="btnAddComment" class="btn-outline">送出</button>
+        </div>
+      </div>
+
+      <div class="form-row" style="justify-content:space-between;margin-top:4px;">
+        <button id="btnDeleteEvent" class="btn-danger hidden">🗑️ 刪除</button>
+        <div style="display:flex;gap:6px;margin-left:auto;">
+          <button id="btnSaveEvent" class="btn-gold" style="padding:7px 18px;">💾 儲存行程</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <script src="lunar.js"></script>
+  <script src="core.js"></script>
   <script src="nlp.js"></script>
   <script src="weather.js"></script>
   <script src="app.js"></script>

@@ -24,7 +24,7 @@ import java.time.format.DateTimeFormatter
 
 /**
  * 跨系統通用 DX日曆整庫備份 Schema（v2）：
- * 完整支援 Android 換機還原，並預留未來 Windows Store 電腦端伴侶版共用同一份 JSON 同步格式。
+ * 完整支援 Android 換機還原，並與官方 Chrome 擴充功能跨系統伴侶版共用同一份 JSON 無損同步格式。
  */
 data class DxFullBackupPayload(
     val schemaVersion: Int = 2,

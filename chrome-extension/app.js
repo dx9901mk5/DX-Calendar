@@ -1,67 +1,46 @@
 /**
- * DX日曆 Chrome 插件主控制器（Popup + Side Panel 雙形態）
- * 與 Android DX日曆 v2.0.0 共用完全相容的 DxFullBackupPayload JSON 備份結構！
+ * DX日曆 Chrome 插件主控制器（Popup / Side Panel / 獨立桌面雙欄視窗 三形態）
+ * 與 Android DX日曆 v2.0.0 共用 100% 無損相容的 DxFullBackupPayload v2 Schema！
  */
 (() => {
   const STORAGE_KEY = "dx_calendar_state_v2";
   const THEME_KEY = "dx_theme_mode";
+  const POMO_STATE_KEY = "dx_pomo_state_v2";
 
-  const DEFAULT_TEMPLATES = [
-    { id: "tpl_day_shift", name: "早班", startHour: 7, startMinute: 0, durationMinutes: 480, isAllDay: false, colorArgb: -13730510 },
-    { id: "tpl_evening_shift", name: "小夜班", startHour: 15, startMinute: 0, durationMinutes: 480, isAllDay: false, colorArgb: -15108398 },
-    { id: "tpl_night_shift", name: "大夜班", startHour: 23, startMinute: 0, durationMinutes: 480, isAllDay: false, colorArgb: -9823334 },
-    { id: "tpl_day_off", name: "休假", startHour: 9, startMinute: 0, durationMinutes: 60, isAllDay: true, colorArgb: -3631570 },
-    { id: "tpl_workout", name: "健身運動", startHour: 19, startMinute: 30, durationMinutes: 60, isAllDay: false, colorArgb: -1683200 }
-  ];
+  const {
+    toIso,
+    parseIso,
+    epochDayToIso,
+    isoToEpochDay,
+    argbToCss,
+    cssToArgb,
+    normalizeState,
+    matchesRecurrence,
+    formatCountdownBadge,
+    buildBackupPayload,
+    importBackupPayload,
+    exportToIcs,
+    importFromIcs
+  } = DXCore;
 
-  let state = {
-    deviceName: "Chrome-Desktop",
-    events: [],
-    tasks: [],
-    templates: [...DEFAULT_TEMPLATES],
-    richMeta: {}
-  };
-
+  let state = normalizeState(null);
   let weatherByDate = {};
   const now = new Date();
   let viewYear = now.getFullYear();
-  let viewMonth = now.getMonth() + 1; // 1..12
+  let viewMonth = now.getMonth() + 1;
   let selectedIso = toIso(now);
   let activeStampTemplate = null;
+  let dayViewMode = "list"; // "list" | "timeline"
+  let pendingImportMode = "merge";
+  let editingEventId = null;
 
-  // Pomodoro state
-  let pomoTotalSec = 25 * 60;
-  let pomoLeftSec = 25 * 60;
-  let pomoTimer = null;
+  // 背景持久化番茄鐘本地渲染狀態
+  let pomoState = { running: false, totalSec: 25 * 60, pausedLeftSec: 25 * 60, endAtMs: null, taskTitle: "" };
+  let pomoUiInterval = null;
 
-  if (new URLSearchParams(location.search).get("mode") === "sidepanel") {
-    document.body.classList.add("sidepanel-mode");
-  }
-
-  function toIso(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
-
-  function parseIso(iso) {
-    const [y, m, d] = iso.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }
-
-  function epochDayToIso(epochDay) {
-    const d = new Date(epochDay * 86400000);
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-  }
-
-  function isoToEpochDay(iso) {
-    const [y, m, d] = iso.split("-").map(Number);
-    return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
-  }
-
-  function argbToCss(argb) {
-    if (typeof argb !== "number") return "#C8962E";
-    const hex = (argb >>> 0).toString(16).padStart(8, "0");
-    return "#" + hex.slice(2);
-  }
+  const urlMode = new URLSearchParams(location.search).get("mode");
+  if (urlMode === "sidepanel") document.body.classList.add("sidepanel-mode");
+  if (urlMode === "app") document.body.classList.add("app-window-mode");
 
   let toastTimer = null;
   function showToast(msg) {
@@ -69,65 +48,37 @@
     el.textContent = msg;
     el.classList.remove("hidden");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.add("hidden"), 2400);
+    toastTimer = setTimeout(() => el.classList.add("hidden"), 2600);
   }
 
   async function loadState() {
-    const res = await chrome.storage.local.get([STORAGE_KEY, THEME_KEY]);
-    if (res[STORAGE_KEY]) {
-      state = {
-        deviceName: res[STORAGE_KEY].deviceName || "Chrome-Desktop",
-        events: Array.isArray(res[STORAGE_KEY].events) ? res[STORAGE_KEY].events : [],
-        tasks: Array.isArray(res[STORAGE_KEY].tasks) ? res[STORAGE_KEY].tasks : [],
-        templates: (Array.isArray(res[STORAGE_KEY].templates) && res[STORAGE_KEY].templates.length)
-          ? res[STORAGE_KEY].templates : [...DEFAULT_TEMPLATES],
-        richMeta: res[STORAGE_KEY].richMeta || {}
-      };
-    }
-    if (res[THEME_KEY]) {
+    const res = await chrome.storage.local.get([STORAGE_KEY, THEME_KEY, POMO_STATE_KEY]);
+    state = normalizeState(res[STORAGE_KEY]);
+    if (res[THEME_KEY] && res[THEME_KEY] !== "auto") {
       document.documentElement.setAttribute("data-theme", res[THEME_KEY]);
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    if (res[POMO_STATE_KEY]) {
+      pomoState = { ...pomoState, ...res[POMO_STATE_KEY] };
     }
     document.getElementById("deviceNameInput").value = state.deviceName;
+    document.getElementById("dualTzSelect").value = state.dualTimeZone || "";
   }
 
   async function saveState() {
     await chrome.storage.local.set({ [STORAGE_KEY]: state });
   }
 
-  function matchesRecurrence(baseDate, candDate, recRaw) {
-    if (candDate < baseDate) return false;
-    const baseIso = toIso(baseDate);
-    const candIso = toIso(candDate);
-    if (baseIso === candIso) return true;
-    const rec = (recRaw || "NONE").trim();
-    if (rec === "NONE") return false;
-    if (rec === "DAILY") return true;
-    const diffDays = Math.round((Date.UTC(candDate.getFullYear(), candDate.getMonth(), candDate.getDate()) -
-      Date.UTC(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate())) / 86400000);
-    if (rec === "WEEKDAYS") return candDate.getDay() >= 1 && candDate.getDay() <= 5;
-    if (rec === "WEEKLY") return diffDays % 7 === 0;
-    if (rec === "BIWEEKLY") return diffDays % 14 === 0;
-    if (rec.startsWith("EVERY_N_WEEKS:")) {
-      const n = Math.max(2, parseInt(rec.split(":")[1], 10) || 2);
-      return diffDays % (n * 7) === 0;
+  async function savePomoState() {
+    await chrome.storage.local.set({ [POMO_STATE_KEY]: pomoState });
+    if (chrome.alarms) {
+      if (pomoState.running && pomoState.endAtMs && pomoState.endAtMs > Date.now()) {
+        chrome.alarms.create("dx_pomo_done", { when: pomoState.endAtMs });
+      } else {
+        chrome.alarms.clear("dx_pomo_done");
+      }
     }
-    if (rec === "MONTHLY") return candDate.getDate() === baseDate.getDate();
-    if (rec === "YEARLY") return candDate.getMonth() === baseDate.getMonth() && candDate.getDate() === baseDate.getDate();
-    if (rec === "LUNAR_MONTHLY") {
-      const bL = DXLunar.getLunarInfo(baseDate.getFullYear(), baseDate.getMonth() + 1, baseDate.getDate());
-      const cL = DXLunar.getLunarInfo(candDate.getFullYear(), candDate.getMonth() + 1, candDate.getDate());
-      return cL.lunarDay === bL.lunarDay && !cL.isLeap;
-    }
-    if (rec === "LUNAR_FIRST_FIFTEENTH") {
-      const cL = DXLunar.getLunarInfo(candDate.getFullYear(), candDate.getMonth() + 1, candDate.getDate());
-      return (cL.lunarDay === 1 || cL.lunarDay === 15) && !cL.isLeap;
-    }
-    if (rec === "LUNAR_YEARLY") {
-      const bL = DXLunar.getLunarInfo(baseDate.getFullYear(), baseDate.getMonth() + 1, baseDate.getDate());
-      const cL = DXLunar.getLunarInfo(candDate.getFullYear(), candDate.getMonth() + 1, candDate.getDate());
-      return cL.lunarMonth === bL.lunarMonth && cL.lunarDay === bL.lunarDay && !cL.isLeap;
-    }
-    return false;
   }
 
   function getItemsForDate(iso) {
@@ -137,13 +88,20 @@
       if (ev.isPrivacy || ev.isPaused) continue;
       const startD = new Date(ev.startEpochMillis);
       const baseDate = new Date(startD.getFullYear(), startD.getMonth(), startD.getDate());
-      if (matchesRecurrence(baseDate, candDate, ev.recurrenceType)) {
+      if (matchesRecurrence(baseDate, candDate, ev.recurrenceType, ev.extraDatesJson, ev.recurrenceEndEpochMillis)) {
+        const startMin = ev.isAllDay ? -1 : (startD.getHours() * 60 + startD.getMinutes());
+        const endD = new Date(Math.max(ev.endEpochMillis || 0, ev.startEpochMillis + 1800000));
         list.push({
           kind: "LOCAL_EVENT",
           rawId: ev.id,
+          raw: ev,
           title: ev.title,
           isAllDay: Boolean(ev.isAllDay),
-          timeLabel: ev.isAllDay ? "全天" : `${String(startD.getHours()).padStart(2, "0")}:${String(startD.getMinutes()).padStart(2, "0")}`,
+          startHour: startD.getHours(),
+          startMin,
+          timeLabel: ev.isAllDay
+            ? "全天"
+            : `${String(startD.getHours()).padStart(2, "0")}:${String(startD.getMinutes()).padStart(2, "0")}–${String(endD.getHours()).padStart(2, "0")}:${String(endD.getMinutes()).padStart(2, "0")}`,
           color: argbToCss(ev.customColorArgb || -3631570),
           location: ev.location || "",
           recurrenceType: ev.recurrenceType || "NONE"
@@ -155,21 +113,25 @@
       if (tk.isPrivacy || tk.isPaused) continue;
       const tkIso = tk.dueEpochDay != null ? epochDayToIso(tk.dueEpochDay) : (!tk.isCompleted ? todayIso : null);
       if (tkIso === iso) {
-        const tm = tk.dueMinuteOfDay != null
-          ? `${String(Math.floor(tk.dueMinuteOfDay / 60)).padStart(2, "0")}:${String(tk.dueMinuteOfDay % 60).padStart(2, "0")}`
-          : "待辦";
+        const hasTime = tk.dueMinuteOfDay != null;
+        const hh = hasTime ? Math.floor(tk.dueMinuteOfDay / 60) : 9;
+        const mm = hasTime ? (tk.dueMinuteOfDay % 60) : 0;
         list.push({
           kind: "TASK",
           rawId: tk.id,
+          raw: tk,
           title: (tk.isCompleted ? "✓ " : "○ ") + tk.title,
-          isAllDay: tk.dueMinuteOfDay == null,
-          timeLabel: tm,
+          isAllDay: !hasTime,
+          startHour: hh,
+          startMin: hasTime ? tk.dueMinuteOfDay : -1,
+          timeLabel: hasTime ? `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")} 待辦` : "待辦",
           color: argbToCss(tk.colorArgb || -12417548),
           location: "",
           isCompleted: Boolean(tk.isCompleted)
         });
       }
     }
+    list.sort((a, b) => a.startMin - b.startMin);
     return list;
   }
 
@@ -179,12 +141,24 @@
     renderSelectedDay();
     renderTasks();
     renderTemplatesAndCountdowns();
+    renderSyncStats();
+    updatePomoUi();
   }
 
   function renderHeader() {
     const el = document.getElementById("ymTitle");
+    el.innerHTML = "";
     const yStr = String(viewYear);
-    el.innerHTML = `${yStr.slice(0, 2)}<span class="accent">${yStr.slice(2)}</span>/<span class="accent">${String(viewMonth).padStart(2, "0")}</span>`;
+    el.appendChild(document.createTextNode(yStr.slice(0, 2)));
+    const yAcc = document.createElement("span");
+    yAcc.className = "accent";
+    yAcc.textContent = yStr.slice(2);
+    el.appendChild(yAcc);
+    el.appendChild(document.createTextNode("/"));
+    const mAcc = document.createElement("span");
+    mAcc.className = "accent";
+    mAcc.textContent = String(viewMonth).padStart(2, "0");
+    el.appendChild(mAcc);
 
     const banner = document.getElementById("stampBanner");
     if (activeStampTemplate) {
@@ -195,12 +169,40 @@
     }
   }
 
+  async function moveItemToIso(kind, rawId, targetIso) {
+    const [y, m, d] = targetIso.split("-").map(Number);
+    if (kind === "LOCAL_EVENT") {
+      const ev = state.events.find((e) => String(e.id) === String(rawId));
+      if (!ev) return;
+      const oldStart = new Date(ev.startEpochMillis);
+      const duration = Math.max(1800000, (ev.endEpochMillis || ev.startEpochMillis + 3600000) - ev.startEpochMillis);
+      const newStart = ev.isAllDay
+        ? new Date(y, m - 1, d, 0, 0, 0).getTime()
+        : new Date(y, m - 1, d, oldStart.getHours(), oldStart.getMinutes(), 0).getTime();
+      ev.startEpochMillis = newStart;
+      ev.endEpochMillis = ev.isAllDay ? new Date(y, m - 1, d, 23, 59, 0).getTime() : (newStart + duration);
+      await saveState();
+      selectedIso = targetIso;
+      showToast(`已將「${ev.title}」改期至 ${targetIso}`);
+      renderAll();
+    } else if (kind === "TASK") {
+      const tk = state.tasks.find((t) => String(t.id) === String(rawId));
+      if (!tk) return;
+      tk.dueEpochDay = isoToEpochDay(targetIso);
+      await saveState();
+      selectedIso = targetIso;
+      showToast(`已將待辦「${tk.title}」改期至 ${targetIso}`);
+      renderAll();
+    }
+  }
+
   function renderMonthGrid() {
     const grid = document.getElementById("monthGrid");
     grid.innerHTML = "";
     const first = new Date(viewYear, viewMonth - 1, 1);
     const startOffset = first.getDay();
     const todayIso = toIso(new Date());
+    const isDesktopApp = document.body.classList.contains("app-window-mode");
 
     for (let i = 0; i < 42; i++) {
       const cellDate = new Date(viewYear, viewMonth - 1, 1 - startOffset + i);
@@ -214,6 +216,7 @@
 
       const cell = document.createElement("div");
       cell.className = `day-cell${inMonth ? "" : " out-month"}${isToday ? " today" : ""}${isSelected ? " selected" : ""}`;
+      cell.dataset.iso = iso;
 
       if (weather) {
         const wEl = document.createElement("span");
@@ -241,16 +244,52 @@
       cell.appendChild(pill);
 
       if (dayItems.length > 0) {
-        const dots = document.createElement("div");
-        dots.className = "day-dots";
-        dayItems.slice(0, 4).forEach((it) => {
-          const d = document.createElement("span");
-          d.className = "day-dot";
-          d.style.background = it.color;
-          dots.appendChild(d);
-        });
-        cell.appendChild(dots);
+        if (isDesktopApp) {
+          const chips = document.createElement("div");
+          chips.className = "day-mini-chips";
+          dayItems.slice(0, 2).forEach((it) => {
+            const c = document.createElement("div");
+            c.className = "day-mini-chip";
+            c.style.background = it.color;
+            c.textContent = it.title;
+            chips.appendChild(c);
+          });
+          if (dayItems.length > 2) {
+            const more = document.createElement("div");
+            more.className = "day-lunar";
+            more.textContent = `+${dayItems.length - 2} 項`;
+            chips.appendChild(more);
+          }
+          cell.appendChild(chips);
+        } else {
+          const dots = document.createElement("div");
+          dots.className = "day-dots";
+          dayItems.slice(0, 4).forEach((it) => {
+            const d = document.createElement("span");
+            d.className = "day-dot";
+            d.style.background = it.color;
+            dots.appendChild(d);
+          });
+          cell.appendChild(dots);
+        }
       }
+
+      // 拖曳行程到月曆格改期 (Drag & Drop)
+      cell.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        cell.classList.add("drag-over");
+      });
+      cell.addEventListener("dragleave", () => cell.classList.remove("drag-over"));
+      cell.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        cell.classList.remove("drag-over");
+        const raw = e.dataTransfer.getData("application/dx-item");
+        if (!raw) return;
+        try {
+          const parsed = JSON.parse(raw);
+          await moveItemToIso(parsed.kind, parsed.rawId, iso);
+        } catch (_) {}
+      });
 
       cell.addEventListener("click", async () => {
         selectedIso = iso;
@@ -276,17 +315,42 @@
     document.getElementById("selectedDateSub").textContent =
       lunar.ganZhi + (weather ? `  ·  ${weather.icon} ${weather.label} ${weather.minC}°~${weather.maxC}°` : "");
 
-    const container = document.getElementById("dayEventsList");
-    container.innerHTML = "";
+    const listEl = document.getElementById("dayEventsList");
+    const tlWrap = document.getElementById("dayTimelineWrap");
+    document.getElementById("btnViewList").classList.toggle("active", dayViewMode === "list");
+    document.getElementById("btnViewTimeline").classList.toggle("active", dayViewMode === "timeline");
+
     const items = getItemsForDate(selectedIso);
+    const todayIso = toIso(new Date());
+
+    if (dayViewMode === "timeline") {
+      listEl.classList.add("hidden");
+      tlWrap.classList.remove("hidden");
+      renderDayTimeline(items, d);
+      return;
+    }
+
+    tlWrap.classList.add("hidden");
+    listEl.classList.remove("hidden");
+    listEl.innerHTML = "";
+
     if (!items.length) {
-      container.innerHTML = `<div class="day-header-sub" style="padding:6px 0;">這天沒有安排行程，可於上方一句話快速新增。</div>`;
+      const empty = document.createElement("div");
+      empty.className = "day-header-sub";
+      empty.style.padding = "6px 0";
+      empty.textContent = "這天沒有安排行程；可於上方一句話快記，或按「＋ 新增」建立（提示：既有行程可拖曳到月曆日期快速改期）。";
+      listEl.appendChild(empty);
       return;
     }
 
     for (const item of items) {
       const row = document.createElement("div");
       row.className = "event-row";
+      row.draggable = true;
+      row.title = "點擊編輯／留言；拖曳到上方月曆日期可快速改期";
+      row.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("application/dx-item", JSON.stringify({ kind: item.kind, rawId: item.rawId }));
+      });
 
       const bar = document.createElement("div");
       bar.className = "event-bar";
@@ -300,26 +364,35 @@
 
       const metaKey = `${item.kind}:${item.rawId}`;
       const meta = state.richMeta[metaKey];
-      let badge = "";
-      if (meta && meta.isCountdown) {
-        const diff = isoToEpochDay(selectedIso) - isoToEpochDay(toIso(new Date()));
-        badge = diff === 0 ? " · 🎯今天" : (diff > 0 ? ` · ⏳還有${diff}天` : ` · 已過${-diff}天`);
-      }
+      const badge = formatCountdownBadge(selectedIso, meta, todayIso);
+      const cmtCount = meta && Array.isArray(meta.sharedComments) && meta.sharedComments.length
+        ? ` · 💬${meta.sharedComments.length}` : "";
       const metaEl = document.createElement("div");
       metaEl.className = "event-meta";
-      metaEl.textContent = `${item.timeLabel}${item.location ? " · " + item.location : ""}${badge}`;
+      metaEl.textContent = `${item.timeLabel}${item.location ? " · " + item.location : ""}${badge ? " · " + badge : ""}${cmtCount}`;
       body.appendChild(titleEl);
       body.appendChild(metaEl);
 
       row.appendChild(bar);
       row.appendChild(body);
 
+      if (item.kind === "LOCAL_EVENT") {
+        row.addEventListener("click", () => openEventModal(item.rawId));
+      } else {
+        row.addEventListener("click", async () => {
+          item.raw.isCompleted = !item.raw.isCompleted;
+          await saveState();
+          renderAll();
+        });
+      }
+
       if (item.location) {
         const navBtn = document.createElement("button");
         navBtn.className = "icon-btn";
         navBtn.title = "Google Maps 導航";
         navBtn.textContent = "🗺️";
-        navBtn.addEventListener("click", () => {
+        navBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
           chrome.tabs.create({ url: `https://maps.google.com/?q=${encodeURIComponent(item.location)}` });
         });
         row.appendChild(navBtn);
@@ -329,11 +402,12 @@
       delBtn.className = "icon-btn";
       delBtn.title = "刪除";
       delBtn.textContent = "🗑️";
-      delBtn.addEventListener("click", async () => {
+      delBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
         if (item.kind === "LOCAL_EVENT") {
-          state.events = state.events.filter((e) => e.id !== item.rawId);
+          state.events = state.events.filter((ev) => ev.id !== item.rawId);
         } else {
-          state.tasks = state.tasks.filter((t) => t.id !== item.rawId);
+          state.tasks = state.tasks.filter((tk) => tk.id !== item.rawId);
         }
         await saveState();
         showToast("已刪除項目");
@@ -341,19 +415,90 @@
       });
       row.appendChild(delBtn);
 
-      container.appendChild(row);
+      listEl.appendChild(row);
+    }
+  }
+
+  function renderDayTimeline(items, dateObj) {
+    const grid = document.getElementById("dayTimelineGrid");
+    grid.innerHTML = "";
+    const dualTz = state.dualTimeZone || "";
+    const dualFmt = dualTz
+      ? new Intl.DateTimeFormat("en-GB", { timeZone: dualTz, hour: "2-digit", minute: "2-digit", hour12: false })
+      : null;
+
+    const allDayItems = items.filter((it) => it.isAllDay);
+    if (allDayItems.length) {
+      const row = document.createElement("div");
+      row.className = "timeline-hour-row";
+      const col = document.createElement("div");
+      col.className = "timeline-tz-col";
+      col.textContent = "全天";
+      row.appendChild(col);
+      if (dualFmt) {
+        const dCol = document.createElement("div");
+        dCol.className = "timeline-tz-col dual";
+        dCol.textContent = "—";
+        row.appendChild(dCol);
+      }
+      const box = document.createElement("div");
+      box.className = "timeline-slot-events";
+      for (const it of allDayItems) {
+        const p = document.createElement("div");
+        p.className = "timeline-pill";
+        p.style.background = it.color;
+        p.textContent = it.title;
+        if (it.kind === "LOCAL_EVENT") p.addEventListener("click", () => openEventModal(it.rawId));
+        box.appendChild(p);
+      }
+      row.appendChild(box);
+      grid.appendChild(row);
+    }
+
+    for (let h = 0; h < 24; h++) {
+      const row = document.createElement("div");
+      row.className = "timeline-hour-row";
+      const col = document.createElement("div");
+      col.className = "timeline-tz-col";
+      col.textContent = `${String(h).padStart(2, "0")}:00`;
+      row.appendChild(col);
+
+      if (dualFmt) {
+        const sample = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), h, 0, 0);
+        const dCol = document.createElement("div");
+        dCol.className = "timeline-tz-col dual";
+        dCol.textContent = dualFmt.format(sample);
+        row.appendChild(dCol);
+      }
+
+      const box = document.createElement("div");
+      box.className = "timeline-slot-events";
+      const hourItems = items.filter((it) => !it.isAllDay && it.startHour === h);
+      for (const it of hourItems) {
+        const p = document.createElement("div");
+        p.className = "timeline-pill";
+        p.style.background = it.color;
+        p.textContent = `${it.timeLabel} ${it.title}`;
+        if (it.kind === "LOCAL_EVENT") p.addEventListener("click", () => openEventModal(it.rawId));
+        box.appendChild(p);
+      }
+      row.appendChild(box);
+      grid.appendChild(row);
     }
   }
 
   function renderTasks() {
     const list = document.getElementById("tasksList");
     list.innerHTML = "";
-    const activeCount = state.tasks.filter((t) => !t.isCompleted && !t.isPrivacy).length;
+    const visible = state.tasks.filter((t) => !t.isPrivacy);
+    const activeCount = visible.filter((t) => !t.isCompleted).length;
     document.getElementById("taskCountLabel").textContent = `${activeCount} 項未完成`;
 
-    const visible = state.tasks.filter((t) => !t.isPrivacy);
     if (!visible.length) {
-      list.innerHTML = `<div class="day-header-sub">尚無待辦事項。</div>`;
+      const empty = document.createElement("div");
+      empty.className = "day-header-sub";
+      empty.textContent = "尚無待辦事項。";
+      list.appendChild(empty);
       return;
     }
 
@@ -366,6 +511,7 @@
       checkBtn.textContent = tk.isCompleted ? "✅" : "⭕";
       checkBtn.addEventListener("click", async () => {
         tk.isCompleted = !tk.isCompleted;
+        tk.completedAt = tk.isCompleted ? Date.now() : null;
         await saveState();
         renderAll();
       });
@@ -378,12 +524,50 @@
       tEl.textContent = tk.title;
       const mEl = document.createElement("div");
       mEl.className = "event-meta";
-      mEl.textContent = tk.dueEpochDay != null ? epochDayToIso(tk.dueEpochDay) : "今日顯示";
+      const timeStr = tk.dueMinuteOfDay != null
+        ? ` · ${String(Math.floor(tk.dueMinuteOfDay / 60)).padStart(2, "0")}:${String(tk.dueMinuteOfDay % 60).padStart(2, "0")}`
+        : "";
+      mEl.textContent = (tk.dueEpochDay != null ? epochDayToIso(tk.dueEpochDay) : "今日顯示") + timeStr;
       body.appendChild(tEl);
       body.appendChild(mEl);
 
+      // ⏰ 待辦排時段 (Time Blocking)
+      const blockBtn = document.createElement("button");
+      blockBtn.className = "icon-btn";
+      blockBtn.title = "排入當日 24h 時間軸";
+      blockBtn.textContent = "⏰";
+      blockBtn.addEventListener("click", async () => {
+        const nextHour = Math.min(22, new Date().getHours() + 1);
+        tk.dueEpochDay = isoToEpochDay(selectedIso);
+        tk.dueMinuteOfDay = nextHour * 60;
+        await saveState();
+        dayViewMode = "timeline";
+        switchTab("tabCalendar");
+        renderAll();
+        showToast(`已將「${tk.title}」排入 ${selectedIso} ${String(nextHour).padStart(2, "0")}:00`);
+      });
+
+      // 🍅 一鍵對該待辦啟動背景番茄鐘
+      const pomoBtn = document.createElement("button");
+      pomoBtn.className = "icon-btn";
+      pomoBtn.title = "對此待辦開始 25 分鐘番茄鐘";
+      pomoBtn.textContent = "🍅";
+      pomoBtn.addEventListener("click", async () => {
+        pomoState = {
+          running: true,
+          totalSec: 25 * 60,
+          pausedLeftSec: 25 * 60,
+          endAtMs: Date.now() + 25 * 60 * 1000,
+          taskTitle: tk.title
+        };
+        await savePomoState();
+        updatePomoUi();
+        showToast(`🍅 開始專注「${tk.title}」(25 分鐘)`);
+      });
+
       const delBtn = document.createElement("button");
       delBtn.className = "icon-btn";
+      delBtn.title = "刪除待辦";
       delBtn.textContent = "🗑️";
       delBtn.addEventListener("click", async () => {
         state.tasks = state.tasks.filter((x) => x.id !== tk.id);
@@ -393,6 +577,8 @@
 
       row.appendChild(checkBtn);
       row.appendChild(body);
+      row.appendChild(blockBtn);
+      row.appendChild(pomoBtn);
       row.appendChild(delBtn);
       list.appendChild(row);
     }
@@ -402,10 +588,29 @@
     const chipRow = document.getElementById("templatesChipRow");
     chipRow.innerHTML = "";
     for (const tpl of state.templates) {
-      const btn = document.createElement("button");
+      const btn = document.createElement("div");
       btn.className = `chip${activeStampTemplate && activeStampTemplate.id === tpl.id ? " active" : ""}`;
-      btn.textContent = `● ${tpl.name}`;
       btn.style.borderColor = argbToCss(tpl.colorArgb);
+
+      const labelSpan = document.createElement("span");
+      const timeTag = tpl.isAllDay ? "全天" : `${String(tpl.startHour).padStart(2, "0")}:${String(tpl.startMinute).padStart(2, "0")}`;
+      labelSpan.textContent = `● ${tpl.name} (${timeTag})`;
+      btn.appendChild(labelSpan);
+
+      const delX = document.createElement("span");
+      delX.className = "chip-del";
+      delX.textContent = "✕";
+      delX.title = "刪除範本";
+      delX.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (activeStampTemplate && activeStampTemplate.id === tpl.id) activeStampTemplate = null;
+        state.templates = state.templates.filter((t) => t.id !== tpl.id);
+        await saveState();
+        showToast(`已刪除範本「${tpl.name}」`);
+        renderAll();
+      });
+      btn.appendChild(delX);
+
       btn.addEventListener("click", () => {
         activeStampTemplate = (activeStampTemplate && activeStampTemplate.id === tpl.id) ? null : tpl;
         if (activeStampTemplate) {
@@ -419,7 +624,8 @@
 
     const cdBox = document.getElementById("countdownList");
     cdBox.innerHTML = "";
-    const todayEpoch = isoToEpochDay(toIso(new Date()));
+    const todayIso = toIso(new Date());
+    const todayEpoch = isoToEpochDay(todayIso);
     const countdownEvents = state.events
       .filter((ev) => !ev.isPrivacy)
       .map((ev) => {
@@ -429,29 +635,244 @@
         const diff = isoToEpochDay(iso) - todayEpoch;
         return { ev, meta, iso, diff };
       })
-      .filter((x) => (x.meta && (x.meta.isCountdown || x.meta.isBirthday)) || /倒數|生日|紀念/.test(x.ev.title))
+      .filter((x) => (x.meta && (x.meta.isCountdown || x.meta.isBirthday || x.meta.anniversaryStartYear != null)) || /倒數|生日|紀念/.test(x.ev.title))
       .sort((a, b) => a.diff - b.diff);
 
     if (!countdownEvents.length) {
-      cdBox.innerHTML = `<div class="day-header-sub">尚未建立倒數日；試著在上方輸入「倒數 12/31 跨年煙火」！</div>`;
+      const empty = document.createElement("div");
+      empty.className = "day-header-sub";
+      empty.textContent = "尚未建立倒數日；試著輸入「倒數 12/31 跨年煙火」或在編輯行程勾選倒數／生日！";
+      cdBox.appendChild(empty);
       return;
     }
 
     for (const item of countdownEvents) {
       const row = document.createElement("div");
       row.className = "event-row";
+      row.addEventListener("click", () => openEventModal(item.ev.id));
+
       const body = document.createElement("div");
       body.className = "event-body";
-      body.innerHTML = `<div class="event-title">${item.ev.title}</div><div class="event-meta">${item.iso}</div>`;
+      const tEl = document.createElement("div");
+      tEl.className = "event-title";
+      tEl.textContent = item.ev.title;
+      const mEl = document.createElement("div");
+      mEl.className = "event-meta";
+      mEl.textContent = item.iso;
+      body.appendChild(tEl);
+      body.appendChild(mEl);
+
       const badge = document.createElement("div");
       badge.style.fontWeight = "800";
       badge.style.color = "var(--accent)";
-      badge.style.fontSize = "14px";
-      badge.textContent = item.diff === 0 ? "就是今天" : (item.diff > 0 ? `還有 ${item.diff} 天` : `已過 ${-item.diff} 天`);
+      badge.style.fontSize = "13px";
+      badge.style.textAlign = "right";
+      const richBadge = formatCountdownBadge(item.iso, item.meta, todayIso);
+      badge.textContent = richBadge || (item.diff === 0 ? "🎯 就是今天" : (item.diff > 0 ? `⏳ 還有 ${item.diff} 天` : `已過 ${-item.diff} 天`));
+
       row.appendChild(body);
       row.appendChild(badge);
       cdBox.appendChild(row);
     }
+  }
+
+  function renderSyncStats() {
+    const el = document.getElementById("syncStatsText");
+    const visEvents = state.events.filter((e) => !e.isPrivacy).length;
+    const privCount = state.events.filter((e) => e.isPrivacy).length + state.tasks.filter((t) => t.isPrivacy).length;
+    el.textContent = `目前本機：${visEvents} 筆行程 · ${state.tasks.filter((t) => !t.isPrivacy).length} 項待辦 · ${state.templates.length} 組範本` +
+      (privCount > 0 ? `（另有 ${privCount} 筆 Android 加密項目原樣保留）` : "");
+  }
+
+  function openEventModal(eventId = null) {
+    editingEventId = eventId;
+    const modal = document.getElementById("eventModal");
+    const delBtn = document.getElementById("btnDeleteEvent");
+    const cmtSection = document.getElementById("commentsSection");
+    const ev = eventId != null ? state.events.find((e) => e.id === eventId) : null;
+
+    if (ev) {
+      document.getElementById("modalTitleHeader").textContent = "編輯行程與協作留言";
+      const sd = new Date(ev.startEpochMillis);
+      const ed = new Date(Math.max(ev.endEpochMillis || 0, ev.startEpochMillis + 1800000));
+      document.getElementById("evTitle").value = ev.title || "";
+      document.getElementById("evDate").value = toIso(sd);
+      document.getElementById("evAllDay").checked = Boolean(ev.isAllDay);
+      document.getElementById("evStartTime").value = `${String(sd.getHours()).padStart(2, "0")}:${String(sd.getMinutes()).padStart(2, "0")}`;
+      document.getElementById("evEndTime").value = `${String(ed.getHours()).padStart(2, "0")}:${String(ed.getMinutes()).padStart(2, "0")}`;
+      document.getElementById("evLocation").value = ev.location || "";
+      document.getElementById("evRecurrence").value = ev.recurrenceType || "NONE";
+      document.getElementById("evColor").value = argbToCss(ev.customColorArgb || -3631570);
+      try {
+        const arr = JSON.parse(ev.reminderMinutesJson || "[0,15]");
+        document.getElementById("evReminder").value = Array.isArray(arr) ? arr.join(",") : "0,15";
+      } catch (_) {
+        document.getElementById("evReminder").value = "0,15";
+      }
+      document.getElementById("evNotes").value = ev.notes || "";
+
+      const meta = state.richMeta[`LOCAL_EVENT:${ev.id}`] || {};
+      document.getElementById("evIsCountdown").checked = Boolean(meta.isCountdown);
+      document.getElementById("evIsBirthday").checked = Boolean(meta.isBirthday);
+      document.getElementById("evBirthYear").value = meta.anniversaryStartYear != null ? String(meta.anniversaryStartYear) : "";
+
+      delBtn.classList.remove("hidden");
+      cmtSection.classList.remove("hidden");
+      renderModalComments(`LOCAL_EVENT:${ev.id}`);
+    } else {
+      document.getElementById("modalTitleHeader").textContent = "新增行程";
+      document.getElementById("evTitle").value = "";
+      document.getElementById("evDate").value = selectedIso;
+      document.getElementById("evAllDay").checked = false;
+      document.getElementById("evStartTime").value = "09:00";
+      document.getElementById("evEndTime").value = "10:00";
+      document.getElementById("evLocation").value = "";
+      document.getElementById("evRecurrence").value = "NONE";
+      document.getElementById("evColor").value = "#c8962e";
+      document.getElementById("evReminder").value = "0,15";
+      document.getElementById("evNotes").value = "";
+      document.getElementById("evIsCountdown").checked = false;
+      document.getElementById("evIsBirthday").checked = false;
+      document.getElementById("evBirthYear").value = "";
+      delBtn.classList.add("hidden");
+      cmtSection.classList.add("hidden");
+    }
+
+    document.getElementById("evTimeRow").classList.toggle("hidden", document.getElementById("evAllDay").checked);
+    modal.classList.remove("hidden");
+    document.getElementById("evTitle").focus();
+  }
+
+  function closeEventModal() {
+    document.getElementById("eventModal").classList.add("hidden");
+    editingEventId = null;
+  }
+
+  function renderModalComments(metaKey) {
+    const box = document.getElementById("commentsList");
+    box.innerHTML = "";
+    const comments = (state.richMeta[metaKey] && state.richMeta[metaKey].sharedComments) || [];
+    if (!comments.length) {
+      const empty = document.createElement("div");
+      empty.className = "day-header-sub";
+      empty.style.marginBottom = "6px";
+      empty.textContent = "尚無留言，可在此留下備註同步給家人或另一半。";
+      box.appendChild(empty);
+      return;
+    }
+    for (const c of comments) {
+      const div = document.createElement("div");
+      div.className = "comment-item";
+      const head = document.createElement("div");
+      head.style.fontWeight = "700";
+      head.style.color = "var(--accent)";
+      const dt = new Date(c.createdAtMillis || Date.now());
+      head.textContent = `${c.author || "我"} · ${dt.getMonth() + 1}/${dt.getDate()} ${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+      const body = document.createElement("div");
+      body.textContent = c.content || "";
+      div.appendChild(head);
+      div.appendChild(body);
+      box.appendChild(div);
+    }
+  }
+
+  async function saveEventFromModal() {
+    const title = document.getElementById("evTitle").value.trim();
+    if (!title) {
+      showToast("請輸入行程標題");
+      return;
+    }
+    const dateVal = document.getElementById("evDate").value || selectedIso;
+    const [y, m, d] = dateVal.split("-").map(Number);
+    const isAllDay = document.getElementById("evAllDay").checked;
+    const [sh, sm] = (document.getElementById("evStartTime").value || "09:00").split(":").map(Number);
+    const [eh, em] = (document.getElementById("evEndTime").value || "10:00").split(":").map(Number);
+    const startMs = isAllDay ? new Date(y, m - 1, d, 0, 0, 0).getTime() : new Date(y, m - 1, d, sh || 0, sm || 0, 0).getTime();
+    const endMs = isAllDay
+      ? new Date(y, m - 1, d, 23, 59, 0).getTime()
+      : Math.max(startMs + 1800000, new Date(y, m - 1, d, eh || 0, em || 0, 0).getTime());
+
+    const remArr = document.getElementById("evReminder").value
+      .split(/[,，\s]+/)
+      .map((s) => parseInt(s, 10))
+      .filter((n) => Number.isFinite(n) && n >= 0);
+    const reminderMinutesJson = JSON.stringify(remArr.length ? Array.from(new Set(remArr)).sort((a, b) => a - b) : [0]);
+
+    const colorArgb = cssToArgb(document.getElementById("evColor").value);
+    const location = document.getElementById("evLocation").value.trim();
+    const notes = document.getElementById("evNotes").value.trim();
+    const recurrenceType = document.getElementById("evRecurrence").value || "NONE";
+
+    let targetId = editingEventId;
+    if (editingEventId != null) {
+      const ev = state.events.find((e) => e.id === editingEventId);
+      if (ev) {
+        ev.title = title;
+        ev.startEpochMillis = startMs;
+        ev.endEpochMillis = endMs;
+        ev.isAllDay = isAllDay;
+        ev.location = location;
+        ev.notes = notes;
+        ev.recurrenceType = recurrenceType;
+        ev.customColorArgb = colorArgb;
+        ev.reminderMinutesJson = reminderMinutesJson;
+      }
+    } else {
+      targetId = Date.now();
+      state.events.push({
+        id: targetId,
+        categoryId: 1,
+        title,
+        location,
+        url: "",
+        notes,
+        startEpochMillis: startMs,
+        endEpochMillis: endMs,
+        isAllDay,
+        extraDatesJson: "[]",
+        recurrenceType,
+        isRoutine: false,
+        showInMonthGrid: true,
+        showInAgendaAndWidget: true,
+        isPaused: false,
+        isPrivacy: false,
+        reminderMinutesJson,
+        enableMultiCall: false,
+        multiCallCount: 3,
+        multiCallIntervalMinutes: 3,
+        useAlarmStream: false,
+        syncSystemAlarm: false,
+        customColorArgb: colorArgb,
+        createdAt: Date.now()
+      });
+    }
+
+    const metaKey = `LOCAL_EVENT:${targetId}`;
+    const existingMeta = state.richMeta[metaKey] || { key: metaKey, attachmentUris: [], sharedComments: [] };
+    const isCountdown = document.getElementById("evIsCountdown").checked;
+    const isBirthday = document.getElementById("evIsBirthday").checked;
+    const birthYearRaw = parseInt(document.getElementById("evBirthYear").value, 10);
+    const anniversaryStartYear = Number.isFinite(birthYearRaw) ? birthYearRaw : null;
+
+    if (isCountdown || isBirthday || anniversaryStartYear != null || (existingMeta.sharedComments && existingMeta.sharedComments.length) || (existingMeta.attachmentUris && existingMeta.attachmentUris.length)) {
+      state.richMeta[metaKey] = {
+        ...existingMeta,
+        key: metaKey,
+        isCountdown,
+        isBirthday,
+        anniversaryStartYear
+      };
+    } else {
+      delete state.richMeta[metaKey];
+    }
+
+    selectedIso = dateVal;
+    viewYear = y;
+    viewMonth = m;
+    await saveState();
+    closeEventModal();
+    showToast(`已儲存「${title}」`);
+    renderAll();
   }
 
   async function stampTemplateOnIso(tpl, iso) {
@@ -479,8 +900,14 @@
       showInAgendaAndWidget: true,
       isPaused: false,
       isPrivacy: false,
-      reminderMinutesJson: "[0,15]",
-      customColorArgb: tpl.colorArgb || -3631570
+      reminderMinutesJson: JSON.stringify(Array.isArray(tpl.reminderMinutes) ? tpl.reminderMinutes : [0, 15]),
+      enableMultiCall: Boolean(tpl.enableMultiCall),
+      multiCallCount: 3,
+      multiCallIntervalMinutes: 3,
+      useAlarmStream: false,
+      syncSystemAlarm: false,
+      customColorArgb: tpl.colorArgb || -3631570,
+      createdAt: Date.now()
     });
     await saveState();
     showToast(`已排入 ${m}/${d}「${tpl.name}」`);
@@ -503,10 +930,14 @@
         dueMinuteOfDay: p.isAllDay ? null : (sh * 60 + sm),
         isCompleted: false,
         recurrenceType: p.recurrenceType,
+        isRoutine: false,
         showInMonthGrid: true,
         showInAgendaAndWidget: true,
+        isPaused: false,
         isPrivacy: false,
-        colorArgb: -12417548
+        reminderMinutesJson: JSON.stringify(p.reminderMinutes),
+        colorArgb: -12417548,
+        updatedAt: Date.now()
       });
     } else {
       const startMs = p.isAllDay
@@ -533,7 +964,13 @@
         isPaused: false,
         isPrivacy: false,
         reminderMinutesJson: JSON.stringify(p.reminderMinutes),
-        customColorArgb: -3631570
+        enableMultiCall: false,
+        multiCallCount: 3,
+        multiCallIntervalMinutes: 3,
+        useAlarmStream: false,
+        syncSystemAlarm: false,
+        customColorArgb: -3631570,
+        createdAt: Date.now()
       });
       if (p.isCountdown) {
         state.richMeta[`LOCAL_EVENT:${newId}`] = {
@@ -558,11 +995,38 @@
     document.querySelectorAll(".nav-btn").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === tabId));
   }
 
+  function getPomoLeftSeconds() {
+    if (pomoState.running && pomoState.endAtMs) {
+      return Math.max(0, Math.ceil((pomoState.endAtMs - Date.now()) / 1000));
+    }
+    return Math.max(0, pomoState.pausedLeftSec || 0);
+  }
+
   function updatePomoUi() {
-    const m = String(Math.floor(pomoLeftSec / 60)).padStart(2, "0");
-    const s = String(pomoLeftSec % 60).padStart(2, "0");
+    const left = getPomoLeftSeconds();
+    if (pomoState.running && left === 0) {
+      pomoState.running = false;
+      pomoState.endAtMs = null;
+      pomoState.pausedLeftSec = pomoState.totalSec;
+      savePomoState();
+    }
+    const m = String(Math.floor(left / 60)).padStart(2, "0");
+    const s = String(left % 60).padStart(2, "0");
     document.getElementById("pomoDisplay").textContent = `${m}:${s}`;
-    document.getElementById("btnPomoToggle").textContent = pomoTimer ? "暫停" : "開始專注";
+    document.getElementById("btnPomoToggle").textContent = pomoState.running ? "暫停" : "開始專注";
+    document.getElementById("pomoTaskLabel").textContent = pomoState.taskTitle
+      ? `🍅 專注中：${pomoState.taskTitle}（關閉視窗仍持續倒數）`
+      : "🍅 番茄鐘專注計時（關閉視窗仍於背景倒數）";
+  }
+
+  function downloadFile(filename, content, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function bindEvents() {
@@ -598,21 +1062,45 @@
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (tab && chrome.sidePanel && chrome.sidePanel.open) {
           await chrome.sidePanel.open({ windowId: tab.windowId });
-          window.close();
+          if (!urlMode) window.close();
         }
       } catch (_) {
         showToast("請點擊瀏覽器右上角側邊欄切換 DX日曆");
       }
     });
 
+    document.getElementById("btnAppWindow").addEventListener("click", async () => {
+      try {
+        await chrome.windows.create({
+          url: chrome.runtime.getURL("popup.html?mode=app"),
+          type: "popup",
+          width: 1060,
+          height: 760
+        });
+        if (!urlMode) window.close();
+      } catch (_) {
+        chrome.tabs.create({ url: chrome.runtime.getURL("popup.html?mode=app") });
+      }
+    });
+
+    // 鍵盤左右換月、Esc 關閉彈窗
+    document.addEventListener("keydown", (e) => {
+      const tag = (document.activeElement && document.activeElement.tagName) || "";
+      if (e.key === "Escape" && !document.getElementById("eventModal").classList.contains("hidden")) {
+        closeEventModal();
+        return;
+      }
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+      if (e.key === "ArrowLeft") document.getElementById("btnPrev").click();
+      if (e.key === "ArrowRight") document.getElementById("btnNext").click();
+    });
+
+    // NLP 快記與語音
     const nlpInput = document.getElementById("nlpInput");
     const nlpPreview = document.getElementById("nlpPreview");
     nlpInput.addEventListener("input", () => {
       const val = nlpInput.value.trim();
-      if (!val) {
-        nlpPreview.classList.add("hidden");
-        return;
-      }
+      if (!val) { nlpPreview.classList.add("hidden"); return; }
       const p = DXNlp.parse(val, new Date());
       nlpPreview.textContent = `${p.isTaskMode ? "✅待辦" : "📌行程"}「${p.title}」 · 📅 ${p.dateIso} ${p.isAllDay ? "全天" : p.startTime + "-" + p.endTime}${p.recurrenceType !== "NONE" ? " · 🔁" + p.recurrenceType : ""}`;
       nlpPreview.classList.remove("hidden");
@@ -630,30 +1118,73 @@
 
     document.getElementById("btnVoice").addEventListener("click", () => {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) {
-        showToast("此瀏覽器不支援語音輸入，請直接打字一句話快記");
-        return;
-      }
+      if (!SR) { showToast("此瀏覽器不支援語音輸入，請直接打字一句話快記"); return; }
       const rec = new SR();
       rec.lang = "zh-TW";
       rec.onresult = (ev) => {
-        const spoken = ev.results[0][0].transcript;
-        nlpInput.value = spoken;
+        nlpInput.value = ev.results[0][0].transcript;
         nlpInput.dispatchEvent(new Event("input"));
       };
-      rec.onerror = () => showToast("語音辨識未取得麥克風權限");
+      rec.onerror = () => showToast("語音辨識未取得麥克風權限（建議於獨立視窗或側邊欄授權一次麥克風）");
       rec.start();
       showToast("🎙️ 請說出行程...");
     });
 
-    document.getElementById("btnQuickEventOnDate").addEventListener("click", () => {
-      nlpInput.value = `${selectedIso} `;
-      nlpInput.focus();
+    document.getElementById("btnQuickEventOnDate").addEventListener("click", () => openEventModal(null));
+    document.getElementById("btnViewList").addEventListener("click", () => { dayViewMode = "list"; renderSelectedDay(); });
+    document.getElementById("btnViewTimeline").addEventListener("click", () => { dayViewMode = "timeline"; renderSelectedDay(); });
+    document.getElementById("dualTzSelect").addEventListener("change", async (e) => {
+      state.dualTimeZone = e.target.value;
+      await saveState();
+      renderSelectedDay();
     });
 
     document.getElementById("btnStopStamp").addEventListener("click", () => {
       activeStampTemplate = null;
       renderAll();
+    });
+
+    // Event Editor Modal
+    document.getElementById("btnCloseModal").addEventListener("click", closeEventModal);
+    document.getElementById("eventModal").addEventListener("click", (e) => {
+      if (e.target.id === "eventModal") closeEventModal();
+    });
+    document.getElementById("evAllDay").addEventListener("change", (e) => {
+      document.getElementById("evTimeRow").classList.toggle("hidden", e.target.checked);
+    });
+    document.getElementById("btnModalNavMaps").addEventListener("click", () => {
+      const loc = document.getElementById("evLocation").value.trim();
+      if (!loc) { showToast("請先輸入地點"); return; }
+      chrome.tabs.create({ url: `https://maps.google.com/?q=${encodeURIComponent(loc)}` });
+    });
+    document.getElementById("btnSaveEvent").addEventListener("click", saveEventFromModal);
+    document.getElementById("btnDeleteEvent").addEventListener("click", async () => {
+      if (editingEventId == null) return;
+      state.events = state.events.filter((e) => e.id !== editingEventId);
+      delete state.richMeta[`LOCAL_EVENT:${editingEventId}`];
+      await saveState();
+      closeEventModal();
+      showToast("已刪除行程");
+      renderAll();
+    });
+    document.getElementById("btnAddComment").addEventListener("click", async () => {
+      if (editingEventId == null) return;
+      const inp = document.getElementById("commentInput");
+      const content = inp.value.trim();
+      if (!content) return;
+      const key = `LOCAL_EVENT:${editingEventId}`;
+      const existing = state.richMeta[key] || { key, isCountdown: false, isBirthday: false, attachmentUris: [], sharedComments: [] };
+      existing.sharedComments = [...(existing.sharedComments || []), {
+        id: `cmt_${Date.now()}`,
+        author: state.deviceName || "Chrome-Desktop",
+        content,
+        createdAtMillis: Date.now()
+      }];
+      state.richMeta[key] = existing;
+      inp.value = "";
+      await saveState();
+      renderModalComments(key);
+      renderSelectedDay();
     });
 
     // Bottom navigation
@@ -662,7 +1193,7 @@
     });
 
     // Tasks
-    document.getElementById("btnAddTask").addEventListener("click", async () => {
+    const addTaskAction = async () => {
       const inp = document.getElementById("taskInput");
       const title = inp.value.trim();
       if (!title) return;
@@ -675,56 +1206,49 @@
         dueMinuteOfDay: null,
         isCompleted: false,
         recurrenceType: "NONE",
+        isRoutine: false,
         showInMonthGrid: true,
         showInAgendaAndWidget: true,
+        isPaused: false,
         isPrivacy: false,
-        colorArgb: -12417548
+        reminderMinutesJson: "[0]",
+        colorArgb: -12417548,
+        updatedAt: Date.now()
       });
       inp.value = "";
       await saveState();
       renderAll();
-    });
+    };
+    document.getElementById("btnAddTask").addEventListener("click", addTaskAction);
+    document.getElementById("taskInput").addEventListener("keydown", (e) => { if (e.key === "Enter") addTaskAction(); });
 
-    // Pomodoro
+    // Background-persisted Pomodoro
     document.querySelectorAll("[data-pomo]").forEach((chip) => {
-      chip.addEventListener("click", () => {
-        clearInterval(pomoTimer);
-        pomoTimer = null;
+      chip.addEventListener("click", async () => {
         document.querySelectorAll("[data-pomo]").forEach((c) => c.classList.remove("active"));
         chip.classList.add("active");
-        pomoTotalSec = parseInt(chip.dataset.pomo, 10) * 60;
-        pomoLeftSec = pomoTotalSec;
+        const sec = parseInt(chip.dataset.pomo, 10) * 60;
+        pomoState = { running: false, totalSec: sec, pausedLeftSec: sec, endAtMs: null, taskTitle: "" };
+        await savePomoState();
         updatePomoUi();
       });
     });
-    document.getElementById("btnPomoToggle").addEventListener("click", () => {
-      if (pomoTimer) {
-        clearInterval(pomoTimer);
-        pomoTimer = null;
+    document.getElementById("btnPomoToggle").addEventListener("click", async () => {
+      if (pomoState.running) {
+        pomoState.pausedLeftSec = getPomoLeftSeconds();
+        pomoState.running = false;
+        pomoState.endAtMs = null;
       } else {
-        pomoTimer = setInterval(() => {
-          if (pomoLeftSec > 0) {
-            pomoLeftSec--;
-            updatePomoUi();
-          } else {
-            clearInterval(pomoTimer);
-            pomoTimer = null;
-            updatePomoUi();
-            chrome.notifications.create(`pomo_${Date.now()}`, {
-              type: "basic",
-              iconUrl: "icons/icon128.png",
-              title: "🍅 DX日曆番茄鐘完成！",
-              message: "專注時段結束，起來伸展休息一下吧！"
-            });
-          }
-        }, 1000);
+        const left = getPomoLeftSeconds() || pomoState.totalSec;
+        pomoState.running = true;
+        pomoState.endAtMs = Date.now() + left * 1000;
       }
+      await savePomoState();
       updatePomoUi();
     });
-    document.getElementById("btnPomoReset").addEventListener("click", () => {
-      clearInterval(pomoTimer);
-      pomoTimer = null;
-      pomoLeftSec = pomoTotalSec;
+    document.getElementById("btnPomoReset").addEventListener("click", async () => {
+      pomoState = { ...pomoState, running: false, endAtMs: null, pausedLeftSec: pomoState.totalSec, taskTitle: "" };
+      await savePomoState();
       updatePomoUi();
     });
 
@@ -732,6 +1256,8 @@
     document.getElementById("btnAddTpl").addEventListener("click", async () => {
       const name = document.getElementById("newTplName").value.trim();
       const timeVal = document.getElementById("newTplTime").value || "08:00";
+      const dur = Math.max(15, parseInt(document.getElementById("newTplDuration").value, 10) || 480);
+      const isAllDay = document.getElementById("newTplAllDay").checked;
       if (!name) return;
       const [h, m] = timeVal.split(":").map(Number);
       state.templates.unshift({
@@ -739,9 +1265,13 @@
         name,
         startHour: h || 8,
         startMinute: m || 0,
-        durationMinutes: 480,
-        isAllDay: false,
-        colorArgb: -3631570
+        durationMinutes: dur,
+        isAllDay,
+        colorArgb: -3631570,
+        location: "",
+        notes: "",
+        reminderMinutes: [0, 15],
+        enableMultiCall: false
       });
       document.getElementById("newTplName").value = "";
       await saveState();
@@ -749,7 +1279,7 @@
       renderAll();
     });
 
-    // Backup & Sync (100% compatible with Android v2.0.0 DxFullBackupPayload)
+    // Backup & Sync (100% lossless Android v2.0.0 DxFullBackupPayload)
     const devInput = document.getElementById("deviceNameInput");
     devInput.addEventListener("change", async () => {
       state.deviceName = devInput.value.trim() || "Chrome-Desktop";
@@ -757,48 +1287,29 @@
     });
 
     document.getElementById("btnExportBackup").addEventListener("click", () => {
-      const dev = (devInput.value.trim() || "Chrome-Desktop").replace(/[\\/:*?"<>|\s]+/g, "_");
+      state.deviceName = devInput.value.trim() || "Chrome-Desktop";
+      const dev = state.deviceName.replace(/[\\/:*?"<>|\s]+/g, "_");
       const nowD = new Date();
       const ts = `${nowD.getFullYear()}${String(nowD.getMonth() + 1).padStart(2, "0")}${String(nowD.getDate()).padStart(2, "0")}_${String(nowD.getHours()).padStart(2, "0")}${String(nowD.getMinutes()).padStart(2, "0")}`;
-      const payload = {
-        schemaVersion: 2,
-        appId: "com.dx.calendar",
-        deviceName: state.deviceName,
-        exportedAtMillis: Date.now(),
-        categories: [],
-        events: state.events,
-        tasks: state.tasks,
-        routineCheckIns: [],
-        externalOverrides: [],
-        templates: state.templates,
-        richMeta: state.richMeta
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `DX-Calendar_${dev}_${ts}.dxbackup.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("已匯出相容 Android 的備份檔！");
+      const payload = buildBackupPayload(state);
+      downloadFile(`DX-Calendar_${dev}_${ts}.dxbackup.json`, JSON.stringify(payload, null, 2), "application/json");
+      showToast("已無損匯出相容 Android v2.0 的備份檔！");
     });
 
     const fileInput = document.getElementById("backupFileInput");
-    document.getElementById("btnImportBackup").addEventListener("click", () => fileInput.click());
+    document.getElementById("btnImportMerge").addEventListener("click", () => { pendingImportMode = "merge"; fileInput.click(); });
+    document.getElementById("btnImportOverwrite").addEventListener("click", () => { pendingImportMode = "overwrite"; fileInput.click(); });
     fileInput.addEventListener("change", async () => {
       const file = fileInput.files && fileInput.files[0];
       if (!file) return;
       try {
-        const text = await file.text();
-        const payload = JSON.parse(text);
-        if (Array.isArray(payload.events)) state.events = payload.events;
-        if (Array.isArray(payload.tasks)) state.tasks = payload.tasks;
-        if (Array.isArray(payload.templates) && payload.templates.length) state.templates = payload.templates;
-        if (payload.richMeta && typeof payload.richMeta === "object") state.richMeta = payload.richMeta;
+        const payload = JSON.parse(await file.text());
+        state = importBackupPayload(state, payload, pendingImportMode);
         await saveState();
-        showToast(`已從「${payload.deviceName || "Android"}」還原 ${state.events.length} 筆活動與 ${state.tasks.length} 項待辦`);
+        const modeLabel = pendingImportMode === "merge" ? "智慧合併" : "完整覆蓋";
+        showToast(`已${modeLabel}「${payload.deviceName || "Android"}」備份（共 ${state.events.length} 筆活動／${state.tasks.length} 項待辦）`);
         renderAll();
-      } catch (e) {
+      } catch (_) {
         showToast("還原失敗：請選擇有效的 .dxbackup.json 檔案");
       }
       fileInput.value = "";
@@ -808,19 +1319,56 @@
       chrome.tabs.create({ url: "https://drive.google.com/drive/my-drive" });
     });
 
+    // .ics Export / Import
+    document.getElementById("btnExportIcs").addEventListener("click", () => {
+      const ics = exportToIcs(state.events);
+      downloadFile(`DX-Calendar_${toIso(new Date())}.ics`, ics, "text/calendar;charset=utf-8");
+      showToast("已匯出標準 .ics 行事曆檔");
+    });
+    const icsInput = document.getElementById("icsFileInput");
+    document.getElementById("btnImportIcs").addEventListener("click", () => icsInput.click());
+    icsInput.addEventListener("change", async () => {
+      const file = icsInput.files && icsInput.files[0];
+      if (!file) return;
+      try {
+        const imported = importFromIcs(await file.text());
+        state.events.push(...imported);
+        await saveState();
+        showToast(`已匯入 ${imported.length} 筆 .ics 行程`);
+        renderAll();
+      } catch (_) {
+        showToast("ICS 解析失敗，請確認檔案格式");
+      }
+      icsInput.value = "";
+    });
+
     document.getElementById("btnRefreshWeather").addEventListener("click", async () => {
       weatherByDate = await DXWeather.getSevenDayForecast(true);
       document.getElementById("weatherStatusText").textContent = `已更新 ${Object.keys(weatherByDate).length} 天天氣預報`;
       renderAll();
       showToast("7 天天氣已更新");
     });
+
+    // 跨視窗即時同步（Popup ⇄ Side Panel ⇄ 獨立桌面視窗）
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area !== "local") return;
+      if (changes[STORAGE_KEY]) {
+        state = normalizeState(changes[STORAGE_KEY].newValue);
+        renderAll();
+      }
+      if (changes[POMO_STATE_KEY]) {
+        pomoState = { ...pomoState, ...(changes[POMO_STATE_KEY].newValue || {}) };
+        updatePomoUi();
+      }
+    });
   }
 
   async function init() {
     await loadState();
     bindEvents();
-    updatePomoUi();
     renderAll();
+    clearInterval(pomoUiInterval);
+    pomoUiInterval = setInterval(updatePomoUi, 1000);
     weatherByDate = await DXWeather.getSevenDayForecast(false);
     const cnt = Object.keys(weatherByDate).length;
     document.getElementById("weatherStatusText").textContent = cnt

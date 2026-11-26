@@ -5,6 +5,20 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [Chrome Extension v2.1.0] - 2026-11-26
+
+### 🧩 電腦端正式改採跨系統 Chrome 擴充功能伴侶版（取代 Windows 獨立程式規劃）
+- **🖥️ 三形態桌面體驗（Popup / Side Panel / 獨立雙欄桌面視窗）**：
+  - 支援快捷鍵 `Alt+Shift+D` 喚起彈出月曆、常駐 Chrome 側邊欄，以及一鍵點右上角 **`⛶`** 開啟無網址列獨立雙欄桌面視窗（左側月曆直接顯示行程卡片、右側並排顯示當日詳情與 24h 時間軸），跨 Windows / macOS / Linux / Chromebook 全平台通用。
+- **✨ 桌面效率全面對齊 Android `v2.0.0`**：
+  - 完整事件新增／編輯彈窗（自訂顏色、地點一鍵 Google Maps 導航、11 種重複規則含農曆初一十五／農曆每月／農曆每年、倒數日與生日自動算歲數、家庭／情侶協作留言板）。
+  - 支援月曆拖曳改期（Drag & Drop）、24 小時時間軸＋第二時區對照、待辦一鍵排時段（Time Blocking）、背景持久化番茄鐘（關閉視窗仍準時響鈴並於工具列徽章顯示剩餘分鐘）及背景重複農曆行程桌面通知。
+- **☁️ 100% 無損 Android `.dxbackup.json` 雙向互通 ＋ 標準 `.ics` 匯出入**：
+  - 匯入支援「智慧合併」與「完整覆蓋」雙模式，完整保留 Android 分類、例行打卡與加密隱私項目絕不遺失。
+  - 新增自動化驗證測試 `chrome-extension/test_extension.mjs` 與 Chrome Web Store 上架打包腳本 `chrome-extension/package_extension.ps1`。
+
+---
+
 ## [v2.0.0] - 2026-11-26 (`versionCode = 26`)
 
 ### 🚀 重大功能全面登場 / Major v2.0.0 Release

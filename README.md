@@ -1,135 +1,104 @@
-# DX日曆 (DX-Calendar) | 全尺寸奢華金主題智慧日曆 · Adaptive Smart Calendar
+# DX日曆 (DX-Calendar) | 全尺寸奢華金主題智慧日曆 ＋ Chrome 跨系統伴侶插件
 
-[🇹🇼 繁體中文](#繁體中文) | [🇺🇸 English](#english) | [🗺️ 開發路線圖 / Roadmap](#roadmap) | [👨‍💻 關於我 / About Me](#about-me)
+[🇹🇼 繁體中文](#繁體中文) | [🧩 Chrome 擴充功能](#chrome-extension) | [🇺🇸 English](#english) | [👨‍💻 關於我 / About Me](#about-me)
 
 [![Release](https://img.shields.io/github/v/release/dx9901mk5/DX-Calendar?color=C8962E&label=Latest%20Release)](https://github.com/dx9901mk5/DX-Calendar/releases/latest)
-[![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20%7C%20Foldable%20%7C%20Tablet%20%7C%20Chromebook-00B884)](https://github.com/dx9901mk5/DX-Calendar)
-[![UI](https://img.shields.io/badge/UI-Jetpack%20Compose%20Material%203-0D84FF)](https://developer.android.com/jetpack/compose)
+[![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20%7C%20Foldable%20%7C%20Tablet%20%7C%20Chrome%20Extension-00B884)](https://github.com/dx9901mk5/DX-Calendar)
+[![UI](https://img.shields.io/badge/UI-Jetpack%20Compose%20M3%20%2B%20Manifest%20V3-0D84FF)](https://developer.android.com/jetpack/compose)
 
 ---
 
 <a id="繁體中文"></a>
 ## 🇹🇼 繁體中文
 
-> **一款專為手機、摺疊機、8 吋／10 吋平板與 Chromebook 自由視窗打造的次世代 Android 智慧日曆。融合奢華金白／金色黑底自動主題、全 App Q 彈流暢手勢動畫、60fps 手風琴高解析桌面小工具、當日起 7 天月曆天氣、Google 行事曆與 Google Tasks 雙向整合、例行事務不佔月曆中心、多重連段追擊鬧鐘，以及無痕雙指紋隱私日曆。**
+> **一款專為手機、摺疊機、8 吋／10 吋平板、Chromebook 與跨系統 Chrome／Edge 瀏覽器打造的次世代智慧日曆。融合奢華金白／金色黑底自動主題、全 App Q 彈流暢手勢動畫、60fps 高解析含天氣桌面小工具、100% 離線自然語言與語音快記、農曆初一十五與生日算歲數、輪班連點排班、雙時區 24h 時間軸、番茄鐘與 Google 雲端硬碟無損跨裝置備份，以及無痕雙指紋隱私日曆。**
 
-### 📲 下載安裝 (GitHub Releases)
+### 📲 下載安裝
 
-前往 [**GitHub Releases 最新發行頁面**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) 下載最新正式簽章版 APK 安裝即可使用（App 內建 **GitHub 自動檢查更新**，發現新版會彈窗提示並由您確認後附即時進度條一鍵下載安裝）。
-
----
-
-### ✨ 核心功能特色（已實裝）
-
-#### 1. 🎬 Q 彈手勢動畫與全尺寸響應式體驗
-- **全 App 統一 Q 彈物理動畫**：點開設定頁、編輯頁、浮動 24 小時時間軸卡片、行程詳情卡與設定內頁每個分類皆具備一致的彈性過渡；`年 / 月 / 週 / 日 / 時間表` 切換支援方向性縮放過渡，切月／切年支援跟手水平滑動回彈。
-- **滿版月曆 ⇄ 彩條壓縮手勢連動**：月檢視支援 1:1 跟手上下滑動，將滿版月曆平滑壓縮為彩條提示＋下方當日時間表；再次點擊已選日期即 Q 彈展開 24 小時浮動時間軸卡片。
-- **全裝置與摺疊機專屬優化**：
-  - **手機與自由小視窗**（最小支援至 `300×360dp`）：緊湊單欄、頂部常駐 `now` 一鍵回今天、今日圓角高亮膠囊＋強調色底條。
-  - **摺疊機展開與 8 吋平板**：左主視圖＋右欄詳情（大字農曆干支、節氣詩詞、黃曆宜忌與天氣高低溫），新增／編輯頁自動切換為**左右雙欄並排**。
-  - **10 吋平板與 Pixelbook / Chromebook**：三欄常駐分類篩選側欄＋外接鍵盤方向鍵／翻頁快捷鍵。
-
-#### 2. 🎨 奢華金色亮暗雙主題 ＋ 1–31 動態日期 App 圖示
-- **跟隨系統自動切換主題**：亮色預設「**金色白底**」（純淨珍珠白＋18K 香檳金），暗色預設「**金色灰黑底**」（沉穩深灰黑 `#16171B`＋高光香檳金）；同時提供多套風格與自訂月曆背景底圖（可調透明度）。
-- **全新重新設計的金色 App 圖示**：同步對應系統亮暗色自動呈現「金色白底」與「金色黑底」，並內建 **1–31 日動態日期向量圖示**，午夜自動跨日刷新。
-
-#### 3. 🌤️ 預設當日起 7 天月曆天氣預報
-- 內建免 API Key 的 7 天天氣預報引擎（依所在地時區自動對應地區＋3 小時本機快取，免跳擾人定位權限），於月曆今日起連續 7 天日期格右上角呈現對應天氣圖示，並於當日詳情標頭顯示天氣狀態與高低溫。
-
-#### 4. 🧩 高解析度透明背景桌面小工具（60fps 週次展開＋點擊直達事件）
-- **DX 月曆小工具**：支援 **2,400,000 px** 旗艦高 DPI 1:1 銳利渲染，背景可自由調整 `0%–100%` 透明度，文字維持 100% 實心高對比＋微距陰影不發虛。
-- **60fps 單週展開與直達詳情**：在桌面點擊任一週次即可流暢展開當週詳細行程，**直接點擊展開週中的事件卡片即可跳轉 App 顯示當下事件詳情**。
-- **DX 時間表小工具**：可捲動瀏覽近期行程與待辦事項，點擊直達詳情，支援自由縮放與透明度調整。
-
-#### 5. 🔄 例行事務「不佔月曆格」獨立管理 ＋ 進階重複規則
-- **個別項目顯示控制**：建立活動或例行提醒（如每日吃藥、繳費、喝水）時可單獨決定是否佔用月曆格，連同步進來的外部 Google 行事曆重複活動也能單獨隱藏收納，無須關閉整個帳號。
-- **例行中心**：集中打卡、一鍵暫停／恢復提醒與清理過期累積舊項目。
-- **完整進階重複與日期**：支援每天／平日／每週／**隔 N 週（`FREQ=WEEKLY;INTERVAL=N`，如隔 2/3/4/6/8/12 週）**／每月／每年，以及**多個不連續日期**批次建立。
-
-#### 6. ⏰ 多重連段追擊鬧鐘 ＋ 國際版 Android Live Updates 即時動態通知
-- **多選提早提醒**：支援同時複選多組提早時間（準時、15 分前、1 小時前、1/2/3 天前、1 週前等），並可設定預設活動／待辦提醒時間。
-- **連段追擊強提醒**：可開啟多重連響追擊（自訂次數與間隔分鐘，直到手動確認停止）、鎖屏全螢幕鬧鐘聲道強響，並可同步建立手機系統原生鬧鐘。
-- **國際版 Android 16+ Live Updates**：符合 Android 國際版即時動態通知規範（`POST_PROMOTED_NOTIFICATIONS` / `requestPromotedOngoing`）。
-
-#### 7. ✅ Google 行事曆即時聯動 ＋ Google Tasks ＋ 自動時區 ＋ 農曆黃曆
-- **系統行事曆與語音助理即時聯動**：註冊 `CalendarContract` 防抖監聽，透過 Gemini 語音或 Google 行事曆新增事件後即時同步刷新月曆、小工具與鬧鐘。
-- **多 Gmail 帳號與 Google Tasks 整合**：將待辦事項圓圈混排於月曆、時間表與小工具（未設日期之未完成任務預設顯示於今日），並支援標準 `.ics` 匯入匯出與網址訂閱。
-- **自動判定時區與在地農曆**：自動依手機所在地判定時區（出國跨時區自動重排鬧鐘），預設依區域自動選用台灣／中國／香港農曆、國定假日、傳統節日、二十四節氣與傳統黃曆宜忌。
-
-#### 8. 👁️ 零痕跡高隱蔽「隱私日曆」（雙指紋＋離場秒隱藏）
-- **建立前完全零痕跡**：於「設定 → 隱私日曆設定」啟用前，全 App 隱藏所有隱私相關元件與按鈕。
-- **閃爍眼睛入口與無痕驗證**：啟用後僅於月曆頂欄呈現一枚「眼睛」按鈕，點擊閃爍並僅提示「請使用指紋驗證」（底層強制連續通過 2 枚指紋驗證，不透露雙指紋機制），密件採 Android Keystore `AES-256-GCM` 硬體級加密。
-- **離開即刻自動隱藏**：只要關閉 App、切換至其他 App 或**關閉螢幕**，立刻自動重新隱藏所有隱私內容，絕不外洩於公開檢視或桌面小工具。
+- **Android App（手機／摺疊機／平板／Chromebook）**：前往 [**GitHub Releases 最新發行頁面**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) 下載最新正式簽章版 APK（內建 **GitHub 自動檢查更新**，發現新版會彈窗提示確認並附進度條下載安裝）。
+- **電腦端跨系統伴侶（Chrome / Edge / Brave 擴充功能）**：已全面改採跨平台 **Manifest V3 Chrome 插件**（免安裝原生桌面程式，一次通吃 Windows / macOS / Linux / Chromebook），詳見下方 [🧩 Chrome 擴充功能安裝說明](#chrome-extension) 或 [`chrome-extension/README_CHROME_EXTENSION.md`](chrome-extension/README_CHROME_EXTENSION.md)。
 
 ---
 
-<a id="roadmap"></a>
-## 🗺️ 開發路線圖 / Roadmap（規劃實作中）
+### ✨ Android `v2.0.0` 核心功能特色（已全部實裝）
 
-以下進階功能已排入後續版本開發計畫：
+#### 1. 🎙️ 100% 本機離線自然語言＋語音快速建行程（0 費用、免 API）
+- 純本機時間詞法引擎，免外接 LLM API、免額外 OAuth、零延遲。
+- 輸入或語音說出一句話（如「`明天下午3點半開會 提前15分`」、「`農曆初一十五拜拜`」、「`下週二 14:00-15:30 牙醫`」、「`倒數 12/31 跨年煙火`」），即時預覽並一鍵建立行程、待辦或倒數日。
 
-| # | 功能項目 | 重點規劃 |
-| :---: | :--- | :--- |
-| **1** | **本機離線自然語言＋語音快速新增** | 免 LLM API、免額外 OAuth！輸入或說出一句話（如「明天下午3點半開會 提前15分」），純本機零延遲解析時間、重複與提醒 |
-| **2** | **行程長按拖曳改期 (Drag & Drop)** | 月檢視長按跨日拖曳改期；週／日 24h 時間軸拖曳調整開始時間與拉長縮短時長 |
-| **3** | **倒數日／紀念日／生日自動算歲數** | 標記目標倒數天數、自動讀取聯絡人生日並計算今年幾歲與週年數 |
-| **4** | **輪班與常用行程範本 (Templates)** | 預設整組事件範本（標題＋時長＋顏色＋連段提醒），支援輪班族一鍵連點快速排班 |
-| **5** | **行程圖片附件 ＋ 地點一鍵導航** | 活動內可附加車票／預約截圖照片，點擊地點直接開啟 Google Maps 導航 |
-| **6** | **農曆重複規則（初一十五／農曆生日）** | 原生支援「農曆每月（初一、十五）」與「農曆每年（長輩生日、祭祀、節慶）」跨年精準展開 |
-| **7** | **雙時區 24h 時間軸對照** | 週／日時間軸左側並排顯示雙時區刻度，跨國會議與出差一目了然 |
-| **8** | **待辦 × 時間塊 (Time Blocking) ＋ 番茄鐘** | 待辦事項直接排入 24h 時間軸執行時段，並內建專注倒數番茄鐘 |
-| **9** | **家庭／情侶共用群組行事曆** | 支援共享行程協作、行程下備註留言與變更即時提醒 |
-| **10** | **更多高質感桌面小工具（含天氣顯示）** | 新增倒數日小工具、下一行程迷你橫條、單週 7 天時間軸小工具，並全面支援顯示即時天氣 |
-| **11** | **自訂裝置名稱整庫加密備份 ＋ Google 雲端硬碟連動** | 一鍵打包行程、例行打卡、設定與加密資料；備份上方可自訂「裝置名稱」標記來源，並直接連動 Google 雲端硬碟 App 上傳與還原 |
-| **12** | **Chrome 插件電腦端跨系統伴侶版（已推出！）** | 已於 [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) 實作 Manifest V3 擴充功能（支援 Windows / macOS / Linux / Chromebook 之 Popup、側邊欄 Side Panel、當日日期徽章、農曆、7天天氣、離線快記、輪班排班、番茄鐘與 Android `.dxbackup.json` 跨系統互通） |
+#### 2. 🎬 Q 彈手勢動畫、拖曳改期與全尺寸響應式體驗
+- **全 App 統一 Q 彈物理動畫**：設定頁、編輯頁、浮動 24 小時時間軸卡片、行程詳情卡皆具流暢彈性過渡；`年 / 月 / 週 / 日 / 時間表` 支援方向性縮放過渡與跟手水平滑動換月。
+- **滿版月曆 ⇄ 彩條壓縮手勢連動**：月檢視 1:1 跟手上下滑動壓縮為彩條提示＋下方當日時間表；再點已選日期 Q 彈展開 24h 浮動時間軸卡片。
+- **行程拖曳改期（Drag & Drop）**：月檢視長按事件即可點擊目標日期快速搬移；週／日 24h 時間軸支援直接上下拖曳以 15 分鐘刻度調整時段。
+- **全裝置與摺疊機專屬優化**：手機常駐 `now` 回今天與醒目今日膠囊；摺疊機展開與 8 吋平板左右雙欄＋編輯頁雙欄並排；10 吋平板／Chromebook 三欄分類側欄＋鍵盤快捷鍵。
+
+#### 3. 🎨 奢華金色亮暗雙主題 ＋ 1–31 動態日期 App 圖示
+- 跟隨系統自動切換「**金色白底（亮色）**」與「**金色灰黑底（暗色）**」，內建多套風格與自訂半透明月曆背景底圖。
+- 全新金色幾何日曆 App 圖示同步隨系統亮暗色變換，並內建 **1–31 日動態日期向量圖示**，午夜自動跨日刷新。
+
+#### 4. 🌤️ 預設當日起 7 天月曆天氣 ＋ 高解析含天氣桌面小工具
+- 內建免 API Key Open-Meteo 7 天預報（依時區自動對應＋3 小時快取），於月曆與小工具日期格右上角呈現 7 天天氣圖示與詳情高低溫。
+- **DX 月曆小工具**：**2,400,000 px** 旗艦高 DPI 1:1 渲染，背景 `0%–100%` 透明而文字維持 100% 實心高對比＋微距陰影；支援 **60fps 點擊週次展開**，**直接點擊展開週中的事件卡片即直達 App 事件詳情**。
+- **擴充桌面小工具**：同步提供 **DX 時間表小工具**、**DX 下一行程與天氣橫條（4×1）** 與 **DX 倒數日與天氣小工具（2×2）**。
+
+#### 5. 🏷️ 輪班範本連點排班 ＋ 倒數日算歲數 ＋ 圖片附件與導航 ＋ 協作留言
+- **輪班與常用範本（Stamp Mode）**：內建早班／小夜班／大夜班／休假／健身並可自訂新增，啟用連點排班後直接點擊日期格即蓋章排完整月班表。
+- **倒數日、紀念日與生日自動算歲數**：標記起始西元年自動計算「還有 X 天」、「🎂 今年 N 歲」或「💍 第 N 週年」。
+- **行程圖片附件與一鍵 Google Maps 導航**：活動可附加多張車票／預約照片截圖，點擊地點直接開啟 Google Maps 導航。
+- **家庭／情侶協作留言板**：行程詳情內建署名留言板，隨整庫備份跨裝置同步。
+
+#### 6. 🌙 完整農曆重複（初一十五／農曆生日）＋ 雙時區時間軸 ＋ 番茄鐘
+- **11 種重複規則**：支援每天／平日／每週／**隔 N 週（`FREQ=WEEKLY;INTERVAL=N`）**／每月／每年／**農曆每月**／**農曆初一與十五**／**農曆每年**，以及多組不連續日期批次建立。
+- **雙時區 24h 時間軸**：週／日時間軸左側可並排對照第二時區刻度，跨國會議與出差一目了然。
+- **待辦時間塊（Time Blocking）＋ 環形番茄鐘**：待辦可一鍵「⏰ 排時段」排入當日時間軸，或開啟「🍅 專注」倒數計時器（25/15/45/5 分）。
+
+#### 7. 🔄 例行事務不佔月曆格 ＋ 多重連段追擊鬧鐘 ＋ 國際版 Live Updates
+- **例行中心**：每日吃藥、繳費、運動可個別設為「不在月曆佔空間」（連外部同步的 Google 重複行程也可單獨隱藏收納），集中打卡、暫停與清理。
+- **多重連段追擊強提醒**：複選多組提早時間、每隔數分鐘連響追擊直到確認、鎖屏全螢幕鬧鐘聲道強響、連動系統時鐘鬧鐘，並遵循國際版 **Android 16+ Live Updates** 即時動態通知規範。
+
+#### 8. ✅ Google 行事曆／Tasks 雙向同步 ＋ 自訂裝置名稱雲端硬碟備份 ＋ 雙指紋隱私日曆
+- **Google 生態與自動時區**：防抖即時監聽 Google 行事曆（含語音助理新增）、支援多組 Gmail 帳號與 Google Tasks、標準 `.ics` 匯出入與 URL 訂閱、自動判定所在地時區與 1900–2100 區域農曆黃曆。
+- **自訂裝置名稱整庫備份 ＋ Google 雲端硬碟連動**：上方自訂「裝置名稱」自動寫入 `.dxbackup.json` 檔名與協作留言署名，一鍵連動 Google 雲端硬碟 App 上傳並與 Chrome 插件無損互通。
+- **零痕跡雙指紋「隱私日曆」**：設定頁啟用前全 App 零痕跡；啟用後僅呈現閃爍「眼睛」按鈕，底層強制連續 2 枚指紋驗證＋Keystore `AES-256-GCM` 硬體加密，關閉 App、切換視窗或關閉螢幕瞬間自動隱藏。
+
+---
+
+<a id="chrome-extension"></a>
+## 🧩 Chrome 擴充功能 — 官方電腦端跨系統伴侶版（v2.1.0）
+
+我們已正式放棄單一平台的 Windows 桌面程式，改以 **Chrome / Edge / Brave 擴充功能（Manifest V3）** 作為 DX日曆官方電腦端伴侶，一次支援 **Windows / macOS / Linux / Chromebook**！
+
+- **三形態桌面體驗**：
+  1. **工具列彈出月曆**（快捷鍵 `Alt+Shift+D`，工具列圖示即時顯示今日日期徽章，番茄鐘運作中自動顯示剩餘分鐘）。
+  2. **Chrome 側邊欄（Side Panel）**：常駐於瀏覽器右側一邊上網一邊排程。
+  3. **獨立雙欄桌面視窗（點右上角 `⛶`）**：無網址列干擾的獨立視窗，左欄大月曆直接呈現行程晶片、右欄並排顯示詳情與 24h 雙時區時間軸，完整取代原生桌面日曆！
+- **完整電腦端效率功能**：1900–2100 農曆節氣、7 天月曆天氣、離線自然語言與語音快記、完整編輯器與家庭協作留言板、月曆拖曳改期（Drag & Drop）、11 種重複規則背景桌面提醒、輪班連點排班、倒數日自動算歲數、背景持久化番茄鐘（關掉視窗依然準時響鈴）、標準 `.ics` 匯出入，以及與 Android `v2.0.0` **100% 無損互通的 `.dxbackup.json` 智慧合併／覆蓋還原**。
+
+### 🚀 10 秒載入使用（Chrome / Edge）
+1. 開啟 `chrome://extensions/`（Edge 開啟 `edge://extensions/`）。
+2. 開啟右上角 **「開發人員模式」** → 點擊 **「載入未封裝項目」**。
+3. 選擇本專案內的 [`chrome-extension`](chrome-extension/) 資料夾即可立即使用！
 
 ---
 
 <a id="english"></a>
 ## 🇺🇸 English
 
-> **A next-generation adaptive Android smart calendar engineered for phones, foldables, 8"/10" tablets, and Chromebooks. Built with luxury Gold-on-White / Gold-on-Black auto themes, playful spring-physics animations, 60fps high-DPI accordion widgets with direct event launch, 7-day calendar weather, Google Calendar & Tasks sync, a clutter-free Routine Hub, multi-call escalating alarms, and a zero-trace Dual-Fingerprint Privacy Vault.**
+> **A next-generation adaptive smart calendar for Android phones, foldables, tablets, Chromebooks, and cross-platform Chrome/Edge browsers. Featuring luxury Gold-on-White / Gold-on-Black auto themes, playful spring-physics animations, 60fps high-DPI weather widgets, 100% offline natural-language & voice quick add, lunar recurrences (1st/15th & lunar birthdays), shift stamping, dual-timezone 24h timelines, Pomodoro focus timers, lossless Google Drive cross-device backups, and a zero-trace Dual-Fingerprint Privacy Vault.**
 
 ### 📲 Download & Install
+- **Android App**: Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) (includes built-in **GitHub Update Checker** with confirmation dialog and live progress bar).
+- **Cross-Platform Desktop Companion (Chrome / Edge / Brave Extension)**: Replaces the former Windows-only desktop app plan so **Windows, macOS, Linux, and Chromebook** users all get the full companion experience in [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) (`chrome://extensions/` → Developer Mode → Load unpacked).
 
-Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest). Built-in **GitHub Update Checker** automatically checks for updates and prompts for your confirmation before downloading with a live progress bar.
-
-### ✨ Key Features (Shipped)
-
-- **🎬 Spring-Physics Animations & Full-Spectrum Adaptive UI**
-  - Unified bouncy spring transitions across Settings, Event Editor, floating 24h timeline cards, detail panels, and directional zoom transitions between **Year / Month / Week / Day / Schedule** views.
-  - Restores smooth 1:1 vertical drag gesture to compress the full-screen month grid into color-bar indicators + daily agenda sheet, plus swipe-to-switch-month spring feedback.
-  - Responsive layouts for **phones** (persistent top-bar `now` button & highlighted Today pill), **unfolded foldables & 8" tablets** (dual-pane calendar + side-by-side Event Editor), and **10" tablets / Chromebooks** (3-pane layout + hardware keyboard navigation).
-- **🎨 Luxury Gold Light/Dark Auto Theme & Dynamic 1–31 Day Icons**
-  - Automatically follows system Light (**Gold on White**) and Dark (**Gold on Graphite Black**) themes, with multiple preset styles and custom semi-transparent calendar wallpapers.
-  - Redesigned luxury gold adaptive app icon with **31 dynamic day-of-month vector icons (01–31)** that auto-match system Light/Dark mode and refresh at midnight.
-- **🌤️ Built-in 7-Day Weather Forecast on Month Calendar**
-  - Zero-API-key Open-Meteo 7-day forecast with timezone-based location defaults and 3-hour local caching—displays crisp weather icons directly on the next 7 days in Month view and high/low temperatures in the daily header.
-- **🧩 High-DPI Transparent Widgets with 60fps Week-Expand & Direct Event Click**
-  - **2,400,000 px** native high-DPI canvas rendering with `0%–100%` background opacity while keeping text 100% solid high-contrast with micro-shadows.
-  - Tap any week row on the home screen to smoothly expand it at 60fps, and **tap any event card inside the expanded week to jump straight to that event in the app**.
-- **🔄 Clutter-Free Routine Hub & Advanced Recurrence**
-  - Control per-item whether reminders appear in the month grid or stay cleanly tucked into the **Routine Hub** (with daily check-ins, pause/resume, and expired cleanup).
-  - Supports **Every N Weeks (`FREQ=WEEKLY;INTERVAL=N`)** and **multiple non-consecutive dates**.
-- **⏰ Multi-Call Escalating Alarms & International Android 16+ Live Updates**
-  - Multi-select early reminders, repeating burst alarms until dismissed, full-screen alarm-stream alerts, native Clock App sync, and standard international **Android 16+ Live Updates**.
-- **✅ Real-Time Google Calendar & Tasks Sync + Auto Timezone & Lunar Almanac**
-  - Debounced `CalendarContract` observer for instant sync with Google Calendar & voice assistants, Google Tasks integration (undated active tasks surface on Today), `.ics` import/export, automatic timezone detection, and 1900–2100 regional Lunar/Solar-Term/Almanac data.
-- **👁️ Zero-Trace Stealth Privacy Calendar (Dual-Fingerprint + Instant Auto-Lock)**
-  - Completely invisible until enabled in Settings; reveals only a subtle blinking **Eye** icon on the calendar bar (discreet fingerprint prompt backed by sequential dual-fingerprint verification + `AES-256-GCM` Keystore encryption).
-  - Automatically re-locks and hides immediately upon closing the app, switching apps, or turning off the screen.
-
-### 🗺️ Planned Roadmap (English Summary)
-- **Offline Natural Language & Voice Quick Add** (zero LLM API / zero OAuth required)
-- **Drag & Drop Event Rescheduling** across Month cells and Week/Day 24h timelines
-- **Countdowns, Anniversaries & Contact Birthday Age Calculator**
-- **Shift & Event Templates** for one-tap schedule stamping
-- **Image Attachments & One-Tap Google Maps Navigation**
-- **Lunar Recurrence Rules** (monthly 1st/15th & annual lunar birthdays/festivals)
-- **Dual-Timezone 24h Timeline**, **Task Time-Blocking + Pomodoro**, & **Shared Family/Couple Calendars**
-- **Expanded Weather-Enabled Widgets** (Countdown, Next-Up Bar, 7-Day Week Timeline)
-- **Named-Device Encrypted Full Backup & Google Drive App Upload**
-- **Chrome Extension Desktop Companion (Shipped!)**: Manifest V3 extension in [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) for Windows / macOS / Linux / Chromebook with Popup + Side Panel, live day badge, Lunar & 7-day weather, offline NLP/voice, Pomodoro, shift stamping, and 100% Android `.dxbackup.json` sync compatibility.
+### ✨ Shipped Highlights (`Android v2.0.0` + `Chrome Extension v2.1.0`)
+- **🎙️ 100% Offline Natural-Language & Voice Quick Add** (zero LLM API cost / zero extra OAuth): Type or speak phrases like *"Tomorrow 3:30pm dentist remind 15m early"* or *"Lunar 1st & 15th offering"* for instant zero-latency parsing.
+- **🎬 Spring Animations, Drag & Drop Rescheduling & Adaptive Multi-Pane UI**: Unified bouncy transitions, 1:1 vertical month-to-agenda swipe gesture, drag-to-reschedule on Month cells & 15-min snap dragging on 24h timelines, plus dual-pane / 3-pane layouts for foldables, tablets, and Chromebooks.
+- **🎨 Luxury Gold Auto Theme & Dynamic 1–31 Day Icons**: Automatic Gold-on-White (Light) / Gold-on-Graphite-Black (Dark) themes and 31 dynamic day-of-month adaptive vector icons.
+- **🌤️ Built-in 7-Day Weather & Expanded High-DPI Widgets**: Zero-API-key Open-Meteo 7-day forecast on Month view & widgets, **2,400,000 px** transparent Month Widget with 60fps week-expand + direct event tap, Schedule Widget, **Next Event + Weather Bar (4×1)**, and **Countdown + Weather Widget (2×2)**.
+- **🏷️ Shift Stamping, Countdowns/Age Tracker, Attachments, Maps & Family Comments**: One-tap shift template stamping, automatic birthday age / anniversary year calculation, photo attachments, one-tap Google Maps navigation, and synced family/couple event comments.
+- **🌙 Lunar Recurrences, Dual-Timezone Timeline & Task Time-Blocking + Pomodoro**: Native Lunar Monthly / Lunar 1st & 15th / Lunar Yearly / Every-N-Weeks recurrences, side-by-side dual-timezone 24h scale, one-tap task time-blocking, and focus Pomodoro timer.
+- **🔄 Clutter-Free Routine Hub, Escalating Alarms & International Android 16+ Live Updates**: Per-item hide-from-month-grid control (even for external Google Calendar series), multi-call burst alarms, native Clock sync, and standard Android 16+ Live Updates.
+- **☁️ Lossless Android ⇄ Chrome Backup Sync & Dual-Fingerprint Privacy Vault**: Named-device `.dxbackup.json` (Schema v2) with direct Google Drive app upload and lossless smart-merge in Chrome Extension (`Popup`, `Side Panel`, and standalone dual-pane `App Window` modes), plus hardware `AES-256-GCM` Dual-Fingerprint Privacy Vault with instant auto-lock on screen off or app switch.
 
 ---
 
@@ -137,11 +106,11 @@ Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9
 ## 👨‍💻 關於我 / About Me
 
 ### 🇹🇼 關於開發者 (`dx9901mk5`)
-我是 **dx9901mk5**，熱愛深度打磨原生介面動畫、跨裝置生產力（手機／摺疊機／平板／車機／Chromebook／Windows 桌面）與解決真實日常痛點的獨立開發者。堅持「無廣告干擾、尊重隱私、高效率與極致順手」的設計理念，持續打造乾淨俐落的 **DX 系列工具生態**。
+我是 **dx9901mk5**，熱愛深度打磨原生介面動畫、跨裝置生產力（手機／摺疊機／平板／車機／Chromebook／Chrome 瀏覽器擴充功能）與解決真實日常痛點的獨立開發者。堅持「無廣告干擾、尊重隱私、高效率與極致順手」的設計理念，持續打造乾淨俐落的 **DX 系列工具生態**。
 
 歡迎造訪我的 GitHub 主頁探索更多專案：
 - 🔗 **GitHub 主頁**：[https://github.com/dx9901mk5](https://github.com/dx9901mk5)
-- 📅 [**DX-Calendar**](https://github.com/dx9901mk5/DX-Calendar) — 全尺寸奢華金主題智慧日曆（本專案）
+- 📅 [**DX-Calendar**](https://github.com/dx9901mk5/DX-Calendar) — 全尺寸奢華金主題智慧日曆 ＋ Chrome 跨系統插件（本專案）
 - 🚗 [**DX-Car-Launcher**](https://github.com/dx9901mk5/DX-Car-Launcher) — Android Auto (Coolwalk) 風格車載 AI Box 桌面啟動器
 - 🎙️ [**DxVoice-IME**](https://github.com/dx9901mk5/DxVoice-IME) — 離線 AI 智慧語音輸入法（說完自動切回原鍵盤＋懸浮語音球）
 - 📁 [**DX_fileManager**](https://github.com/dx9901mk5/DX_fileManager) — 多面板與自由小視窗 Android 檔案管理器
@@ -149,14 +118,19 @@ Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9
 - 🛡️ [**PhotoSyncGuard**](https://github.com/dx9901mk5/PhotoSyncGuard) / [**CallMusicGuard**](https://github.com/dx9901mk5/CallMusicGuard) / [**PixelAI-Bridge**](https://github.com/dx9901mk5/PixelAI-Bridge)
 
 ### 🇺🇸 About the Developer (`dx9901mk5`)
-Hi, I'm **dx9901mk5** — an independent developer dedicated to crafting fluid, privacy-respecting productivity tools across phones, foldables, tablets, car head units, Chromebooks, and Windows desktops.
+Hi, I'm **dx9901mk5** — an independent developer dedicated to crafting fluid, privacy-respecting productivity tools across phones, foldables, tablets, car head units, Chromebooks, and Chrome browser extensions.
 
 Explore more projects from the **DX Ecosystem** at [https://github.com/dx9901mk5](https://github.com/dx9901mk5).
 
 ---
 
-## 🛠️ Build from Source
+## 🛠️ Build & Test from Source
 
 ```powershell
+# Android APK & Unit Tests
 .\gradlew.bat testGithubDebugUnitTest assembleGithubRelease
+
+# Chrome Extension Automated Tests & Chrome Web Store ZIP Packaging
+node chrome-extension/test_extension.mjs
+powershell -NoProfile -ExecutionPolicy Bypass -File chrome-extension/package_extension.ps1
 ```

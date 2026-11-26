@@ -1660,7 +1660,7 @@ private fun DxSettingsSectionContent(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("整庫備份與 Google 雲端硬碟連動", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            text = "一鍵打包本機所有行程、待辦、例行打卡、輪班範本、倒數日與協作留言（相容未來 Chrome 插件跨系統同步格式）。",
+                            text = "一鍵打包本機所有行程、待辦、例行打卡、輪班範本、倒數日與協作留言（100% 互通官方 Chrome 插件跨系統同步格式）。",
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
                         )
