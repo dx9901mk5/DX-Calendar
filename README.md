@@ -81,7 +81,7 @@
 | **9** | **家庭／情侶共用群組行事曆** | 支援共享行程協作、行程下備註留言與變更即時提醒 |
 | **10** | **更多高質感桌面小工具（含天氣顯示）** | 新增倒數日小工具、下一行程迷你橫條、單週 7 天時間軸小工具，並全面支援顯示即時天氣 |
 | **11** | **自訂裝置名稱整庫加密備份 ＋ Google 雲端硬碟連動** | 一鍵打包行程、例行打卡、設定與加密資料；備份上方可自訂「裝置名稱」標記來源，並直接連動 Google 雲端硬碟 App 上傳與還原 |
-| **12** | **Windows Store 電腦端跨系統同步版** | 規劃推出 Microsoft Store 桌面端程式，透過 Google 行事曆／Tasks 與 Google 雲端硬碟加密同步檔實現 Android ⇄ Windows 無縫跨系統同步 |
+| **12** | **Chrome 插件電腦端跨系統伴侶版（已推出！）** | 已於 [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) 實作 Manifest V3 擴充功能（支援 Windows / macOS / Linux / Chromebook 之 Popup、側邊欄 Side Panel、當日日期徽章、農曆、7天天氣、離線快記、輪班排班、番茄鐘與 Android `.dxbackup.json` 跨系統互通） |
 
 ---
 
@@ -129,7 +129,7 @@ Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9
 - **Dual-Timezone 24h Timeline**, **Task Time-Blocking + Pomodoro**, & **Shared Family/Couple Calendars**
 - **Expanded Weather-Enabled Widgets** (Countdown, Next-Up Bar, 7-Day Week Timeline)
 - **Named-Device Encrypted Full Backup & Google Drive App Upload**
-- **Windows Microsoft Store Desktop Companion** with cross-system sync
+- **Chrome Extension Desktop Companion (Shipped!)**: Manifest V3 extension in [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) for Windows / macOS / Linux / Chromebook with Popup + Side Panel, live day badge, Lunar & 7-day weather, offline NLP/voice, Pomodoro, shift stamping, and 100% Android `.dxbackup.json` sync compatibility.
 
 ---
 
