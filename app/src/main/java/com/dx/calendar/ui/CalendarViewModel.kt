@@ -229,7 +229,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 autoSyncGoogleTasksSilently(initSettings.googleAccountEmail)
             }
             if (initSettings.autoCheckUpdate && !BuildConfig.IS_PLAY_BUILD) {
-                checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = true)
+                // 自動檢查更新並彈窗提示，由使用者確認點擊「立即下載更新」後才開始下載
+                checkGitHubUpdate(autoDownloadIfFound = false, showDialogIfOnMain = true)
             }
         }
     }

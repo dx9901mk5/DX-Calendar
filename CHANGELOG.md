@@ -5,6 +5,14 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.9.7] - 2026-11-26 (`versionCode = 24`)
+
+### ✨ 更新流程優化 / Improved
+- **🔔 自動更新改為「自動檢查 → 彈窗提示確認後再下載」**：
+  - 啟動 App 時自動背景檢查 GitHub 最新版本，發現新版時先彈出更新提示視窗，由使用者點擊「立即下載更新」後才開始下載 APK，不再未經確認自動下載。
+
+---
+
 ## [v1.9.6] - 2026-11-26 (`versionCode = 23`)
 
 ### ✨ 新增功能與體驗優化 / Added & Improved
