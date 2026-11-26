@@ -23,8 +23,8 @@ android {
         applicationId = "com.dx.calendar"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "2.0.1"
+        versionCode = 28
+        versionName = "2.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

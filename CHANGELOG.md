@@ -5,6 +5,15 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v2.0.2] - 2026-11-27 (`versionCode = 28`)
+
+### 🔥 緊急閃退修復 / Critical Hotfix
+- **修復 `v2.0.1` 手機開啟主畫面立即閃退的嚴重問題（`IllegalStateException: Horizontally scrollable component was measured with an infinity maximum width constraint`）**：
+  - 根因定位：`v2.0.1` 於手機頂部第二行新增 `Row(...horizontalScroll())` 包裹 `ViewModeSegmentedPill`（其內部原有另一個 `horizontalScroll()`），導致 Compose 產生巢狀橫向捲動容器，在手機開啟第一幀即拋出 `Infinity` 寬度約束閃退。
+  - 徹底移除 `ViewModeSegmentedPill` 內層多餘的 `horizontalScroll`，由外層單一捲動容器承接，並全面清查全 App 所有 `horizontalScroll` / `verticalScroll` 確認零巢狀。
+
+---
+
 ## [v2.0.1] - 2026-11-27 (`versionCode = 27`)
 
 ### ✨ 全功能按鈕總體檢、顯眼語音入口、Google Tasks 呈現專精化與 5 大天氣小工具 / Added & Improved

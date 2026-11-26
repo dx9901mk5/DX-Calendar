@@ -1599,9 +1599,9 @@ private fun ViewModeSegmentedPill(
     onSelect: (CalendarViewMode) -> Unit
 ) {
     val tokens = LocalBrandTokens.current
+    // 注意：外層容器已具備 horizontalScroll，此處嚴禁巢狀 horizontalScroll 以免在手機上引發 Infinity maxWidth 閃退！
     Row(
         modifier = Modifier
-            .horizontalScroll(rememberScrollState())
             .clip(RoundedCornerShape(18.dp))
             .background(tokens.surfaceCardColor)
             .padding(3.dp),
