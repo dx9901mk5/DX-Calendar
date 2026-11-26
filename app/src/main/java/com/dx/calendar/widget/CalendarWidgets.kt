@@ -1156,9 +1156,9 @@ private fun applyMonthContainerThemeAndOpacity(
     )
     views.setInt(R.id.widget_bg_layer, "setImageAlpha", alpha255)
 
-    val titleColor = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF161618.toInt()
-    val iconMutedColor = if (darkStyle) 0xFFA8A8B4.toInt() else 0xFF5A5A66.toInt()
-    val modeChipTextColor = if (darkStyle) 0xFFD8D8E0.toInt() else 0xFF282830.toInt()
+    val titleColor = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF101014.toInt()
+    val iconMutedColor = if (darkStyle) 0xFFE6E6F0.toInt() else 0xFF282832.toInt()
+    val modeChipTextColor = if (darkStyle) 0xFFF2F2FA.toInt() else 0xFF1A1A22.toInt()
     val modeChipBgColor = if (darkStyle) 0x26FFFFFF else 0x16000000
     val safeAccent = accentArgb or 0xFF000000.toInt()
     val todayChipBg = (safeAccent and 0x00FFFFFF) or 0x28000000
@@ -1250,11 +1250,11 @@ private fun buildWidgetConfigPi(context: Context, widgetId: Int, reqOffset: Int)
  */
 internal object MonthCanvasRenderer {
 
-    // 升級為 2K 旗艦／摺疊機原生高解析像素預算（Android 8+ RemoteViews Bitmap 走 ashmem 共享記憶體，系統上限達螢幕像素 1.5 倍 ≈ 15MB，
-    // 1,650,000 像素 ≈ 1285×1285 px = 6.6MB，既有 1:1 銳利字體又遠低於系統記憶體上限！）
-    const val DEFAULT_MAX_PIXELS = 1_650_000
+    // 升級為旗艦 2K/QHD+ 與摺疊機 1:1 原生高解析像素預算（2,400,000 px ≈ 9.6MB，並透過 computeScreenSafePixelBudget
+    // 針對小螢幕自動限制在螢幕總像素 85% 內，確保字體 1:1 銳利不縮放模糊且絕不超限！）
+    const val DEFAULT_MAX_PIXELS = 2_400_000
     const val ANIM_FRAME_MAX_PIXELS = 160_000
-    const val MAX_SIDE_PX = 1650
+    const val MAX_SIDE_PX = 2200
 
     internal fun computeScreenSafePixelBudget(screenWidthPx: Int, screenHeightPx: Int, requestedMaxPixels: Int): Int {
         val safeReq = requestedMaxPixels.coerceAtLeast(60_000).toLong()
@@ -1269,7 +1269,7 @@ internal object MonthCanvasRenderer {
         maxPixels: Int = DEFAULT_MAX_PIXELS,
         maxSidePx: Int = MAX_SIDE_PX
     ): Pair<Int, Int> {
-        val safeDensity = density.takeIf { it.isFinite() && it > 0f }?.coerceIn(1.5f, 3.5f) ?: 2.75f
+        val safeDensity = density.takeIf { it.isFinite() && it > 0f }?.coerceIn(1.5f, 4.0f) ?: 3.0f
         val safeWdp = widthDp.coerceIn(120, 760)
         val safeHdp = heightDp.coerceIn(90, 820)
 
@@ -1336,41 +1336,50 @@ internal object MonthCanvasRenderer {
             density = rawDensity,
             maxPixels = effectiveMaxPixels
         )
-        val density = (wPx.toFloat() / widthDp.coerceIn(120, 760).toFloat()).coerceIn(1.0f, 3.5f)
+        val density = (wPx.toFloat() / widthDp.coerceIn(120, 760).toFloat()).coerceIn(1.0f, 4.0f)
 
         val bmp = Bitmap.createBitmap(wPx, hPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
 
-        val primaryText = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF18181B.toInt()
-        val secondaryText = if (darkStyle) 0xFFA4A4AE.toInt() else 0xFF565660.toInt()
+        // 背景可高度透明，但所有文字維持 100% 實心高對比＋微距陰影，避免與桌布融在一起顯得過透或模糊
+        val primaryText = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF101014.toInt()
+        val secondaryText = if (darkStyle) 0xFFE6E6F0.toInt() else 0xFF2A2A34.toInt()
+        val textShadowColor = if (darkStyle) 0xB3000000.toInt() else 0x66FFFFFF.toInt()
         val gridLineColor = if (darkStyle) 0x26FFFFFF else 0x22000000
 
-        val textFlags = Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG or Paint.LINEAR_TEXT_FLAG
+        val textFlags = Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG or Paint.LINEAR_TEXT_FLAG or Paint.DITHER_FLAG
+        val mediumTypeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         val headerPaint = Paint(textFlags).apply {
             color = secondaryText
-            textSize = 11.6f * density
+            textSize = 11.8f * density
             textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            typeface = mediumTypeface
+            setShadowLayer(1.6f * density, 0f, 0.8f * density, textShadowColor)
         }
         val dayPaint = Paint(textFlags).apply {
-            textSize = (if (hPx < 420) 13.4f else 15.6f) * density
+            textSize = (if (hPx < 420) 13.6f else 15.8f) * density
             textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            typeface = mediumTypeface
+            setShadowLayer(1.8f * density, 0f, 0.9f * density, textShadowColor)
         }
         val lunarPaint = Paint(textFlags).apply {
-            textSize = 9.8f * density
+            textSize = 9.9f * density
             textAlign = Paint.Align.CENTER
+            typeface = mediumTypeface
+            setShadowLayer(1.4f * density, 0f, 0.7f * density, textShadowColor)
         }
         val chipPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         val chipTextPaint = Paint(textFlags).apply {
             color = primaryText
-            textSize = 9.6f * density
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            textSize = 9.8f * density
+            typeface = mediumTypeface
+            setShadowLayer(1.2f * density, 0f, 0.6f * density, textShadowColor)
         }
         val cardTitlePaint = Paint(textFlags).apply {
-            color = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF141418.toInt()
-            textSize = 10.6f * density
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            color = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF101014.toInt()
+            textSize = 10.8f * density
+            typeface = mediumTypeface
+            setShadowLayer(1.2f * density, 0f, 0.6f * density, textShadowColor)
         }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = gridLineColor
@@ -1450,7 +1459,7 @@ internal object MonthCanvasRenderer {
                 val d = startDate.plusDays((r * 7 + c).toLong())
                 val inMonth = d.month == yearMonth.month
                 val isToday = d == today
-                val alphaFactor = if (inMonth) 255 else 95
+                val alphaFactor = if (inMonth) 255 else 155
 
                 val cx = cellLeft + colW / 2f
                 val dayBaseline = cellTop + (if (anyWeekAccordionMode && rowExpandFrac < 0.3f) 14.8f else 15.8f) * density
@@ -1533,13 +1542,13 @@ internal object MonthCanvasRenderer {
                             val cardH = lines.size * lineH + 6.4f * density
                             if (yCursor + cardH > cardAreaBottom + 4f * density && drawnCount > 0) break
 
-                            val bgBaseAlpha = if (darkStyle) 0xA6 else 0x44
+                            val bgBaseAlpha = if (darkStyle) 0xD8 else 0x8C
                             val bgScaledAlpha = (bgBaseAlpha * cardOpacity).roundToInt().coerceIn(0, 255)
                             chipPaint.color = (ev.colorArgb and 0x00FFFFFF) or (bgScaledAlpha shl 24)
                             val cardRect = RectF(cellLeft + padX, yCursor, cellLeft + colW - padX, yCursor + cardH)
                             canvas.drawRoundRect(cardRect, 6f * density, 6f * density, chipPaint)
 
-                            val textBaseAlpha = if (inMonth) 255 else 185
+                            val textBaseAlpha = if (inMonth) 255 else 215
                             cardTitlePaint.alpha = (textBaseAlpha * cardOpacity).roundToInt().coerceIn(0, 255)
                             lines.forEachIndexed { lIdx, lineText ->
                                 canvas.drawText(
