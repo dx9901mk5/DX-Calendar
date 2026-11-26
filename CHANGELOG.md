@@ -5,6 +5,13 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.8.4] - 2026-11-26 (`versionCode = 15`)
+
+### 🎨 文案調整 / Updated
+- 設定頁「原子島與動態圖示」區塊正式更名為 **「動態島圖示」**。
+
+---
+
 ## [v1.8.3] - 2026-11-26 (`versionCode = 14`)
 
 ### 🎨 小工具字體與排版精修 / Polished

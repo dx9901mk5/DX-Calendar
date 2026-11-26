@@ -114,7 +114,7 @@ private enum class DxSettingsSection(
     ABOUT_UPDATE("GitHub 與自動更新", "GitHub 專案連結、點擊檢查更新與自動下載安裝", Icons.Filled.SystemUpdate),
     APPEARANCE("外觀主題與底圖", "金白明亮預設、金色灰黑暗色預設與跟隨系統", Icons.Filled.Palette),
     ACCOUNTS_AND_TASKS("行事曆與 Google Tasks", "行事曆顯示開關、本機類型與 Tasks 自動同步", Icons.Filled.AccountCircle),
-    ICON_AND_ISLAND("原子島與動態圖示", "日曆通知上原子島、1–31 日期圖示", Icons.Filled.NotificationsActive),
+    ICON_AND_ISLAND("動態島圖示", "日曆通知上動態島、1–31 日期圖示", Icons.Filled.NotificationsActive),
     CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線、透視例行與連段測試", Icons.Filled.Tune),
     IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport),
     PRIVACY("隱私日曆設定", "預設隱藏入口；於此啟用後才顯示雙指紋隱私日曆", Icons.Filled.Lock)
@@ -1034,7 +1034,7 @@ private fun DxSettingsSectionContent(
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = "動態日期圖示 (1–31) 與原子島通知上島",
+                            text = "動態島圖示 (1–31 日期圖示與通知上島)",
                             color = tokens.primaryTextColor,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
