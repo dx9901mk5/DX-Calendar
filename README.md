@@ -1,9 +1,9 @@
-# DX日曆 (DX-Calendar) | 全尺寸多主題智慧日曆 · Adaptive Multi-Theme Smart Calendar
+# DX日曆 (DX-Calendar) | 全尺寸奢華金主題智慧日曆 · Adaptive Smart Calendar
 
-[🇹🇼 繁體中文](#繁體中文) | [🇺🇸 English](#english) | [👨‍💻 關於我 / About Me](#about-me)
+[🇹🇼 繁體中文](#繁體中文) | [🇺🇸 English](#english) | [🗺️ 開發路線圖 / Roadmap](#roadmap) | [👨‍💻 關於我 / About Me](#about-me)
 
-[![Release](https://img.shields.io/github/v/release/dx9901mk5/DX-Calendar?color=FF5238&label=Latest%20Release)](https://github.com/dx9901mk5/DX-Calendar/releases/latest)
-[![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20%7C%20Tablet%20%7C%20Chromebook-00B884)](https://github.com/dx9901mk5/DX-Calendar)
+[![Release](https://img.shields.io/github/v/release/dx9901mk5/DX-Calendar?color=C8962E&label=Latest%20Release)](https://github.com/dx9901mk5/DX-Calendar/releases/latest)
+[![Platform](https://img.shields.io/badge/Platform-Android%208.0%2B%20%7C%20Foldable%20%7C%20Tablet%20%7C%20Chromebook-00B884)](https://github.com/dx9901mk5/DX-Calendar)
 [![UI](https://img.shields.io/badge/UI-Jetpack%20Compose%20Material%203-0D84FF)](https://developer.android.com/jetpack/compose)
 
 ---
@@ -11,73 +11,125 @@
 <a id="繁體中文"></a>
 ## 🇹🇼 繁體中文
 
-> **以 vivo OriginOS 日曆美學為基底、融合 Google 日曆高效率體驗的全尺寸 Android 智慧日曆。專為手機、摺疊機、8 吋平板、10 吋平板與 Pixelbook (Chromebook) 自由視窗打造，內建五大品牌主題、桌面任意縮放小工具、Google Tasks 整合、例行事務獨立隱藏中心、多重連段鬧鐘呼叫與雙指紋鎖隱私日曆。**
+> **一款專為手機、摺疊機、8 吋／10 吋平板與 Chromebook 自由視窗打造的次世代 Android 智慧日曆。融合奢華金白／金色黑底自動主題、全 App Q 彈流暢手勢動畫、60fps 手風琴高解析桌面小工具、當日起 7 天月曆天氣、Google 行事曆與 Google Tasks 雙向整合、例行事務不佔月曆中心、多重連段追擊鬧鐘，以及無痕雙指紋隱私日曆。**
 
 ### 📲 下載安裝 (GitHub Releases)
 
-前往 [**GitHub Releases 最新發行頁面**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) 下載最新簽章版 APK 直接安裝即可使用（App 設定內建 **GitHub 自動檢查與進度條一鍵下載更新**）。
+前往 [**GitHub Releases 最新發行頁面**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) 下載最新正式簽章版 APK 安裝即可使用（App 內建 **GitHub 自動檢查更新**，發現新版會彈窗提示並由您確認後附即時進度條一鍵下載安裝）。
 
-### ✨ 核心特色
+---
 
-- **🖥️ 全尺寸與自由小視窗響應式設計（Phone / 8" & 10" Tablet / Pixelbook）**
-  - 自動偵測視窗實際寬高動態切換版面：**8 吋平板與摺疊機展開**採用 vivo 經典左右雙欄（左主視圖＋右農曆干支、節氣詩詞卡與活動詳情）；**10 吋大平板與 Pixelbook** 支援三欄常駐分類篩選與外接鍵盤方向鍵／翻頁快捷鍵；**手機與懸浮小視窗**（最小支援至 `300×360dp`）則提供緊湊單欄與可一鍵收合的當日行程面板。
-  - 完整支援 **年、月、週、日、時間表** 五種檢視模式，內建精準 1900–2100 農曆、天干地支生肖、二十四節氣、傳統黃曆宜忌與台灣節慶假日。
-- **🎨 金白／金色灰黑跟隨系統預設主題 ＋ 仿V/O/M/G/S 主題風格**
-  - 預設採用**跟隨手機系統主題自動移動切換**：明亮模式為 **金白風格**（純淨珍珠白底＋18K 香檳曜金），暗色模式自動切換為 **金色灰黑風格**（沉穩石墨灰黑底 `#16171B`＋璀璨香檳金，溫潤不死黑）；另可自由切換 **仿V**、**仿O**、**仿M**、**仿G**、**仿S** 等風格與自訂月曆底圖。
-- **🧩 精選兩款高解析桌面自由縮放小工具（DX 月曆 ＆ DX 時間表）**
-  - **DX 月曆小工具**：2K 級原生高解析次像素抗鋸齒字體渲染，支援桌面點擊任意一週平滑展開／收合當週詳細行程動畫、點 `‹` `›` 翻月、`now` 回當日、`⚙` 直調 0%–100% 透明度與自由縮放。
-  - **DX 時間表小工具**：可上下捲動瀏覽近期行程與待辦事項，點擊事件直達詳情，支援 0%–100% 自由透明度與縮放。
-- **🔄 例行事務「月曆顯示獨立開關」＋「例行事務與隱藏提醒中心」**
-  - 徹底解決傳統日曆（如簡單日曆）只能按整個帳號開關、或每日例行事項把月曆塞滿的痛點！建立提醒時可直接選擇 **「顯示於月曆格」** 或 **「不在月曆佔空間」**（如每日吃藥提醒不佔月曆空間，仍照常響鈴提醒）；連 Google 帳號同步進來的重複活動也能單獨將該系列隱藏收納。
-  - 專屬 **「例行中心」** 集中納管所有例行事務與隱藏提醒，支援**每日完成打卡**、**一鍵暫停／恢復提醒**與**一鍵清理過期累積舊項目**，並可在主畫面頂部點選眼睛圖示「暫時透視」所有隱藏例行項目。
-- **⏰ 多重呼叫（連段追擊提醒）與連動系統鬧鐘**
-  - 提醒時間**支援多選**（活動時間、1/3/5/10/15/20/30/45 分、1～6 小時、1～7 天前可複選），並支援**多個不連續日期批次建立活動**。
-  - 可開啟 **「連段追擊呼叫」**（設定連響次數與追擊間隔分鐘，直到手動確認停止為止）、**鎖屏全螢幕鬧鐘音軌強提醒**，以及勾選 **「同步連動手機系統鬧鐘 App」** 自動建立原生時鐘鬧鐘。
-- **✅ Google Tasks 待辦整合 ＋ 系統日曆雙向同步 ＋ ICS / URL 匯入匯出**
-  - 連結裝置 Google 帳號即可雙向同步 **Google Tasks**，將待辦圓圈直接混排顯示於月曆格、時間表與桌面小工具中並支援一鍵打勾；同時支援標準 `.ics` 檔案匯入匯出與網址訂閱。
-- **🔐 雙指紋鎖「隱私日曆」獨立加密保險箱**
-  - 開啟隱私日曆時強制執行 **第一道指紋 (1/2) → 第二道指紋 (2/2)** 連續雙重生物辨識驗證（防止單指誤觸，並提供雙重隱私 PIN 碼備援）。
-  - 隱私密件採用 Android Keystore `AES-256-GCM` 硬體級加密儲存，未解鎖或切換至背景時立即自動上鎖，絕不外洩於一般月曆、搜尋結果或桌面小工具。
-- **📅 動態日期 App 圖示（1–31 日）＋ 🏝️ Android 16 Live Updates 原子島通知上島**
-  - 內建 31 組向量自適應日曆圖示，依當下日期自動切換桌面 App 圖示顯示當日日期（1–31），並支援跨日午夜自動刷新與設定頁自由開關。
-  - 原生實作 **Android 16 Live Updates**（`POST_PROMOTED_NOTIFICATIONS`、`setRequestPromotedOngoing(true)`、`setShortCriticalText`、`Notification.ProgressStyle`），免白名單即可同時登上**台版與陸版 vivo OriginOS 6 原子島**，設定頁內建權限狀態檢查、系統上島開關直達與一鍵測試上島功能。
-- **🔄 內建 GitHub 連結與自動更新下載器（附即時進度條）**
-  - 設定頁內建專案 GitHub 直達連結，支援啟動與進入設定時**自動判讀 GitHub 最新 Release 版本**，發現新版即自動下載並顯示即時百分比／MB 進度條，完成後自動喚起系統安裝覆蓋更新。
+### ✨ 核心功能特色（已實裝）
+
+#### 1. 🎬 Q 彈手勢動畫與全尺寸響應式體驗
+- **全 App 統一 Q 彈物理動畫**：點開設定頁、編輯頁、浮動 24 小時時間軸卡片、行程詳情卡與設定內頁每個分類皆具備一致的彈性過渡；`年 / 月 / 週 / 日 / 時間表` 切換支援方向性縮放過渡，切月／切年支援跟手水平滑動回彈。
+- **滿版月曆 ⇄ 彩條壓縮手勢連動**：月檢視支援 1:1 跟手上下滑動，將滿版月曆平滑壓縮為彩條提示＋下方當日時間表；再次點擊已選日期即 Q 彈展開 24 小時浮動時間軸卡片。
+- **全裝置與摺疊機專屬優化**：
+  - **手機與自由小視窗**（最小支援至 `300×360dp`）：緊湊單欄、頂部常駐 `now` 一鍵回今天、今日圓角高亮膠囊＋強調色底條。
+  - **摺疊機展開與 8 吋平板**：左主視圖＋右欄詳情（大字農曆干支、節氣詩詞、黃曆宜忌與天氣高低溫），新增／編輯頁自動切換為**左右雙欄並排**。
+  - **10 吋平板與 Pixelbook / Chromebook**：三欄常駐分類篩選側欄＋外接鍵盤方向鍵／翻頁快捷鍵。
+
+#### 2. 🎨 奢華金色亮暗雙主題 ＋ 1–31 動態日期 App 圖示
+- **跟隨系統自動切換主題**：亮色預設「**金色白底**」（純淨珍珠白＋18K 香檳金），暗色預設「**金色灰黑底**」（沉穩深灰黑 `#16171B`＋高光香檳金）；同時提供多套風格與自訂月曆背景底圖（可調透明度）。
+- **全新重新設計的金色 App 圖示**：同步對應系統亮暗色自動呈現「金色白底」與「金色黑底」，並內建 **1–31 日動態日期向量圖示**，午夜自動跨日刷新。
+
+#### 3. 🌤️ 預設當日起 7 天月曆天氣預報
+- 內建免 API Key 的 7 天天氣預報引擎（依所在地時區自動對應地區＋3 小時本機快取，免跳擾人定位權限），於月曆今日起連續 7 天日期格右上角呈現對應天氣圖示，並於當日詳情標頭顯示天氣狀態與高低溫。
+
+#### 4. 🧩 高解析度透明背景桌面小工具（60fps 週次展開＋點擊直達事件）
+- **DX 月曆小工具**：支援 **2,400,000 px** 旗艦高 DPI 1:1 銳利渲染，背景可自由調整 `0%–100%` 透明度，文字維持 100% 實心高對比＋微距陰影不發虛。
+- **60fps 單週展開與直達詳情**：在桌面點擊任一週次即可流暢展開當週詳細行程，**直接點擊展開週中的事件卡片即可跳轉 App 顯示當下事件詳情**。
+- **DX 時間表小工具**：可捲動瀏覽近期行程與待辦事項，點擊直達詳情，支援自由縮放與透明度調整。
+
+#### 5. 🔄 例行事務「不佔月曆格」獨立管理 ＋ 進階重複規則
+- **個別項目顯示控制**：建立活動或例行提醒（如每日吃藥、繳費、喝水）時可單獨決定是否佔用月曆格，連同步進來的外部 Google 行事曆重複活動也能單獨隱藏收納，無須關閉整個帳號。
+- **例行中心**：集中打卡、一鍵暫停／恢復提醒與清理過期累積舊項目。
+- **完整進階重複與日期**：支援每天／平日／每週／**隔 N 週（`FREQ=WEEKLY;INTERVAL=N`，如隔 2/3/4/6/8/12 週）**／每月／每年，以及**多個不連續日期**批次建立。
+
+#### 6. ⏰ 多重連段追擊鬧鐘 ＋ 國際版 Android Live Updates 即時動態通知
+- **多選提早提醒**：支援同時複選多組提早時間（準時、15 分前、1 小時前、1/2/3 天前、1 週前等），並可設定預設活動／待辦提醒時間。
+- **連段追擊強提醒**：可開啟多重連響追擊（自訂次數與間隔分鐘，直到手動確認停止）、鎖屏全螢幕鬧鐘聲道強響，並可同步建立手機系統原生鬧鐘。
+- **國際版 Android 16+ Live Updates**：符合 Android 國際版即時動態通知規範（`POST_PROMOTED_NOTIFICATIONS` / `requestPromotedOngoing`）。
+
+#### 7. ✅ Google 行事曆即時聯動 ＋ Google Tasks ＋ 自動時區 ＋ 農曆黃曆
+- **系統行事曆與語音助理即時聯動**：註冊 `CalendarContract` 防抖監聽，透過 Gemini 語音或 Google 行事曆新增事件後即時同步刷新月曆、小工具與鬧鐘。
+- **多 Gmail 帳號與 Google Tasks 整合**：將待辦事項圓圈混排於月曆、時間表與小工具（未設日期之未完成任務預設顯示於今日），並支援標準 `.ics` 匯入匯出與網址訂閱。
+- **自動判定時區與在地農曆**：自動依手機所在地判定時區（出國跨時區自動重排鬧鐘），預設依區域自動選用台灣／中國／香港農曆、國定假日、傳統節日、二十四節氣與傳統黃曆宜忌。
+
+#### 8. 👁️ 零痕跡高隱蔽「隱私日曆」（雙指紋＋離場秒隱藏）
+- **建立前完全零痕跡**：於「設定 → 隱私日曆設定」啟用前，全 App 隱藏所有隱私相關元件與按鈕。
+- **閃爍眼睛入口與無痕驗證**：啟用後僅於月曆頂欄呈現一枚「眼睛」按鈕，點擊閃爍並僅提示「請使用指紋驗證」（底層強制連續通過 2 枚指紋驗證，不透露雙指紋機制），密件採 Android Keystore `AES-256-GCM` 硬體級加密。
+- **離開即刻自動隱藏**：只要關閉 App、切換至其他 App 或**關閉螢幕**，立刻自動重新隱藏所有隱私內容，絕不外洩於公開檢視或桌面小工具。
+
+---
+
+<a id="roadmap"></a>
+## 🗺️ 開發路線圖 / Roadmap（規劃實作中）
+
+以下進階功能已排入後續版本開發計畫：
+
+| # | 功能項目 | 重點規劃 |
+| :---: | :--- | :--- |
+| **1** | **本機離線自然語言＋語音快速新增** | 免 LLM API、免額外 OAuth！輸入或說出一句話（如「明天下午3點半開會 提前15分」），純本機零延遲解析時間、重複與提醒 |
+| **2** | **行程長按拖曳改期 (Drag & Drop)** | 月檢視長按跨日拖曳改期；週／日 24h 時間軸拖曳調整開始時間與拉長縮短時長 |
+| **3** | **倒數日／紀念日／生日自動算歲數** | 標記目標倒數天數、自動讀取聯絡人生日並計算今年幾歲與週年數 |
+| **4** | **輪班與常用行程範本 (Templates)** | 預設整組事件範本（標題＋時長＋顏色＋連段提醒），支援輪班族一鍵連點快速排班 |
+| **5** | **行程圖片附件 ＋ 地點一鍵導航** | 活動內可附加車票／預約截圖照片，點擊地點直接開啟 Google Maps 導航 |
+| **6** | **農曆重複規則（初一十五／農曆生日）** | 原生支援「農曆每月（初一、十五）」與「農曆每年（長輩生日、祭祀、節慶）」跨年精準展開 |
+| **7** | **雙時區 24h 時間軸對照** | 週／日時間軸左側並排顯示雙時區刻度，跨國會議與出差一目了然 |
+| **8** | **待辦 × 時間塊 (Time Blocking) ＋ 番茄鐘** | 待辦事項直接排入 24h 時間軸執行時段，並內建專注倒數番茄鐘 |
+| **9** | **家庭／情侶共用群組行事曆** | 支援共享行程協作、行程下備註留言與變更即時提醒 |
+| **10** | **更多高質感桌面小工具（含天氣顯示）** | 新增倒數日小工具、下一行程迷你橫條、單週 7 天時間軸小工具，並全面支援顯示即時天氣 |
+| **11** | **自訂裝置名稱整庫加密備份 ＋ Google 雲端硬碟連動** | 一鍵打包行程、例行打卡、設定與加密資料；備份上方可自訂「裝置名稱」標記來源，並直接連動 Google 雲端硬碟 App 上傳與還原 |
+| **12** | **Windows Store 電腦端跨系統同步版** | 規劃推出 Microsoft Store 桌面端程式，透過 Google 行事曆／Tasks 與 Google 雲端硬碟加密同步檔實現 Android ⇄ Windows 無縫跨系統同步 |
 
 ---
 
 <a id="english"></a>
 ## 🇺🇸 English
 
-> **An adaptive, multi-theme Android smart calendar built upon the vivo OriginOS aesthetic and supercharged with Google Calendar productivity. Engineered seamlessly for phones, foldables, 8" & 10" tablets, Pixelbook (Chromebook), and freeform multi-window environments—featuring 5 brand themes, freely resizable widgets, Google Tasks integration, an independent Routine & Hidden Reminders Hub, multi-call escalating alarms, and a Dual-Fingerprint Privacy Vault.**
+> **A next-generation adaptive Android smart calendar engineered for phones, foldables, 8"/10" tablets, and Chromebooks. Built with luxury Gold-on-White / Gold-on-Black auto themes, playful spring-physics animations, 60fps high-DPI accordion widgets with direct event launch, 7-day calendar weather, Google Calendar & Tasks sync, a clutter-free Routine Hub, multi-call escalating alarms, and a zero-trace Dual-Fingerprint Privacy Vault.**
 
 ### 📲 Download & Install
 
-Grab the latest signed APK directly from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) (includes a built-in **GitHub Auto-Updater with live download progress bar** inside Settings).
+Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest). Built-in **GitHub Update Checker** automatically checks for updates and prompts for your confirmation before downloading with a live progress bar.
 
-### ✨ Key Features
+### ✨ Key Features (Shipped)
 
-- **🖥️ Full-Spectrum Adaptive & Freeform Window UI (Phone / 8" & 10" Tablet / Pixelbook)**
-  - Dynamically adapts to any window size: **8" tablets & unfolded foldables** feature a vivo-inspired master-detail split pane (calendar viewport on the left; Lunar stem-branch header, solar-term poetry card, almanac & event details on the right); **10" tablets & Pixelbooks** unlock a 3-pane layout with a persistent category filter rail and hardware keyboard shortcuts (`←`/`→`, `PageUp`/`PageDown`); **phones & mini floating windows** (down to `300×360dp`) use a clean single-column layout with a collapsible daily panel.
-  - Supports **Year, Month, Week, Day, and Schedule (Agenda)** views with accurate 1900–2100 Lunar calendar, 24 Solar Terms, traditional Yi/Ji almanac, and regional holidays.
-- **🎨 6 Signature Visual Themes (Gold-White Default) + Custom Calendar Wallpaper**
-  - Defaults to **Gold & White** (pearl white surfaces, 18K champagne gold accents, dual-tone year header & frosted floating navigation capsules), plus one-tap switching across **V-Style**, **O-Style**, **M-Style**, **G-Style**, and **S-Style** themes, alongside custom semi-transparent calendar background images.
-- **🧩 4 Freely Resizable Home Screen Widgets (0%–100% Opacity & Week-Expand Animation)**
-  - Includes **DX Month Widget (V-Style)** (interactive tap-to-expand week accordion animation, `<` `>` month switching, `now` reset, and `⚙` 0%–100% live opacity popup), **DX Tasks & Routines Widget (V-Style)**, **DX Month Grid Widget (G-Style)**, and **DX Scrollable Schedule Widget (G-Style)**.
-  - Every widget supports smooth `horizontal|vertical` resizing from compact `2×2` tiles up to full-screen tablet/desktop dashboards.
-- **🔄 Per-Reminder Month Visibility Toggle & Centralized Routine Hub**
-  - Say goodbye to cluttered month grids or apps that only let you hide entire accounts! Choose per item whether to **Show on Month Grid** or **Keep Hidden from Grid (Alert Only)**—ideal for daily medication or recurring chores, and even works as an override for synced Google Calendar series.
-  - All routines and hidden reminders live cleanly inside the **Routine Hub** with daily check-in tracking, one-tap pause/resume, a temporary "Peek Hidden Items" toggle on the top bar, and one-tap cleanup for expired reminders.
-- **⏰ Multi-Call Escalating Reminders & Native System Alarm Sync**
-  - Multi-select reminder offsets (At event time, 1/3/5/10/15/20/30/45 mins, 1–6 hours, 1–7 days before) and batch-create events across **multiple non-consecutive dates**.
-  - Enable **Multi-Call Burst Escalation** (repeatedly calls every $N$ minutes up to $K$ times until explicitly dismissed), full-screen lock-screen alarm wake-up on the Alarm audio stream, and automatic **Android System Clock Alarm integration**.
-- **✅ Google Tasks Integration, 2-Way System Calendar Sync & ICS Import/Export**
-  - Displays **Google Tasks** directly inside month cells, timelines, and home widgets with one-tap completion sync, alongside `.ics` file import/export and webcal/URL subscriptions.
-- **🔐 Dual-Fingerprint Privacy Calendar Vault**
-  - Protected by sequential **Two-Step Biometric Verification (Fingerprint 1/2 → Fingerprint 2/2)** with dual-entry PIN fallback.
-  - Encrypts sensitive titles, locations, and notes via Android Keystore `AES-256-GCM`, auto-locks when backgrounded, and strictly isolates private items from public views and widgets.
-- **🔄 Built-in GitHub Link & Auto-Updater with Progress Bar**
-  - Direct links to the GitHub repository & Releases inside Settings, with automatic semantic version checking, automatic APK streaming download with a live percentage/MB progress bar, and one-tap package installation.
+- **🎬 Spring-Physics Animations & Full-Spectrum Adaptive UI**
+  - Unified bouncy spring transitions across Settings, Event Editor, floating 24h timeline cards, detail panels, and directional zoom transitions between **Year / Month / Week / Day / Schedule** views.
+  - Restores smooth 1:1 vertical drag gesture to compress the full-screen month grid into color-bar indicators + daily agenda sheet, plus swipe-to-switch-month spring feedback.
+  - Responsive layouts for **phones** (persistent top-bar `now` button & highlighted Today pill), **unfolded foldables & 8" tablets** (dual-pane calendar + side-by-side Event Editor), and **10" tablets / Chromebooks** (3-pane layout + hardware keyboard navigation).
+- **🎨 Luxury Gold Light/Dark Auto Theme & Dynamic 1–31 Day Icons**
+  - Automatically follows system Light (**Gold on White**) and Dark (**Gold on Graphite Black**) themes, with multiple preset styles and custom semi-transparent calendar wallpapers.
+  - Redesigned luxury gold adaptive app icon with **31 dynamic day-of-month vector icons (01–31)** that auto-match system Light/Dark mode and refresh at midnight.
+- **🌤️ Built-in 7-Day Weather Forecast on Month Calendar**
+  - Zero-API-key Open-Meteo 7-day forecast with timezone-based location defaults and 3-hour local caching—displays crisp weather icons directly on the next 7 days in Month view and high/low temperatures in the daily header.
+- **🧩 High-DPI Transparent Widgets with 60fps Week-Expand & Direct Event Click**
+  - **2,400,000 px** native high-DPI canvas rendering with `0%–100%` background opacity while keeping text 100% solid high-contrast with micro-shadows.
+  - Tap any week row on the home screen to smoothly expand it at 60fps, and **tap any event card inside the expanded week to jump straight to that event in the app**.
+- **🔄 Clutter-Free Routine Hub & Advanced Recurrence**
+  - Control per-item whether reminders appear in the month grid or stay cleanly tucked into the **Routine Hub** (with daily check-ins, pause/resume, and expired cleanup).
+  - Supports **Every N Weeks (`FREQ=WEEKLY;INTERVAL=N`)** and **multiple non-consecutive dates**.
+- **⏰ Multi-Call Escalating Alarms & International Android 16+ Live Updates**
+  - Multi-select early reminders, repeating burst alarms until dismissed, full-screen alarm-stream alerts, native Clock App sync, and standard international **Android 16+ Live Updates**.
+- **✅ Real-Time Google Calendar & Tasks Sync + Auto Timezone & Lunar Almanac**
+  - Debounced `CalendarContract` observer for instant sync with Google Calendar & voice assistants, Google Tasks integration (undated active tasks surface on Today), `.ics` import/export, automatic timezone detection, and 1900–2100 regional Lunar/Solar-Term/Almanac data.
+- **👁️ Zero-Trace Stealth Privacy Calendar (Dual-Fingerprint + Instant Auto-Lock)**
+  - Completely invisible until enabled in Settings; reveals only a subtle blinking **Eye** icon on the calendar bar (discreet fingerprint prompt backed by sequential dual-fingerprint verification + `AES-256-GCM` Keystore encryption).
+  - Automatically re-locks and hides immediately upon closing the app, switching apps, or turning off the screen.
+
+### 🗺️ Planned Roadmap (English Summary)
+- **Offline Natural Language & Voice Quick Add** (zero LLM API / zero OAuth required)
+- **Drag & Drop Event Rescheduling** across Month cells and Week/Day 24h timelines
+- **Countdowns, Anniversaries & Contact Birthday Age Calculator**
+- **Shift & Event Templates** for one-tap schedule stamping
+- **Image Attachments & One-Tap Google Maps Navigation**
+- **Lunar Recurrence Rules** (monthly 1st/15th & annual lunar birthdays/festivals)
+- **Dual-Timezone 24h Timeline**, **Task Time-Blocking + Pomodoro**, & **Shared Family/Couple Calendars**
+- **Expanded Weather-Enabled Widgets** (Countdown, Next-Up Bar, 7-Day Week Timeline)
+- **Named-Device Encrypted Full Backup & Google Drive App Upload**
+- **Windows Microsoft Store Desktop Companion** with cross-system sync
 
 ---
 
@@ -85,10 +137,11 @@ Grab the latest signed APK directly from [**GitHub Releases**](https://github.co
 ## 👨‍💻 關於我 / About Me
 
 ### 🇹🇼 關於開發者 (`dx9901mk5`)
-我是 **dx9901mk5**，熱愛深度打磨 Android 原生體驗、跨裝置生產力（手機／摺疊機／平板／車機／Chromebook）與解決系統日常痛點的獨立開發者。致力於將各家旗艦系統最順手的互動細節融合進乾淨、高效、尊重使用者隱私的應用程式中。
+我是 **dx9901mk5**，熱愛深度打磨原生介面動畫、跨裝置生產力（手機／摺疊機／平板／車機／Chromebook／Windows 桌面）與解決真實日常痛點的獨立開發者。堅持「無廣告干擾、尊重隱私、高效率與極致順手」的設計理念，持續打造乾淨俐落的 **DX 系列工具生態**。
 
-歡迎造訪我的 GitHub 主頁探索更多 **DX 系列開源與工具專案**：
+歡迎造訪我的 GitHub 主頁探索更多專案：
 - 🔗 **GitHub 主頁**：[https://github.com/dx9901mk5](https://github.com/dx9901mk5)
+- 📅 [**DX-Calendar**](https://github.com/dx9901mk5/DX-Calendar) — 全尺寸奢華金主題智慧日曆（本專案）
 - 🚗 [**DX-Car-Launcher**](https://github.com/dx9901mk5/DX-Car-Launcher) — Android Auto (Coolwalk) 風格車載 AI Box 桌面啟動器
 - 🎙️ [**DxVoice-IME**](https://github.com/dx9901mk5/DxVoice-IME) — 離線 AI 智慧語音輸入法（說完自動切回原鍵盤＋懸浮語音球）
 - 📁 [**DX_fileManager**](https://github.com/dx9901mk5/DX_fileManager) — 多面板與自由小視窗 Android 檔案管理器
@@ -96,14 +149,14 @@ Grab the latest signed APK directly from [**GitHub Releases**](https://github.co
 - 🛡️ [**PhotoSyncGuard**](https://github.com/dx9901mk5/PhotoSyncGuard) / [**CallMusicGuard**](https://github.com/dx9901mk5/CallMusicGuard) / [**PixelAI-Bridge**](https://github.com/dx9901mk5/PixelAI-Bridge)
 
 ### 🇺🇸 About the Developer (`dx9901mk5`)
-Hi, I'm **dx9901mk5** — an independent Android developer passionate about crafting refined, cross-form-factor productivity tools (phones, foldables, tablets, head units, and Chromebooks) and solving real-world usability pain points without bloat.
+Hi, I'm **dx9901mk5** — an independent developer dedicated to crafting fluid, privacy-respecting productivity tools across phones, foldables, tablets, car head units, Chromebooks, and Windows desktops.
 
-Explore more projects from the **DX Ecosystem** on my GitHub profile: [https://github.com/dx9901mk5](https://github.com/dx9901mk5).
+Explore more projects from the **DX Ecosystem** at [https://github.com/dx9901mk5](https://github.com/dx9901mk5).
 
 ---
 
 ## 🛠️ Build from Source
 
 ```powershell
-.\gradlew.bat testDebugUnitTest assembleDebug
+.\gradlew.bat testGithubDebugUnitTest assembleGithubRelease
 ```
