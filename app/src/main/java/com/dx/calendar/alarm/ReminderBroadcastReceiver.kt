@@ -52,6 +52,9 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                         val settings = AppPreferences(context).getSettingsOnce()
                         DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
                         DynamicAppIconManager.scheduleMidnightRefresh(context)
+                        if (intent.action == Intent.ACTION_TIMEZONE_CHANGED || intent.action == Intent.ACTION_TIME_CHANGED) {
+                            MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(context)
+                        }
                         WidgetRefreshHelper.refreshAllWidgets(context)
                     } finally {
                         runCatching { pending?.finish() }

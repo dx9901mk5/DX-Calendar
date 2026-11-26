@@ -169,6 +169,7 @@ fun EventEditorScreen(
     presetRoutine: Boolean,
     presetPrivacy: Boolean,
     presetTaskMode: Boolean,
+    allowPrivacyEditing: Boolean = false,
     routineDefaultHideFromMonth: Boolean,
     defaultEventReminders: List<Int> = listOf(0, 5),
     defaultTaskReminders: List<Int> = listOf(0),
@@ -586,12 +587,14 @@ fun EventEditorScreen(
                                 onClick = { showInAgendaAndWidget = !showInAgendaAndWidget },
                                 label = { Text("在時間表與小工具顯示", fontSize = 12.sp) }
                             )
-                            FilterChip(
-                                selected = isPrivacy,
-                                onClick = { isPrivacy = !isPrivacy },
-                                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                                label = { Text("雙指紋鎖隱私加密", fontSize = 12.sp) }
-                            )
+                            if (allowPrivacyEditing) {
+                                FilterChip(
+                                    selected = isPrivacy,
+                                    onClick = { isPrivacy = !isPrivacy },
+                                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                                    label = { Text("雙指紋鎖隱私加密", fontSize = 12.sp) }
+                                )
+                            }
                         }
                     }
                 }
@@ -1238,7 +1241,7 @@ fun EventEditorScreen(
                     }
 
                     Text("本機行事曆與待辦", fontSize = 12.sp, color = tokens.secondaryTextColor)
-                    categories.forEach { cat ->
+                    categories.filter { allowPrivacyEditing || !it.isPrivacyCategory }.forEach { cat ->
                         val isSelectedCat = if (cat.isTaskCategory) {
                             entryMode == 1
                         } else {

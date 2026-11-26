@@ -106,7 +106,7 @@ class CalendarRepository(private val context: Context) {
         settings: UserSettings,
         isPrivacyUnlocked: Boolean
     ): List<UnifiedCalendarItem> = withContext(Dispatchers.Default) {
-        val zone = ZoneId.systemDefault()
+        val zone = settings.effectiveZoneId
         val categoryMap = categories.associateBy { it.id }
         val checkInSet = checkIns.map { "${it.targetType}:${it.targetId}:${it.epochDay}" }.toHashSet()
         val overrideMap = overrides.associateBy { it.externalKey }

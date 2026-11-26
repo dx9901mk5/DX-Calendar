@@ -1146,7 +1146,16 @@ private fun DxSettingsSectionContent(
                 } else {
                     settings.alternateCalendarMode.label
                 }
-                val tzValueText = if (settings.timeZoneOverrideId.isBlank()) "已關閉" else settings.timeZoneOverrideId
+                val autoZoneId = remember { java.time.ZoneId.systemDefault() }
+                val autoOffsetStr = remember(autoZoneId) {
+                    val off = autoZoneId.rules.getOffset(java.time.Instant.now()).id
+                    if (off == "Z") "UTC+0" else "UTC$off"
+                }
+                val tzValueText = if (settings.timeZoneOverrideId.isBlank()) {
+                    "自動（${autoZoneId.id}, $autoOffsetStr）"
+                } else {
+                    settings.timeZoneOverrideId
+                }
                 val holidaySummary = buildList {
                     if (settings.showPublicHolidays) add("國定假日")
                     if (settings.showTraditionalFestivals) add("傳統節日")
@@ -1175,6 +1184,7 @@ private fun DxSettingsSectionContent(
 
                         SettingClickableValueRow(
                             title = "時區優先",
+                            subtitle = "預設依所在地自動判定時區，跨時區即時自動切換",
                             value = tzValueText,
                             onClick = { showTzDialog = true }
                         )
@@ -1284,7 +1294,7 @@ private fun DxSettingsSectionContent(
 
                 if (showTzDialog) {
                     val tzOptions = listOf(
-                        "" to "已關閉（跟隨系統所在地時區）",
+                        "" to "自動判定所在地時區（目前：${autoZoneId.id}, $autoOffsetStr）",
                         "Asia/Taipei" to "台北 (Asia/Taipei, UTC+8)",
                         "Asia/Tokyo" to "東京 (Asia/Tokyo, UTC+9)",
                         "Asia/Hong_Kong" to "香港 (Asia/Hong_Kong, UTC+8)",
@@ -1538,31 +1548,26 @@ private fun DxSettingsSectionContent(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("隱私日曆設定", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         Text(
-                            text = "預設隱藏主畫面與選單中的隱私日曆入口，保護隱私不留痕跡；開啟下方開關後才會顯示隱私入口。",
+                            text = "尚未透過雙指紋生物驗證建立之前，全 App 不會顯示任何隱私日曆相關元件與分類；完成建立後，僅於月曆頁出現一顆鎖頭按鈕，每次點擊須通過兩枚指紋解鎖才臨時將隱私內容顯示於月曆與時間表，離開背景即自動上鎖隱藏。",
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
                         )
                         SettingSwitchRow(
-                            label = "啟用隱私日曆功能（開啟後顯示入口）",
+                            label = if (settings.privacyFeatureEnabled) {
+                                "隱私日曆已建立（關閉將立即移除月曆鎖頭按鈕並上鎖）"
+                            } else {
+                                "建立並啟用隱私日曆（須通過兩枚指紋生物驗證）"
+                            },
                             checked = settings.privacyFeatureEnabled,
                             onCheckedChange = onTogglePrivacyFeature
                         )
                         if (settings.privacyFeatureEnabled) {
                             HorizontalDivider(color = tokens.gridLineColor)
-                            SettingSwitchRow(
-                                label = "解鎖時需要連續雙指紋驗證",
-                                checked = settings.requireDualFingerprint,
-                                onCheckedChange = onToggleRequireDualFingerprint
+                            Text(
+                                text = "✓ 雙指紋強制防護已啟用：請回到「月曆」點擊頂欄鎖頭圖示進行雙指紋臨時解鎖／上鎖。",
+                                color = Color(0xFF00C853),
+                                fontSize = 12.sp
                             )
-                            Button(
-                                onClick = onOpenPrivacyVault,
-                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("前往開啟隱私日曆", color = Color.White, fontWeight = FontWeight.Bold)
-                            }
                         }
                     }
                 }

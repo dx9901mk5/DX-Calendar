@@ -129,7 +129,7 @@ fun DXCalendarRootApp(
     onLaunchGoogleAccountPicker: () -> Unit,
     onAddGoogleAccount: () -> Unit = onLaunchGoogleAccountPicker,
     onAddSystemGoogleAccount: () -> Unit = onLaunchGoogleAccountPicker,
-    onTriggerDualBiometric: () -> Unit,
+    onTriggerDualBiometric: (onVerified: () -> Unit) -> Unit,
     onPickWallpaperImage: () -> Unit,
     onPickIcsFile: () -> Unit
 ) {
@@ -192,6 +192,7 @@ fun DXCalendarRootApp(
                 presetRoutine = editorState.presetRoutine,
                 presetPrivacy = editorState.presetPrivacy,
                 presetTaskMode = editorState.presetTaskMode,
+                allowPrivacyEditing = settings.privacyFeatureEnabled && isPrivacyUnlocked,
                 routineDefaultHideFromMonth = settings.routineDefaultHideFromMonth,
                 defaultEventReminders = settings.defaultEventReminders,
                 defaultTaskReminders = settings.defaultTaskReminders,
@@ -249,12 +250,25 @@ fun DXCalendarRootApp(
                 onToggleGridLines = { viewModel.setShowGridLines(it) },
                 onTogglePeekHiddenInMonth = { viewModel.setPeekHiddenInMonth(it) },
                 onToggleRoutineMedicationFeature = { viewModel.setRoutineMedicationFeatureEnabled(it) },
-                onTogglePrivacyFeature = { viewModel.setPrivacyFeatureEnabled(it) },
-                onToggleRequireDualFingerprint = { viewModel.setRequireDualFingerprint(it) },
+                onTogglePrivacyFeature = { enable ->
+                    if (enable) {
+                        onTriggerDualBiometric {
+                            viewModel.setPrivacyFeatureEnabled(true)
+                            android.widget.Toast.makeText(
+                                context,
+                                "🔓 雙指紋驗證通過！隱私日曆已建立，請至月曆頂欄點擊鎖頭按鈕臨時解鎖顯示",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } else {
+                        viewModel.setPrivacyUnlocked(false)
+                        viewModel.setPrivacyFeatureEnabled(false)
+                    }
+                },
+                onToggleRequireDualFingerprint = { viewModel.setRequireDualFingerprint(true) },
                 onOpenPrivacyVault = {
                     viewModel.openSettings(false)
-                    viewModel.setMainSection(MainSection.PRIVACY)
-                    if (!isPrivacyUnlocked) onTriggerDualBiometric()
+                    viewModel.setMainSection(MainSection.CALENDAR)
                 },
                 onToggleShowCompletedTasks = { viewModel.setShowCompletedTasks(it) },
                 onSyncGoogleTasks = onLaunchGoogleAccountPicker,
@@ -389,8 +403,23 @@ fun DXCalendarRootApp(
                     },
                     onOpenAlmanacDiscovery = { showAlmanacDiscoveryDialog = true },
                     onQuickPrivacyAccess = {
-                        viewModel.setMainSection(MainSection.PRIVACY)
-                        if (!isPrivacyUnlocked) onTriggerDualBiometric()
+                        if (isPrivacyUnlocked) {
+                            viewModel.setPrivacyUnlocked(false)
+                            android.widget.Toast.makeText(
+                                context,
+                                "🔒 已重新上鎖，隱私日曆內容已自月曆與時間表隱藏",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            onTriggerDualBiometric {
+                                viewModel.setPrivacyUnlocked(true)
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "🔓 雙指紋解鎖成功！已臨時於月曆與時間表顯示隱私內容",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     }
                 )
 
@@ -443,10 +472,12 @@ fun DXCalendarRootApp(
                         MainSection.PRIVACY -> {
                             PrivacyVaultView(
                                 isUnlocked = isPrivacyUnlocked,
-                                requireDualFingerprint = settings.requireDualFingerprint,
+                                requireDualFingerprint = true,
                                 hasPinConfigured = settings.privacyPinHash.isNotBlank(),
                                 privacyItems = rangeItems.filter { it.isPrivacy },
-                                onTriggerDualFingerprintUnlock = onTriggerDualBiometric,
+                                onTriggerDualFingerprintUnlock = {
+                                    onTriggerDualBiometric { viewModel.setPrivacyUnlocked(true) }
+                                },
                                 onLockImmediately = { viewModel.setPrivacyUnlocked(false) },
                                 onAddPrivacyEvent = { viewModel.openNewEditor(presetPrivacy = true) },
                                 onSetupOrVerifyPin = { showPinDialog = true },
@@ -712,13 +743,10 @@ fun DXCalendarRootApp(
                             currentSection = mainSection,
                             isNotToday = selectedDate != today,
                             narrow = spec.isNarrowSplit,
-                            showPrivacyTab = settings.privacyFeatureEnabled,
+                            showPrivacyTab = false,
                             isPrivacyUnlocked = isPrivacyUnlocked,
                             onSelectSection = { sec ->
                                 viewModel.setMainSection(sec)
-                                if (sec == MainSection.PRIVACY && !isPrivacyUnlocked) {
-                                    onTriggerDualBiometric()
-                                }
                             },
                             onJumpToday = { viewModel.jumpToToday() },
                             onQuickAdd = {
@@ -740,9 +768,6 @@ fun DXCalendarRootApp(
                         compactHeight = spec.isShortSplit,
                         onSelectSection = { sec ->
                             viewModel.setMainSection(sec)
-                            if (sec == MainSection.PRIVACY && !isPrivacyUnlocked) {
-                                onTriggerDualBiometric()
-                            }
                         },
                         onJumpToday = { viewModel.jumpToToday() },
                         onQuickAdd = {
@@ -1085,6 +1110,17 @@ private fun AdaptiveTopHeaderBar(
                 Spacer(modifier = Modifier.weight(1f))
             }
 
+            // 唯有在設定頁通過雙指紋建立隱私日曆後，才於月曆頂欄顯示專屬鎖頭按鈕（點擊雙指紋臨時解鎖／再次點擊上鎖）
+            if (privacyFeatureEnabled && mainSection == MainSection.CALENDAR) {
+                IconButton(onClick = onQuickPrivacyAccess, modifier = Modifier.size(iconBtnSize)) {
+                    Icon(
+                        imageVector = if (isPrivacyUnlocked) Icons.Filled.LockOpen else Icons.Filled.Lock,
+                        contentDescription = if (isPrivacyUnlocked) "鎖定隱藏隱私日曆" else "雙指紋臨時解鎖隱私日曆",
+                        tint = if (isPrivacyUnlocked) tokens.accentColor else tokens.secondaryTextColor
+                    )
+                }
+            }
+
             IconButton(onClick = onOpenSearch, modifier = Modifier.size(iconBtnSize)) {
                 Icon(Icons.Filled.Search, contentDescription = "搜尋", tint = tokens.primaryTextColor)
             }
@@ -1108,15 +1144,6 @@ private fun AdaptiveTopHeaderBar(
                         leadingIcon = { Icon(Icons.Filled.Explore, contentDescription = null) },
                         onClick = { showOverflow = false; onOpenAlmanacDiscovery() }
                     )
-                    if (privacyFeatureEnabled) {
-                        DropdownMenuItem(
-                            text = { Text(if (isPrivacyUnlocked) "進入隱私日曆 (已解鎖)" else "雙指紋鎖開啟隱私日曆") },
-                            leadingIcon = {
-                                Icon(if (isPrivacyUnlocked) Icons.Filled.LockOpen else Icons.Filled.Lock, contentDescription = null)
-                            },
-                            onClick = { showOverflow = false; onQuickPrivacyAccess() }
-                        )
-                    }
                 }
             }
         }

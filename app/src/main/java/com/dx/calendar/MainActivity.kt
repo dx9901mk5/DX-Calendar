@@ -171,17 +171,15 @@ class MainActivity : AppCompatActivity() {
                         launchGoogleAccountChooser()
                     }
                 },
-                onTriggerDualBiometric = {
-                    val requireTwo = viewModel.settings.value.requireDualFingerprint
+                onTriggerDualBiometric = { onVerified ->
                     DualBiometricHelper.authenticateDualFingerprint(
                         activity = this,
-                        requireTwoSteps = requireTwo,
+                        requireTwoSteps = true,
                         onStageOnePassed = {
                             Toast.makeText(this, "第一道指紋驗證成功，請感應第二枚指紋！", Toast.LENGTH_SHORT).show()
                         },
                         onUnlocked = {
-                            viewModel.setPrivacyUnlocked(true)
-                            Toast.makeText(this, "🔓 雙指紋驗證通過，隱私日曆已解鎖", Toast.LENGTH_SHORT).show()
+                            onVerified()
                         },
                         onFallbackToPin = { reason ->
                             Toast.makeText(this, reason, Toast.LENGTH_SHORT).show()
