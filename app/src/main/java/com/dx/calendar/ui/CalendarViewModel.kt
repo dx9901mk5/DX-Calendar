@@ -172,6 +172,12 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     )
     val weatherByDate: StateFlow<Map<LocalDate, com.dx.calendar.data.weather.DailyWeatherInfo>> = _weatherByDate.asStateFlow()
 
+    val templates: StateFlow<List<com.dx.calendar.data.local.EventTemplateItem>> =
+        com.dx.calendar.data.local.EventTemplateStore.templates
+
+    val richMetaMap: StateFlow<Map<String, com.dx.calendar.data.local.EventRichMeta>> =
+        com.dx.calendar.data.local.EventRichMetaStore.metaMap
+
     private val _refreshTick = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -216,6 +222,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        com.dx.calendar.data.local.EventTemplateStore.ensureLoaded(app)
+        com.dx.calendar.data.local.EventRichMetaStore.ensureLoaded(app)
         refreshSystemCalendars()
         viewModelScope.launch {
             repo.prefs.applyGoldWhiteDefaultMigrationOnce()
@@ -518,6 +526,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 )
                 val savedId = repo.dao.upsertTask(task)
                 val savedTask = task.copy(id = if (task.id == 0L) savedId else task.id)
+                persistRichMetaForKey(app, com.dx.calendar.data.local.EventRichMetaStore.makeKey(UnifiedSourceType.TASK.name, savedTask.id), payload)
                 if (!savedTask.isRoutine || settings.value.routineMedicationFeatureEnabled) {
                     MultiCallAlarmScheduler.scheduleForTask(app, savedTask)
                 } else {
@@ -571,6 +580,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         }
                         if (updated) {
                             com.dx.calendar.data.sync.SystemEventAlarmPrefs.save(app, payload.editingSystemEventId, alarmMeta)
+                            persistRichMetaForKey(app, com.dx.calendar.data.local.EventRichMetaStore.makeKey(UnifiedSourceType.SYSTEM_EVENT.name, payload.editingSystemEventId), payload)
                             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
                             _refreshTick.value += 1
                             toast("已更新 Google 行事曆與鬧鐘提醒")
@@ -622,6 +632,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                             mainId
                         }
                         if (insertedId != null) {
+                            persistRichMetaForKey(app, com.dx.calendar.data.local.EventRichMetaStore.makeKey(UnifiedSourceType.SYSTEM_EVENT.name, insertedId), payload)
                             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
                             _refreshTick.value += 1
                         } else {
@@ -680,6 +691,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     val newId = repo.dao.upsertEvent(event)
                     val savedEv = event.copy(id = if (event.id == 0L) newId else event.id)
+                    persistRichMetaForKey(app, com.dx.calendar.data.local.EventRichMetaStore.makeKey(UnifiedSourceType.LOCAL_EVENT.name, savedEv.id), payload)
                     if (savedEv.isRoutine && !settings.value.routineMedicationFeatureEnabled) {
                         repo.prefs.setRoutineMedicationFeatureEnabled(true)
                     }
@@ -713,6 +725,303 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             )
             repo.dao.upsertTask(task)
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
+        }
+    }
+
+    private fun persistRichMetaForKey(app: Application, key: String, payload: EditorSavePayload) {
+        val existing = com.dx.calendar.data.local.EventRichMetaStore.get(app, key)
+        com.dx.calendar.data.local.EventRichMetaStore.upsert(
+            app,
+            com.dx.calendar.data.local.EventRichMeta(
+                key = key,
+                isCountdown = payload.isCountdown,
+                anniversaryStartYear = payload.anniversaryStartYear,
+                isBirthday = payload.isBirthday,
+                attachmentUris = payload.attachmentUris,
+                sharedComments = existing?.sharedComments ?: emptyList()
+            )
+        )
+    }
+
+    /**
+     * #1 + #13 離線自然語言與語音一句話快速建行程（0 額外費用、免 LLM API、免 OAuth）
+     */
+    fun quickCreateFromNaturalLanguage(rawInput: String) {
+        val trimmed = rawInput.trim()
+        if (trimmed.isEmpty()) return
+        val parsed = com.dx.calendar.util.NaturalLanguageEventParser.parse(trimmed, LocalDate.now(settings.value.effectiveZoneId))
+        val defaultSysCal = com.dx.calendar.data.sync.SystemCalendarBridge.pickDefaultGoogleCalendar(
+            _systemCalendars.value.filter { it.isWritable },
+            settings.value.googleAccountEmail
+        )
+        val useLocalForLunar = parsed.recurrenceType == com.dx.calendar.data.model.RecurrenceType.LUNAR_MONTHLY ||
+            parsed.recurrenceType == com.dx.calendar.data.model.RecurrenceType.LUNAR_FIRST_FIFTEENTH ||
+            parsed.recurrenceType == com.dx.calendar.data.model.RecurrenceType.LUNAR_YEARLY
+        saveFromEditor(
+            EditorSavePayload(
+                isTaskMode = parsed.isTaskMode,
+                editingEventId = null,
+                editingTaskId = null,
+                categoryId = categories.value.firstOrNull { !it.isTaskCategory }?.id ?: 1L,
+                writeToSystemCalendarId = if (parsed.isTaskMode || useLocalForLunar) null else defaultSysCal?.id,
+                title = parsed.title,
+                isAllDay = parsed.isAllDay,
+                startDate = parsed.date,
+                startTime = parsed.startTime,
+                endDate = parsed.date,
+                endTime = parsed.endTime,
+                extraDates = emptyList(),
+                recurrenceType = parsed.recurrenceType,
+                recurrenceIntervalWeeks = parsed.recurrenceIntervalWeeks,
+                reminderMinutes = parsed.reminderMinutes,
+                enableMultiCall = false,
+                multiCallCount = 3,
+                multiCallIntervalMinutes = 3,
+                useAlarmStream = false,
+                syncSystemAlarm = false,
+                isRoutine = false,
+                showInMonthGrid = true,
+                showInAgendaAndWidget = true,
+                isPrivacy = false,
+                location = "",
+                url = "",
+                notes = "",
+                isCountdown = parsed.isCountdown,
+                isBirthday = parsed.title.contains("生日")
+            )
+        )
+        selectDate(parsed.date)
+        toast("已快速建立：${parsed.title}（${parsed.date}）")
+    }
+
+    /**
+     * #2 行程跨日拖曳改期（支援本機活動、待辦事項與 Google / 系統日曆活動）
+     */
+    fun moveUnifiedItemToDate(item: UnifiedCalendarItem, targetDate: LocalDate) {
+        if (item.date == targetDate) return
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val zone = settings.value.effectiveZoneId
+            val dayShift = java.time.temporal.ChronoUnit.DAYS.between(item.date, targetDate)
+            val deltaMs = dayShift * 86_400_000L
+            when (item.sourceType) {
+                UnifiedSourceType.LOCAL_EVENT -> {
+                    val ev = repo.dao.getEventById(item.rawId) ?: return@launch
+                    val updated = ev.copy(
+                        startEpochMillis = ev.startEpochMillis + deltaMs,
+                        endEpochMillis = ev.endEpochMillis + deltaMs
+                    )
+                    repo.dao.upsertEvent(updated)
+                    MultiCallAlarmScheduler.scheduleForEvent(app, updated)
+                }
+                UnifiedSourceType.TASK -> {
+                    val tk = repo.dao.getTaskById(item.rawId) ?: return@launch
+                    val updated = tk.copy(dueEpochDay = targetDate.toEpochDay(), updatedAt = System.currentTimeMillis())
+                    repo.dao.upsertTask(updated)
+                    MultiCallAlarmScheduler.scheduleForTask(app, updated)
+                }
+                UnifiedSourceType.SYSTEM_EVENT -> {
+                    val startZ = java.time.Instant.ofEpochMilli(item.startMillis).atZone(zone).plusDays(dayShift)
+                    val endZ = java.time.Instant.ofEpochMilli(item.endMillis).atZone(zone).plusDays(dayShift)
+                    withContext(Dispatchers.IO) {
+                        repo.systemBridge.updateEventInSystemCalendar(
+                            eventId = item.rawId,
+                            systemCalendarId = null,
+                            title = item.title,
+                            description = item.notes,
+                            location = item.location,
+                            startMillis = startZ.toInstant().toEpochMilli(),
+                            endMillis = endZ.toInstant().toEpochMilli(),
+                            isAllDay = item.isAllDay,
+                            reminderMinutes = item.reminderMinutes,
+                            rrule = null
+                        )
+                    }
+                    _refreshTick.value += 1
+                }
+            }
+            selectDate(targetDate)
+            toast("已改期至 ${targetDate.monthValue}/${targetDate.dayOfMonth}：${item.title}")
+            WidgetRefreshHelper.refreshAllWidgets(app)
+        }
+    }
+
+    /**
+     * #2 週／日 24h 時間軸上下拖曳調整開始時間（以 15 分鐘為單位）
+     */
+    fun shiftUnifiedItemTimeMinutes(item: UnifiedCalendarItem, deltaMinutes: Int) {
+        if (deltaMinutes == 0 || item.isAllDay) return
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val deltaMs = deltaMinutes * 60_000L
+            when (item.sourceType) {
+                UnifiedSourceType.LOCAL_EVENT -> {
+                    val ev = repo.dao.getEventById(item.rawId) ?: return@launch
+                    val updated = ev.copy(
+                        startEpochMillis = ev.startEpochMillis + deltaMs,
+                        endEpochMillis = ev.endEpochMillis + deltaMs
+                    )
+                    repo.dao.upsertEvent(updated)
+                    MultiCallAlarmScheduler.scheduleForEvent(app, updated)
+                }
+                UnifiedSourceType.TASK -> {
+                    val tk = repo.dao.getTaskById(item.rawId) ?: return@launch
+                    val curMin = tk.dueMinuteOfDay ?: 540
+                    val nextMin = (curMin + deltaMinutes).coerceIn(0, 23 * 60 + 45)
+                    val updated = tk.copy(dueMinuteOfDay = nextMin, updatedAt = System.currentTimeMillis())
+                    repo.dao.upsertTask(updated)
+                    MultiCallAlarmScheduler.scheduleForTask(app, updated)
+                }
+                UnifiedSourceType.SYSTEM_EVENT -> {
+                    withContext(Dispatchers.IO) {
+                        repo.systemBridge.updateEventInSystemCalendar(
+                            eventId = item.rawId,
+                            systemCalendarId = null,
+                            title = item.title,
+                            description = item.notes,
+                            location = item.location,
+                            startMillis = item.startMillis + deltaMs,
+                            endMillis = item.endMillis + deltaMs,
+                            isAllDay = false,
+                            reminderMinutes = item.reminderMinutes,
+                            rrule = null
+                        )
+                    }
+                    _refreshTick.value += 1
+                }
+            }
+            val sign = if (deltaMinutes > 0) "+" else ""
+            toast("已調整時段 (${sign}${deltaMinutes}分)：${item.title}")
+            WidgetRefreshHelper.refreshAllWidgets(app)
+        }
+    }
+
+    /**
+     * #4 輪班／常用範本一鍵連點排班 (Stamp Mode)
+     */
+    fun stampTemplateOnDate(template: com.dx.calendar.data.local.EventTemplateItem, date: LocalDate) {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val zone = settings.value.effectiveZoneId
+            val startT = java.time.LocalTime.of(template.startHour.coerceIn(0, 23), template.startMinute.coerceIn(0, 59))
+            val startMs = if (template.isAllDay) {
+                date.atStartOfDay(zone).toInstant().toEpochMilli()
+            } else {
+                date.atTime(startT).atZone(zone).toInstant().toEpochMilli()
+            }
+            val endMs = if (template.isAllDay) {
+                date.atTime(23, 59).atZone(zone).toInstant().toEpochMilli()
+            } else {
+                startMs + template.durationMinutes.coerceAtLeast(30) * 60_000L
+            }
+            val ev = CalendarEventEntity(
+                categoryId = categories.value.firstOrNull { !it.isTaskCategory }?.id ?: 1L,
+                title = template.name,
+                location = template.location,
+                notes = template.notes,
+                startEpochMillis = startMs,
+                endEpochMillis = endMs,
+                isAllDay = template.isAllDay,
+                reminderMinutesJson = repo.toIntListJson(template.reminderMinutes),
+                enableMultiCall = template.enableMultiCall,
+                customColorArgb = template.colorArgb
+            )
+            val id = repo.dao.upsertEvent(ev)
+            MultiCallAlarmScheduler.scheduleForEvent(app, ev.copy(id = id))
+            toast("已排入 ${date.monthValue}/${date.dayOfMonth}「${template.name}」")
+            WidgetRefreshHelper.refreshAllWidgets(app)
+        }
+    }
+
+    fun saveEventTemplate(item: com.dx.calendar.data.local.EventTemplateItem) {
+        com.dx.calendar.data.local.EventTemplateStore.addOrUpdate(getApplication(), item)
+        toast("已儲存範本：${item.name}")
+    }
+
+    fun deleteEventTemplate(id: String) {
+        com.dx.calendar.data.local.EventTemplateStore.delete(getApplication(), id)
+        toast("已移除範本")
+    }
+
+    /**
+     * #8 待辦事項排入時間塊 (Time Blocking)
+     */
+    fun scheduleTaskToTimeBlock(task: TaskItemEntity, date: LocalDate, startHour: Int, startMinute: Int) {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val updated = task.copy(
+                dueEpochDay = date.toEpochDay(),
+                dueMinuteOfDay = startHour.coerceIn(0, 23) * 60 + startMinute.coerceIn(0, 59),
+                showInMonthGrid = true,
+                updatedAt = System.currentTimeMillis()
+            )
+            repo.dao.upsertTask(updated)
+            MultiCallAlarmScheduler.scheduleForTask(app, updated)
+            toast("已排入時間塊：${date.monthValue}/${date.dayOfMonth} %02d:%02d".format(startHour, startMinute))
+            WidgetRefreshHelper.refreshAllWidgets(app)
+        }
+    }
+
+    /**
+     * #9 家庭／情侶共用協作留言
+     */
+    fun addSharedComment(item: UnifiedCalendarItem, comment: String) {
+        val key = com.dx.calendar.data.local.EventRichMetaStore.makeKey(item.sourceType.name, item.rawId)
+        val author = settings.value.backupDeviceName.ifBlank { "我" }
+        com.dx.calendar.data.local.EventRichMetaStore.addComment(getApplication(), key, author, comment)
+        toast("已新增協作留言")
+    }
+
+    /**
+     * #7 雙時區與 #14 整庫備份＋Google 雲端硬碟連動
+     */
+    fun setSecondaryTimeZoneId(zoneId: String) = viewModelScope.launch {
+        repo.prefs.setSecondaryTimeZoneId(zoneId)
+    }
+
+    fun setBackupDeviceName(name: String) = viewModelScope.launch {
+        repo.prefs.setBackupDeviceName(name)
+    }
+
+    fun buildGoogleDriveBackupIntent(onReady: (Intent) -> Unit) {
+        viewModelScope.launch {
+            val intent = com.dx.calendar.data.backup.FullBackupManager.buildGoogleDriveUploadIntent(
+                context = getApplication(),
+                dao = repo.dao,
+                deviceName = settings.value.backupDeviceName
+            )
+            onReady(intent)
+        }
+    }
+
+    fun exportFullBackupToUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val res = com.dx.calendar.data.backup.FullBackupManager.writeBackupToUri(
+                context = getApplication(),
+                dao = repo.dao,
+                deviceName = settings.value.backupDeviceName,
+                targetUri = uri
+            )
+            res.onSuccess { fname -> toast("整庫備份成功：$fname") }
+                .onFailure { toast("備份失敗：${it.message}") }
+        }
+    }
+
+    fun restoreFullBackupFromUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val res = com.dx.calendar.data.backup.FullBackupManager.restoreFromUri(
+                context = getApplication(),
+                dao = repo.dao,
+                sourceUri = uri
+            )
+            res.onSuccess { summary ->
+                _refreshTick.value += 1
+                MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
+                WidgetRefreshHelper.refreshAllWidgets(getApplication())
+                toast("已從「${summary.deviceName}」還原 ${summary.eventsCount} 筆活動、${summary.tasksCount} 項待辦、${summary.templatesCount} 個範本")
+            }.onFailure {
+                toast("還原失敗：${it.message}")
+            }
         }
     }
 

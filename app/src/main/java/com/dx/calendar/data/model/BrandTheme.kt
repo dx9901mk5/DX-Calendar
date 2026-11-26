@@ -87,6 +87,8 @@ enum class RecurrenceType(val label: String) {
     BIWEEKLY("每兩週"),
     CUSTOM_WEEKS("隔 N 週重複"),
     MONTHLY("每月"),
+    LUNAR_MONTHLY("農曆每月 (固定農曆日)"),
+    LUNAR_FIRST_FIFTEENTH("農曆初一與十五"),
     YEARLY("每年 (國曆)"),
     LUNAR_YEARLY("每年 (農曆生日/紀念)")
 }

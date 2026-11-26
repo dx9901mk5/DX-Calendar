@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_cd_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent">
+
+    <ImageView
+        android:id="@+id/widget_bg_layer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/bg_widget_dark_solid" />
+
+    <LinearLayout
+        android:id="@+id/widget_cd_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/widget_cd_weather"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:shadowColor="#B3000000"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text="🌤️ 20°~26°"
+            android:textColor="#FFE6E6F0"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_cd_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:shadowColor="#B3000000"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text="重要倒數日"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_cd_days"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:shadowColor="#B3000000"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            android:text="0 天"
+            android:textColor="#FFE5BE67"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_cd_date"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:shadowColor="#B3000000"
+            android:shadowDy="1"
+            android:shadowRadius="2"
+            android:text="點擊編輯新增倒數日"
+            android:textColor="#FFE6E6F0"
+            android:textSize="11sp" />
+    </LinearLayout>
+</FrameLayout>

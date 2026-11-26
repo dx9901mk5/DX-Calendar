@@ -6,10 +6,13 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.graphicsLayer
 import com.dx.calendar.data.weather.DailyWeatherInfo
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -234,7 +237,8 @@ fun MonthGridView(
     onSwipeNextMonth: () -> Unit,
     onVerticalDragDelta: ((Float) -> Unit)? = null,
     onVerticalDragEnd: (() -> Unit)? = null,
-    onToggleTaskQuick: (UnifiedCalendarItem) -> Unit
+    onToggleTaskQuick: (UnifiedCalendarItem) -> Unit,
+    onLongPressItem: ((UnifiedCalendarItem) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
     val currentOnSwipePrev by androidx.compose.runtime.rememberUpdatedState(onSwipePrevMonth)
@@ -433,7 +437,8 @@ fun MonthGridView(
                                     onSelectDate(cellDate)
                                 }
                             },
-                            onToggleTaskQuick = onToggleTaskQuick
+                            onToggleTaskQuick = onToggleTaskQuick,
+                            onLongPressItem = onLongPressItem
                         )
                     }
                 }
@@ -442,6 +447,7 @@ fun MonthGridView(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MonthDayCell(
     modifier: Modifier,
@@ -458,7 +464,8 @@ private fun MonthDayCell(
     items: List<UnifiedCalendarItem>,
     maxVisible: Int,
     onClick: () -> Unit,
-    onToggleTaskQuick: (UnifiedCalendarItem) -> Unit
+    onToggleTaskQuick: (UnifiedCalendarItem) -> Unit,
+    onLongPressItem: ((UnifiedCalendarItem) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
     val contentAlpha = if (isInMonth) 1f else 0.36f
@@ -651,9 +658,13 @@ private fun MonthDayCell(
                                 if (item.isTask) chipColor.copy(alpha = 0.22f)
                                 else chipColor.copy(alpha = 0.30f)
                             )
-                            .then(
-                                if (item.isTask) Modifier.clickable { onToggleTaskQuick(item) }
-                                else Modifier
+                            .combinedClickable(
+                                onClick = {
+                                    if (item.isTask) onToggleTaskQuick(item) else onClick()
+                                },
+                                onLongClick = {
+                                    onLongPressItem?.invoke(item)
+                                }
                             )
                             .padding(horizontal = 3.dp, vertical = 1.dp)
                     ) {
@@ -705,10 +716,26 @@ fun WeekOrDayTimelineView(
     startWeekOnMonday: Boolean,
     itemsByDate: Map<LocalDate, List<UnifiedCalendarItem>>,
     onSelectDate: (LocalDate) -> Unit,
-    onSelectItem: (UnifiedCalendarItem) -> Unit
+    onSelectItem: (UnifiedCalendarItem) -> Unit,
+    secondaryTimeZoneId: String = "",
+    onShiftEventTimeMinutes: ((UnifiedCalendarItem, Int) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
     val zone = ZoneId.systemDefault()
+    val secondaryZone = remember(secondaryTimeZoneId) {
+        if (secondaryTimeZoneId.isBlank()) null
+        else runCatching { ZoneId.of(secondaryTimeZoneId) }.getOrNull()
+    }
+    val secondaryShortTag = remember(secondaryTimeZoneId) {
+        when (secondaryTimeZoneId) {
+            "America/Los_Angeles" -> "LA"
+            "America/New_York" -> "NY"
+            "Asia/Tokyo" -> "JP"
+            "Europe/London" -> "UK"
+            "UTC" -> "UTC"
+            else -> secondaryTimeZoneId.substringAfterLast('/').take(3).uppercase()
+        }
+    }
     val daysToShow = remember(isSingleDay, selectedDate, startWeekOnMonday) {
         if (isSingleDay) {
             listOf(selectedDate)
@@ -832,16 +859,27 @@ fun WeekOrDayTimelineView(
         ) {
             val totalHeight = hourHeight * 24
             Row(modifier = Modifier.fillMaxWidth().height(totalHeight)) {
-                // 左側小時刻度 (00:00 ~ 23:00)
-                Column(modifier = Modifier.width(42.dp).fillMaxHeight()) {
+                // 左側小時刻度 (00:00 ~ 23:00，開啟雙時區時同步顯示第二時區對照刻度)
+                val rulerWidth = if (secondaryZone != null) 54.dp else 42.dp
+                Column(modifier = Modifier.width(rulerWidth).fillMaxHeight()) {
                     for (h in 0..23) {
                         Box(modifier = Modifier.height(hourHeight).fillMaxWidth()) {
-                            Text(
-                                text = "%02d:00".format(h),
-                                color = tokens.secondaryTextColor,
-                                fontSize = 10.sp,
-                                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
-                            )
+                            Column(modifier = Modifier.padding(start = 4.dp, top = 2.dp)) {
+                                Text(
+                                    text = "%02d:00".format(h),
+                                    color = tokens.secondaryTextColor,
+                                    fontSize = 10.sp
+                                )
+                                if (secondaryZone != null) {
+                                    val secHour = selectedDate.atTime(h, 0).atZone(zone)
+                                        .withZoneSameInstant(secondaryZone).hour
+                                    Text(
+                                        text = "$secondaryShortTag %02d".format(secHour),
+                                        color = tokens.accentColor.copy(alpha = 0.78f),
+                                        fontSize = 8.5.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -879,15 +917,38 @@ fun WeekOrDayTimelineView(
                             val blockHeight = hourHeight * (durationMin / 60f)
                             val baseColor = Color(ev.colorArgb)
 
+                            val densityLocal = androidx.compose.ui.platform.LocalDensity.current
+                            val pxPerHour = with(densityLocal) { hourHeight.toPx() }.coerceAtLeast(1f)
+                            var dragDeltaPx by remember(ev.uniqueKey) { mutableFloatStateOf(0f) }
+                            val dragOffsetDp = with(densityLocal) { dragDeltaPx.toDp() }
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 2.dp)
-                                    .offset(y = topOffset)
+                                    .offset(y = (topOffset + dragOffsetDp).coerceAtLeast(0.dp))
                                     .height(blockHeight)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(baseColor.copy(alpha = 0.28f))
-                                    .border(1.dp, baseColor.copy(alpha = 0.8f), RoundedCornerShape(6.dp))
+                                    .background(baseColor.copy(alpha = if (dragDeltaPx != 0f) 0.50f else 0.28f))
+                                    .border(1.dp, baseColor.copy(alpha = 0.85f), RoundedCornerShape(6.dp))
+                                    .pointerInput(ev.uniqueKey, onShiftEventTimeMinutes != null) {
+                                        if (onShiftEventTimeMinutes == null) return@pointerInput
+                                        detectVerticalDragGestures(
+                                            onDragEnd = {
+                                                val rawMinutes = ((dragDeltaPx / pxPerHour) * 60f).toInt()
+                                                val snapped = ((rawMinutes + (if (rawMinutes >= 0) 7 else -7)) / 15) * 15
+                                                dragDeltaPx = 0f
+                                                if (snapped != 0) {
+                                                    onShiftEventTimeMinutes(ev, snapped)
+                                                }
+                                            },
+                                            onDragCancel = { dragDeltaPx = 0f },
+                                            onVerticalDrag = { change, dragAmount ->
+                                                change.consume()
+                                                dragDeltaPx += dragAmount
+                                            }
+                                        )
+                                    }
                                     .clickable { onSelectItem(ev) }
                                     .padding(horizontal = 4.dp, vertical = 2.dp)
                             ) {

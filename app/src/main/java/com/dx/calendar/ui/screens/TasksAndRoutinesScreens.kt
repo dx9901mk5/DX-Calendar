@@ -96,9 +96,12 @@ fun TasksCenterView(
     onClearCompleted: () -> Unit,
     onToggleShowCompleted: (Boolean) -> Unit,
     onSyncGoogleTasks: () -> Unit,
-    onOpenFullEditorForTask: () -> Unit
+    onOpenFullEditorForTask: () -> Unit,
+    onScheduleTaskTimeBlock: ((TaskItemEntity, Int, Int) -> Unit)? = null,
+    onStartPomodoroForTask: ((TaskItemEntity) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     var quickText by remember { mutableStateOf("") }
     var quickShowInMonth by remember { mutableStateOf(true) }
 
@@ -257,6 +260,26 @@ fun TasksCenterView(
                                 color = tokens.secondaryTextColor,
                                 fontSize = 12.sp
                             )
+                        }
+                        if (onScheduleTaskTimeBlock != null) {
+                            TextButton(
+                                onClick = {
+                                    val initH = (task.dueMinuteOfDay ?: 540) / 60
+                                    val initM = (task.dueMinuteOfDay ?: 540) % 60
+                                    runCatching {
+                                        android.app.TimePickerDialog(context, { _, h, m ->
+                                            onScheduleTaskTimeBlock(task, h, m)
+                                        }, initH, initM, true).show()
+                                    }
+                                },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                            ) { Text("⏰排時段", fontSize = 11.sp, color = tokens.accentColor) }
+                        }
+                        if (onStartPomodoroForTask != null) {
+                            TextButton(
+                                onClick = { onStartPomodoroForTask(task) },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                            ) { Text("🍅專注", fontSize = 11.sp, color = tokens.accentColor) }
                         }
                         IconButton(onClick = { onToggleTaskMonthVisible(task) }) {
                             Icon(

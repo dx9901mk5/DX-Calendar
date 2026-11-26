@@ -9,4 +9,6 @@
     <string name="widget_google_month_desc">月檢視</string>
     <string name="widget_vivo_tasks_label">DX 待辦</string>
     <string name="widget_vivo_tasks_desc">待辦事項</string>
+    <string name="widget_next_event_weather_label">DX 下一行程與天氣 (4×1)</string>
+    <string name="widget_countdown_weather_label">DX 倒數日與天氣 (2×2)</string>
 </resources>

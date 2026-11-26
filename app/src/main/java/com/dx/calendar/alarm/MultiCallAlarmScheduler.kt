@@ -401,6 +401,15 @@ object MultiCallAlarmScheduler {
                     java.time.temporal.ChronoUnit.DAYS.between(baseDate, d) % periodDays == 0L
                 }
                 RecurrenceType.MONTHLY -> d.dayOfMonth == baseDate.dayOfMonth
+                RecurrenceType.LUNAR_MONTHLY -> {
+                    val bL = LunarCalendarEngine.getLunarInfo(baseDate)
+                    val cL = LunarCalendarEngine.getLunarInfo(d)
+                    cL.lunarDay == bL.lunarDay && !cL.isLeapMonth
+                }
+                RecurrenceType.LUNAR_FIRST_FIFTEENTH -> {
+                    val cL = LunarCalendarEngine.getLunarInfo(d)
+                    (cL.lunarDay == 1 || cL.lunarDay == 15) && !cL.isLeapMonth
+                }
                 RecurrenceType.YEARLY -> d.monthValue == baseDate.monthValue && d.dayOfMonth == baseDate.dayOfMonth
                 RecurrenceType.LUNAR_YEARLY -> {
                     val bL = LunarCalendarEngine.getLunarInfo(baseDate)

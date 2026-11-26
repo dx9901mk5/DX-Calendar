@@ -577,6 +577,32 @@
                 android:resource="@xml/widget_google_schedule_info" />
         </receiver>
 
+        <!-- 小工具 3：DX 下一行程與天氣橫條 (4x1) -->
+        <receiver
+            android:name=".widget.NextEventWeatherWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_next_event_weather_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_next_event_weather_info" />
+        </receiver>
+
+        <!-- 小工具 4：DX 倒數日與天氣小工具 (2x2) -->
+        <receiver
+            android:name=".widget.CountdownWeatherWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_countdown_weather_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_countdown_weather_info" />
+        </receiver>
+
         <service
             android:name=".widget.ScheduleRemoteViewsService"
             android:permission="android.permission.BIND_REMOTEVIEWS"

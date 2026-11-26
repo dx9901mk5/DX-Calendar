@@ -50,6 +50,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Image
@@ -167,6 +168,11 @@ fun SettingsAndManageScreen(
     onSelectDateInfoDisplay: (DateInfoDisplayMode) -> Unit = { onToggleShowLunar(it != DateInfoDisplayMode.NONE) },
     onSelectMonthViewLayout: (MonthViewLayoutMode) -> Unit = {},
     onSelectTimeZoneOverride: (String) -> Unit = {},
+    onSelectSecondaryTimeZone: (String) -> Unit = {},
+    onChangeBackupDeviceName: (String) -> Unit = {},
+    onUploadBackupToGoogleDrive: () -> Unit = {},
+    onExportFullBackupFile: () -> Unit = {},
+    onRestoreFullBackupFile: () -> Unit = {},
     onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
     onUpdateDefaultTaskReminders: (List<Int>) -> Unit = {},
@@ -452,6 +458,11 @@ fun SettingsAndManageScreen(
                                     onSelectDateInfoDisplay = onSelectDateInfoDisplay,
                                     onSelectMonthViewLayout = onSelectMonthViewLayout,
                                     onSelectTimeZoneOverride = onSelectTimeZoneOverride,
+                                    onSelectSecondaryTimeZone = onSelectSecondaryTimeZone,
+                                    onChangeBackupDeviceName = onChangeBackupDeviceName,
+                                    onUploadBackupToGoogleDrive = onUploadBackupToGoogleDrive,
+                                    onExportFullBackupFile = onExportFullBackupFile,
+                                    onRestoreFullBackupFile = onRestoreFullBackupFile,
                                     onUpdateHolidayPrefs = onUpdateHolidayPrefs,
                                     onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
                                     onUpdateDefaultTaskReminders = onUpdateDefaultTaskReminders,
@@ -561,6 +572,11 @@ fun SettingsAndManageScreen(
                                     onSelectDateInfoDisplay = onSelectDateInfoDisplay,
                                     onSelectMonthViewLayout = onSelectMonthViewLayout,
                                     onSelectTimeZoneOverride = onSelectTimeZoneOverride,
+                                    onSelectSecondaryTimeZone = onSelectSecondaryTimeZone,
+                                    onChangeBackupDeviceName = onChangeBackupDeviceName,
+                                    onUploadBackupToGoogleDrive = onUploadBackupToGoogleDrive,
+                                    onExportFullBackupFile = onExportFullBackupFile,
+                                    onRestoreFullBackupFile = onRestoreFullBackupFile,
                                     onUpdateHolidayPrefs = onUpdateHolidayPrefs,
                                     onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
                                     onUpdateDefaultTaskReminders = onUpdateDefaultTaskReminders,
@@ -710,6 +726,11 @@ private fun DxSettingsSectionContent(
     onSelectDateInfoDisplay: (DateInfoDisplayMode) -> Unit = { onToggleShowLunar(it != DateInfoDisplayMode.NONE) },
     onSelectMonthViewLayout: (MonthViewLayoutMode) -> Unit = {},
     onSelectTimeZoneOverride: (String) -> Unit = {},
+    onSelectSecondaryTimeZone: (String) -> Unit = {},
+    onChangeBackupDeviceName: (String) -> Unit = {},
+    onUploadBackupToGoogleDrive: () -> Unit = {},
+    onExportFullBackupFile: () -> Unit = {},
+    onRestoreFullBackupFile: () -> Unit = {},
     onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
     onUpdateDefaultTaskReminders: (List<Int>) -> Unit = {},
@@ -1196,6 +1217,7 @@ private fun DxSettingsSectionContent(
             DxSettingsSection.CALENDAR_PREFS -> {
                 var showAltCalDialog by remember { mutableStateOf(false) }
                 var showTzDialog by remember { mutableStateOf(false) }
+                var showSecondaryTzDialog by remember { mutableStateOf(false) }
                 var showWeekStartDialog by remember { mutableStateOf(false) }
                 var showDateInfoDialog by remember { mutableStateOf(false) }
                 var showMonthLayoutDialog by remember { mutableStateOf(false) }
@@ -1249,6 +1271,14 @@ private fun DxSettingsSectionContent(
                             subtitle = "預設依所在地自動判定時區，跨時區即時自動切換",
                             value = tzValueText,
                             onClick = { showTzDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingClickableValueRow(
+                            title = "雙時區 24h 時間軸對照",
+                            subtitle = "於週／日時間軸左側並排顯示第二時區刻度（跨國會議／出差適用）",
+                            value = settings.secondaryTimeZoneId.ifBlank { "關閉" },
+                            onClick = { showSecondaryTzDialog = true }
                         )
                         HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
 
@@ -1398,6 +1428,49 @@ private fun DxSettingsSectionContent(
                             }
                         },
                         confirmButton = { TextButton(onClick = { showTzDialog = false }) { Text("關閉") } }
+                    )
+                }
+
+                if (showSecondaryTzDialog) {
+                    val secTzOptions = listOf(
+                        "" to "關閉雙時區對照",
+                        "Asia/Tokyo" to "東京 (Asia/Tokyo, UTC+9)",
+                        "America/Los_Angeles" to "美西洛杉磯 (America/Los_Angeles)",
+                        "America/New_York" to "美東紐約 (America/New_York)",
+                        "Europe/London" to "倫敦 (Europe/London)",
+                        "Asia/Singapore" to "新加坡 (Asia/Singapore)",
+                        "UTC" to "世界協調時間 (UTC)"
+                    )
+                    AlertDialog(
+                        onDismissRequest = { showSecondaryTzDialog = false },
+                        title = { Text("雙時區時間軸對照") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                secTzOptions.forEach { (id, label) ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSelectSecondaryTimeZone(id)
+                                                showSecondaryTzDialog = false
+                                            }
+                                            .padding(vertical = 7.dp)
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            color = if (settings.secondaryTimeZoneId == id) tokens.accentColor else tokens.primaryTextColor,
+                                            fontWeight = if (settings.secondaryTimeZoneId == id) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (settings.secondaryTimeZoneId == id) {
+                                            Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showSecondaryTzDialog = false }) { Text("關閉") } }
                     )
                 }
 
@@ -1581,6 +1654,59 @@ private fun DxSettingsSectionContent(
             }
 
             DxSettingsSection.IMPORT_EXPORT -> {
+                // #14 整庫加密備份與還原（上方自訂裝置名稱 ＋ 連動 Google 雲端硬碟 App 上傳）
+                var deviceNameInput by remember(settings.backupDeviceName) { mutableStateOf(settings.backupDeviceName) }
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("整庫備份與 Google 雲端硬碟連動", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "一鍵打包本機所有行程、待辦、例行打卡、輪班範本、倒數日與協作留言（相容未來 Chrome 插件跨系統同步格式）。",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp
+                        )
+                        OutlinedTextField(
+                            value = deviceNameInput,
+                            onValueChange = {
+                                deviceNameInput = it
+                                onChangeBackupDeviceName(it)
+                            },
+                            label = { Text("裝置名稱（自動寫入備份檔名與協作留言署名）") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Button(
+                            onClick = {
+                                onChangeBackupDeviceName(deviceNameInput)
+                                onUploadBackupToGoogleDrive()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Filled.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("備份並連動 Google 雲端硬碟 App 上傳", fontWeight = FontWeight.Bold)
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = {
+                                    onChangeBackupDeviceName(deviceNameInput)
+                                    onExportFullBackupFile()
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(Icons.Filled.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("匯出備份檔", fontSize = 12.sp)
+                            }
+                            OutlinedButton(onClick = onRestoreFullBackupFile, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Filled.FileDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("還原備份檔", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("匯入與匯出日程 (ICS / URL)", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)

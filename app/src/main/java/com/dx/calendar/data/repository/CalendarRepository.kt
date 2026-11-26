@@ -430,6 +430,15 @@ class CalendarRepository(private val context: Context) {
                 ChronoUnit.DAYS.between(baseDate, candidate) % periodDays == 0L
             }
             RecurrenceType.MONTHLY -> candidate.dayOfMonth == baseDate.dayOfMonth
+            RecurrenceType.LUNAR_MONTHLY -> {
+                val baseLunar = LunarCalendarEngine.getLunarInfo(baseDate)
+                val candLunar = LunarCalendarEngine.getLunarInfo(candidate)
+                candLunar.lunarDay == baseLunar.lunarDay && !candLunar.isLeapMonth
+            }
+            RecurrenceType.LUNAR_FIRST_FIFTEENTH -> {
+                val candLunar = LunarCalendarEngine.getLunarInfo(candidate)
+                (candLunar.lunarDay == 1 || candLunar.lunarDay == 15) && !candLunar.isLeapMonth
+            }
             RecurrenceType.YEARLY -> candidate.monthValue == baseDate.monthValue && candidate.dayOfMonth == baseDate.dayOfMonth
             RecurrenceType.LUNAR_YEARLY -> {
                 val baseLunar = LunarCalendarEngine.getLunarInfo(baseDate)

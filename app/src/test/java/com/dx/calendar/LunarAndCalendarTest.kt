@@ -50,7 +50,9 @@ class LunarAndCalendarTest {
 
     @Test
     fun verifyRecurrenceTypesExist() {
-        assertEquals(9, RecurrenceType.entries.size)
+        assertEquals(11, RecurrenceType.entries.size)
+        assertTrue(RecurrenceType.entries.contains(RecurrenceType.LUNAR_MONTHLY))
+        assertTrue(RecurrenceType.entries.contains(RecurrenceType.LUNAR_FIRST_FIFTEENTH))
     }
 
     @Test
@@ -299,5 +301,51 @@ class LunarAndCalendarTest {
         )
         assertEquals("國慶日", twText)
         assertTrue(twHighlight)
+    }
+
+    @Test
+    fun offlineNaturalLanguageParser_parsesChineseTimeDateRecurrenceAndReminders() {
+        val base = LocalDate.of(2026, 11, 26)
+        val p1 = com.dx.calendar.util.NaturalLanguageEventParser.parse("明天下午3點半跟王經理開會 提前15分", base)
+        assertEquals(LocalDate.of(2026, 11, 27), p1.date)
+        assertEquals(15, p1.startTime.hour)
+        assertEquals(30, p1.startTime.minute)
+        assertFalse(p1.isAllDay)
+        assertTrue(p1.reminderMinutes.contains(15))
+        assertTrue(p1.title.contains("王經理開會"))
+
+        val p2 = com.dx.calendar.util.NaturalLanguageEventParser.parse("農曆初一十五拜拜 08:00-09:00", base)
+        assertEquals(com.dx.calendar.data.model.RecurrenceType.LUNAR_FIRST_FIFTEENTH, p2.recurrenceType)
+        assertEquals(8, p2.startTime.hour)
+        assertEquals(9, p2.endTime.hour)
+        assertTrue(p2.title.contains("拜拜"))
+
+        val p3 = com.dx.calendar.util.NaturalLanguageEventParser.parse("倒數 12/31 跨年煙火", base)
+        assertEquals(LocalDate.of(2026, 12, 31), p3.date)
+        assertTrue(p3.isCountdown)
+        assertTrue(p3.isAllDay)
+    }
+
+    @Test
+    fun countdownBadgeAndBackupFileName_formatCorrectly() {
+        val today = LocalDate.of(2026, 11, 26)
+        val meta = com.dx.calendar.data.local.EventRichMeta(
+            key = "LOCAL_EVENT:1",
+            isCountdown = true,
+            anniversaryStartYear = 1996,
+            isBirthday = true
+        )
+        val badge = com.dx.calendar.data.local.EventRichMetaStore.formatCountdownBadge(
+            targetDate = LocalDate.of(2026, 12, 6),
+            meta = meta,
+            today = today
+        )
+        assertTrue(badge != null)
+        assertTrue(badge!!.contains("10 天"))
+        assertTrue(badge.contains("30 歲"))
+
+        val fileName = com.dx.calendar.data.backup.FullBackupManager.buildBackupFileName("我的 vivo X Fold")
+        assertTrue(fileName.startsWith("DX-Calendar_我的_vivo_X_Fold_"))
+        assertTrue(fileName.endsWith(".dxbackup.json"))
     }
 }

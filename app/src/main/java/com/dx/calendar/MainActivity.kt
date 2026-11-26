@@ -37,6 +37,52 @@ class MainActivity : AppCompatActivity() {
     private var hasCalPerm by mutableStateOf(false)
     private var awaitingUnknownSourcesApkPath: String? = null
     private var screenOffReceiver: BroadcastReceiver? = null
+    private var pendingVoiceResultCallback: ((String) -> Unit)? = null
+    private var pendingAttachmentCallback: ((String) -> Unit)? = null
+
+    private val voiceQuickAddLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == Activity.RESULT_OK) {
+            val spoken = res.data
+                ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                ?.trim()
+                .orEmpty()
+            if (spoken.isNotBlank()) {
+                pendingVoiceResultCallback?.invoke(spoken)
+            }
+        }
+        pendingVoiceResultCallback = null
+    }
+
+    private val eventAttachmentPickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            pendingAttachmentCallback?.invoke(uri.toString())
+        }
+        pendingAttachmentCallback = null
+    }
+
+    private val backupExportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            viewModel.exportFullBackupToUri(uri)
+        }
+    }
+
+    private val backupRestoreLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.restoreFullBackupFromUri(uri)
+        }
+    }
 
     private val calendarPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -193,7 +239,7 @@ class MainActivity : AppCompatActivity() {
                         activity = this,
                         requireTwoSteps = true,
                         onStageOnePassed = {
-                            Toast.makeText(this, "第一道指紋驗證成功，請感應第二枚指紋！", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "請再次感應指紋", Toast.LENGTH_SHORT).show()
                         },
                         onUnlocked = {
                             onVerified()
@@ -211,6 +257,45 @@ class MainActivity : AppCompatActivity() {
                 },
                 onPickIcsFile = {
                     runCatching { icsFilePickerLauncher.launch(arrayOf("text/calendar", "*/*")) }
+                },
+                onLaunchVoiceInput = { callback ->
+                    pendingVoiceResultCallback = callback
+                    runCatching {
+                        val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(
+                                android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                            )
+                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault())
+                            putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "請說出行程，例如：明天下午三點半開會 提前15分")
+                        }
+                        voiceQuickAddLauncher.launch(intent)
+                    }.onFailure {
+                        pendingVoiceResultCallback = null
+                        Toast.makeText(this, "此裝置未安裝語音辨識引擎，請改以文字一句話輸入", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onPickEventAttachment = { callback ->
+                    pendingAttachmentCallback = callback
+                    runCatching { eventAttachmentPickerLauncher.launch(arrayOf("image/*")) }
+                        .onFailure { pendingAttachmentCallback = null }
+                },
+                onUploadBackupToGoogleDrive = {
+                    viewModel.buildGoogleDriveBackupIntent { intent ->
+                        runCatching { startActivity(intent) }
+                            .onFailure {
+                                Toast.makeText(this, "無法開啟 Google 雲端硬碟 App，請改用「匯出備份檔」", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                },
+                onExportFullBackupFile = {
+                    val fname = com.dx.calendar.data.backup.FullBackupManager.buildBackupFileName(
+                        viewModel.settings.value.backupDeviceName
+                    )
+                    runCatching { backupExportLauncher.launch(fname) }
+                },
+                onRestoreFullBackupFile = {
+                    runCatching { backupRestoreLauncher.launch(arrayOf("application/json", "*/*")) }
                 }
             )
         }

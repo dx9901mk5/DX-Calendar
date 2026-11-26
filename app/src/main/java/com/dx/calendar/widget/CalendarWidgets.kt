@@ -186,6 +186,18 @@ object WidgetRefreshHelper {
                 GoogleScheduleWidgetProvider.updateWidgets(appContext, mgr, googleSchedIds)
                 runCatching { mgr.notifyAppWidgetViewDataChanged(googleSchedIds, R.id.widget_list_view) }
             }
+
+            // 3. 刷新 DX 下一行程與天氣橫條小工具
+            val nextEventIds = mgr.getAppWidgetIds(ComponentName(appContext, NextEventWeatherWidgetProvider::class.java))
+            if (nextEventIds.isNotEmpty()) {
+                NextEventWeatherWidgetProvider.updateWidgets(appContext, mgr, nextEventIds)
+            }
+
+            // 4. 刷新 DX 倒數日與天氣小工具
+            val countdownIds = mgr.getAppWidgetIds(ComponentName(appContext, CountdownWeatherWidgetProvider::class.java))
+            if (countdownIds.isNotEmpty()) {
+                CountdownWeatherWidgetProvider.updateWidgets(appContext, mgr, countdownIds)
+            }
         }
     }
 }
@@ -1418,6 +1430,11 @@ internal object MonthCanvasRenderer {
         val startDate = firstOfMonth.minusDays(shift.toLong())
         val today = LocalDate.now()
         val byDate = items.groupBy { it.date }
+        val weatherMap = com.dx.calendar.data.weather.WeatherForecastManager.loadCachedForecast(context)
+        val weatherPaint = Paint(textFlags).apply {
+            textSize = 9.0f * density
+            textAlign = Paint.Align.RIGHT
+        }
 
         var curTop = gridTop
         for (r in 0 until safeWeeks) {
@@ -1464,6 +1481,16 @@ internal object MonthCanvasRenderer {
                 val cx = cellLeft + colW / 2f
                 val dayBaseline = cellTop + (if (anyWeekAccordionMode && rowExpandFrac < 0.3f) 14.8f else 15.8f) * density
                 val lunar = if (showLunar) LunarCalendarEngine.getLunarInfo(d) else null
+
+                // 月曆小工具同步繪製今日起 7 天天氣圖示（右上角）
+                weatherMap[d]?.let { wInfo ->
+                    canvas.drawText(
+                        wInfo.icon,
+                        cellLeft + colW - 2.0f * density,
+                        dayBaseline - 1.5f * density,
+                        weatherPaint
+                    )
+                }
 
                 if (isToday) {
                     if (!googleGridStyle) {

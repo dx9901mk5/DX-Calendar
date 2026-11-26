@@ -104,7 +104,9 @@ data class UserSettings(
     val widgetOpacity: Float = 0.88f,
     val autoCheckUpdate: Boolean = true,
     val dynamicDayIconEnabled: Boolean = false,
-    val liveUpdateIslandEnabled: Boolean = true
+    val liveUpdateIslandEnabled: Boolean = true,
+    val secondaryTimeZoneId: String = "",
+    val backupDeviceName: String = android.os.Build.MODEL ?: "DX_Device"
 ) {
     val effectiveAlternateCalendar: AlternateCalendarMode
         get() = if (alternateCalendarMode == AlternateCalendarMode.AUTO_BY_REGION) {
@@ -161,6 +163,8 @@ class AppPreferences(context: Context) {
         private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
         private val KEY_DYNAMIC_DAY_ICON = booleanPreferencesKey("dynamic_day_icon_enabled")
         private val KEY_LIVE_UPDATE_ISLAND = booleanPreferencesKey("live_update_island_enabled")
+        private val KEY_SECONDARY_TIMEZONE = stringPreferencesKey("secondary_timezone_id")
+        private val KEY_BACKUP_DEVICE_NAME = stringPreferencesKey("backup_device_name")
 
         fun sha256(input: String): String {
             val bytes = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
@@ -255,7 +259,10 @@ class AppPreferences(context: Context) {
                 widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.88f,
                 autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true,
                 dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: false,
-                liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true
+                liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true,
+                secondaryTimeZoneId = prefs[KEY_SECONDARY_TIMEZONE] ?: "",
+                backupDeviceName = prefs[KEY_BACKUP_DEVICE_NAME]?.takeIf { it.isNotBlank() }
+                    ?: (android.os.Build.MODEL ?: "DX_Device")
             )
         }
 
@@ -457,5 +464,13 @@ class AppPreferences(context: Context) {
 
     suspend fun setLiveUpdateIslandEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_LIVE_UPDATE_ISLAND] = enabled }
+    }
+
+    suspend fun setSecondaryTimeZoneId(zoneId: String) {
+        appContext.dataStore.edit { it[KEY_SECONDARY_TIMEZONE] = zoneId.trim() }
+    }
+
+    suspend fun setBackupDeviceName(name: String) {
+        appContext.dataStore.edit { it[KEY_BACKUP_DEVICE_NAME] = name.trim() }
     }
 }

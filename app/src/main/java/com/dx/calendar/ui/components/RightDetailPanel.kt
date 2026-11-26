@@ -45,7 +45,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,7 +90,11 @@ fun RightDetailPanel(
     onHideExternalToRoutine: (UnifiedCalendarItem) -> Unit,
     showCloseDayHeaderButton: Boolean = false,
     onCloseDayPanel: (() -> Unit)? = null,
-    dayWeather: DailyWeatherInfo? = null
+    dayWeather: DailyWeatherInfo? = null,
+    richMetaMap: Map<String, com.dx.calendar.data.local.EventRichMeta> = emptyMap(),
+    onStartPomodoro: ((UnifiedCalendarItem) -> Unit)? = null,
+    onBeginMoveItem: ((UnifiedCalendarItem) -> Unit)? = null,
+    onAddSharedComment: ((UnifiedCalendarItem, String) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
 
@@ -108,13 +115,18 @@ fun RightDetailPanel(
         label = "rightDetailPanelTransition"
     ) { activeFocused ->
         if (activeFocused != null) {
+            val metaKey = com.dx.calendar.data.local.EventRichMetaStore.makeKey(activeFocused.sourceType.name, activeFocused.rawId)
             FocusedItemDetailCard(
                 item = activeFocused,
+                richMeta = richMetaMap[metaKey],
                 onBack = onClearFocusedItem,
                 onEdit = { onEditItem(activeFocused) },
                 onDelete = { onDeleteItem(activeFocused) },
                 onShare = { onShareItem(activeFocused) },
-                onHideExternalToRoutine = { onHideExternalToRoutine(activeFocused) }
+                onHideExternalToRoutine = { onHideExternalToRoutine(activeFocused) },
+                onStartPomodoro = onStartPomodoro?.let { fn -> { fn(activeFocused) } },
+                onBeginMoveItem = onBeginMoveItem?.let { fn -> { fn(activeFocused) } },
+                onAddSharedComment = onAddSharedComment?.let { fn -> { text -> fn(activeFocused, text) } }
             )
             return@AnimatedContent
         }
@@ -371,16 +383,25 @@ fun RightDetailPanel(
 @Composable
 private fun FocusedItemDetailCard(
     item: UnifiedCalendarItem,
+    richMeta: com.dx.calendar.data.local.EventRichMeta? = null,
     onBack: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit,
-    onHideExternalToRoutine: () -> Unit
+    onHideExternalToRoutine: () -> Unit,
+    onStartPomodoro: (() -> Unit)? = null,
+    onBeginMoveItem: (() -> Unit)? = null,
+    onAddSharedComment: ((String) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val zone = ZoneId.systemDefault()
     val startText = Instant.ofEpochMilli(item.startMillis).atZone(zone).format(DETAIL_DT_FMT)
     val endText = Instant.ofEpochMilli(item.endMillis).atZone(zone).format(DETAIL_DT_FMT)
+    val countdownBadge = remember(item.date, richMeta) {
+        com.dx.calendar.data.local.EventRichMetaStore.formatCountdownBadge(item.date, richMeta)
+    }
+    var commentDraft by remember(item.uniqueKey) { androidx.compose.runtime.mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -421,6 +442,21 @@ private fun FocusedItemDetailCard(
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
+                if (!countdownBadge.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(tokens.accentColor.copy(alpha = 0.16f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = countdownBadge,
+                            color = tokens.accentColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 HorizontalDivider(color = tokens.gridLineColor)
                 if (item.isAllDay) {
                     Text("時間：${item.date} (整日活動)", color = tokens.secondaryTextColor, fontSize = 13.sp)
@@ -432,7 +468,34 @@ private fun FocusedItemDetailCard(
                     Text("重複：${item.recurrenceLabel}", color = tokens.accentColor, fontSize = 13.sp)
                 }
                 if (item.location.isNotBlank()) {
-                    Text("地點：${item.location}", color = tokens.primaryTextColor, fontSize = 13.sp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("地點：${item.location}", color = tokens.primaryTextColor, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        TextButton(
+                            onClick = {
+                                val encoded = android.net.Uri.encode(item.location)
+                                val mapIntent = android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("geo:0,0?q=$encoded")
+                                )
+                                runCatching { context.startActivity(mapIntent) }.onFailure {
+                                    runCatching {
+                                        context.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse("https://maps.google.com/?q=$encoded")
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("🗺️ 導航", color = tokens.accentColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
                 if (item.url.isNotBlank()) {
                     Text("URL：${item.url}", color = tokens.accentColor, fontSize = 13.sp)
@@ -440,6 +503,31 @@ private fun FocusedItemDetailCard(
                 if (item.notes.isNotBlank()) {
                     HorizontalDivider(color = tokens.gridLineColor)
                     Text("備註：${item.notes}", color = tokens.primaryTextColor, fontSize = 14.sp)
+                }
+                if (!richMeta?.attachmentUris.isNullOrEmpty()) {
+                    HorizontalDivider(color = tokens.gridLineColor)
+                    Text("圖片附件（點擊檢視）", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        richMeta!!.attachmentUris.forEach { uriStr ->
+                            coil.compose.AsyncImage(
+                                model = android.net.Uri.parse(uriStr),
+                                contentDescription = "附件圖片",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        runCatching {
+                                            val viewIntent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                                setDataAndType(android.net.Uri.parse(uriStr), "image/*")
+                                                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(viewIntent)
+                                        }
+                                    }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -504,6 +592,74 @@ private fun FocusedItemDetailCard(
                     if (item.showInMonthGrid) "隱藏此系列於月曆格 (移入例行中心)"
                     else "恢復顯示此系列於月曆格"
                 )
+            }
+        }
+
+        // v2.0 快捷操作：改期移動 ＋ 番茄鐘專注
+        if (onBeginMoveItem != null || onStartPomodoro != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                if (onBeginMoveItem != null) {
+                    OutlinedButton(onClick = onBeginMoveItem, modifier = Modifier.weight(1f)) {
+                        Text("📌 改期移動", fontSize = 12.sp)
+                    }
+                }
+                if (onStartPomodoro != null) {
+                    OutlinedButton(onClick = onStartPomodoro, modifier = Modifier.weight(1f)) {
+                        Text("🍅 番茄鐘專注", fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+
+        // #9 家庭／情侶共用協作留言板
+        if (onAddSharedComment != null) {
+            Surface(
+                color = tokens.surfaceCardColor,
+                shape = RoundedCornerShape(tokens.cardCorner),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "💬 共用協作留言板 (${richMeta?.sharedComments?.size ?: 0})",
+                        color = tokens.primaryTextColor,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    richMeta?.sharedComments?.forEach { c ->
+                        val ts = Instant.ofEpochMilli(c.createdAtMillis).atZone(zone).format(SHORT_TIME_FMT)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(tokens.elevatedSurfaceColor)
+                                .padding(8.dp)
+                        ) {
+                            Text("${c.author} · $ts", color = tokens.accentColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text(c.content, color = tokens.primaryTextColor, fontSize = 13.sp)
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = commentDraft,
+                            onValueChange = { commentDraft = it },
+                            placeholder = { Text("留句備忘給家人／另一半...", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Button(
+                            enabled = commentDraft.isNotBlank(),
+                            colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                            onClick = {
+                                onAddSharedComment(commentDraft.trim())
+                                commentDraft = ""
+                            }
+                        ) { Text("送出", fontSize = 12.sp) }
+                    }
+                }
             }
         }
 

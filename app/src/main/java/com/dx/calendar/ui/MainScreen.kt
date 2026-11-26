@@ -139,7 +139,12 @@ fun DXCalendarRootApp(
     onAddSystemGoogleAccount: () -> Unit = onLaunchGoogleAccountPicker,
     onTriggerDualBiometric: (onVerified: () -> Unit) -> Unit,
     onPickWallpaperImage: () -> Unit,
-    onPickIcsFile: () -> Unit
+    onPickIcsFile: () -> Unit,
+    onLaunchVoiceInput: ((String) -> Unit) -> Unit = {},
+    onPickEventAttachment: ((String) -> Unit) -> Unit = {},
+    onUploadBackupToGoogleDrive: () -> Unit = {},
+    onExportFullBackupFile: () -> Unit = {},
+    onRestoreFullBackupFile: () -> Unit = {}
 ) {
     val settings by viewModel.settings.collectAsState()
     val categories by viewModel.categories.collectAsState()
@@ -161,12 +166,22 @@ fun DXCalendarRootApp(
     val updateState by viewModel.updateState.collectAsState()
     val rangeItems by viewModel.visibleRangeItems.collectAsState()
     val weatherByDate by viewModel.weatherByDate.collectAsState()
+    val templates by viewModel.templates.collectAsState()
+    val richMetaMap by viewModel.richMetaMap.collectAsState()
 
     val context = LocalContext.current
     val today = remember { LocalDate.now() }
 
     var showSearchDialog by remember { mutableStateOf(false) }
     var showAlmanacDiscoveryDialog by remember { mutableStateOf(false) }
+    var showQuickNlpDialog by remember { mutableStateOf(false) }
+    var showTemplateStampBar by remember { mutableStateOf(false) }
+    var activeStampTemplate by remember { mutableStateOf<com.dx.calendar.data.local.EventTemplateItem?>(null) }
+    var showNewTemplateDialog by remember { mutableStateOf(false) }
+    var movingItem by remember { mutableStateOf<com.dx.calendar.data.repository.UnifiedCalendarItem?>(null) }
+    var pomodoroTargetTitle by remember { mutableStateOf<String?>(null) }
+    var showPomodoroDialog by remember { mutableStateOf(false) }
+    var pomodoroCompleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showPinDialog by remember { mutableStateOf(false) }
     // 仿三星日曆手勢動畫狀態：手機月檢視預設滿版月曆 (false)，上滑平滑壓縮月曆並拉起下方時間表 (true)；再點已選日期彈出 24h 浮動時間軸卡片
     var showCompactBottomDayPanel by remember {
@@ -281,6 +296,16 @@ fun DXCalendarRootApp(
                     onOpenSearch = { showSearchDialog = true },
                     onOpenSettings = { viewModel.openSettings(true) },
                     onJumpToToday = { viewModel.jumpToToday() },
+                    onOpenQuickNlp = { showQuickNlpDialog = true },
+                    onToggleTemplateBar = {
+                        showTemplateStampBar = !showTemplateStampBar
+                        if (!showTemplateStampBar) activeStampTemplate = null
+                    },
+                    onOpenPomodoro = {
+                        pomodoroTargetTitle = null
+                        pomodoroCompleteAction = null
+                        showPomodoroDialog = true
+                    },
                     onJumpToDate = {
                         runCatching {
                             DatePickerDialog(
@@ -317,6 +342,45 @@ fun DXCalendarRootApp(
                     }
                 )
 
+                // #2 行程長按拖曳改期提示橫幅
+                AnimatedVisibility(visible = movingItem != null) {
+                    movingItem?.let { itemToMove ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(tokens.accentColor.copy(alpha = 0.18f))
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "📌 改期中「${itemToMove.title}」— 請點擊目標日期完成移動",
+                                color = tokens.accentColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { movingItem = null }) {
+                                Text("取消", color = tokens.primaryTextColor, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+
+                // #4 輪班與常用範本連點排班列（Stamp Mode）
+                AnimatedVisibility(visible = showTemplateStampBar && mainSection == MainSection.CALENDAR) {
+                    com.dx.calendar.ui.components.ShiftTemplateStampBar(
+                        templates = templates,
+                        activeTemplate = activeStampTemplate,
+                        onSelectTemplate = { activeStampTemplate = it },
+                        onAddTemplateClick = { showNewTemplateDialog = true },
+                        onCloseBar = {
+                            showTemplateStampBar = false
+                            activeStampTemplate = null
+                        }
+                    )
+                }
+
                 // 主體區域（依 MainSection 與視窗尺寸動態呈現）
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     when (mainSection) {
@@ -334,7 +398,15 @@ fun DXCalendarRootApp(
                                 onClearCompleted = { viewModel.clearCompletedTasks() },
                                 onToggleShowCompleted = { viewModel.setShowCompletedTasks(it) },
                                 onSyncGoogleTasks = onLaunchGoogleAccountPicker,
-                                onOpenFullEditorForTask = { viewModel.openNewEditor(presetTaskMode = true) }
+                                onOpenFullEditorForTask = { viewModel.openNewEditor(presetTaskMode = true) },
+                                onScheduleTaskTimeBlock = { task, h, m ->
+                                    viewModel.scheduleTaskToTimeBlock(task, selectedDate, h, m)
+                                },
+                                onStartPomodoroForTask = { task ->
+                                    pomodoroTargetTitle = com.dx.calendar.util.PrivacyCryptoManager.decryptIfNeeded(task.title)
+                                    pomodoroCompleteAction = { viewModel.toggleTaskEntity(task) }
+                                    showPomodoroDialog = true
+                                }
                             )
                         }
 
@@ -414,9 +486,38 @@ fun DXCalendarRootApp(
                                                 viewModel.selectDate(ym.atDay(1))
                                                 viewModel.setViewMode(CalendarViewMode.MONTH)
                                             },
-                                            onSelectDate = { viewModel.selectDate(it) },
-                                            onTapAlreadySelectedDate = { floatingTimelinePopupDate = it },
+                                            onSelectDate = { tappedDate ->
+                                                val moveTarget = movingItem
+                                                val stampTpl = activeStampTemplate
+                                                when {
+                                                    moveTarget != null -> {
+                                                        viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
+                                                        movingItem = null
+                                                    }
+                                                    stampTpl != null -> {
+                                                        viewModel.stampTemplateOnDate(stampTpl, tappedDate)
+                                                        viewModel.selectDate(tappedDate)
+                                                    }
+                                                    else -> viewModel.selectDate(tappedDate)
+                                                }
+                                            },
+                                            onTapAlreadySelectedDate = { tappedDate ->
+                                                val moveTarget = movingItem
+                                                val stampTpl = activeStampTemplate
+                                                when {
+                                                    moveTarget != null -> {
+                                                        viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
+                                                        movingItem = null
+                                                    }
+                                                    stampTpl != null -> viewModel.stampTemplateOnDate(stampTpl, tappedDate)
+                                                    else -> floatingTimelinePopupDate = tappedDate
+                                                }
+                                            },
                                             onSelectItem = { viewModel.setFocusedItem(it) },
+                                            onLongPressItem = { movingItem = it },
+                                            onShiftEventTimeMinutes = { ev, deltaMin ->
+                                                viewModel.shiftUnifiedItemTimeMinutes(ev, deltaMin)
+                                            },
                                             onSwipePrevMonth = { viewModel.shiftMonth(-1) },
                                             onSwipeNextMonth = { viewModel.shiftMonth(1) },
                                             onVerticalDragDelta = { deltaY ->
@@ -452,7 +553,20 @@ fun DXCalendarRootApp(
                                             },
                                             onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
                                             onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) },
-                                            dayWeather = weatherByDate[selectedDate]
+                                            dayWeather = weatherByDate[selectedDate],
+                                            richMetaMap = richMetaMap,
+                                            onStartPomodoro = { item ->
+                                                pomodoroTargetTitle = item.title
+                                                pomodoroCompleteAction = if (item.isTask) { { viewModel.toggleUnifiedItemComplete(item) } } else null
+                                                showPomodoroDialog = true
+                                            },
+                                            onBeginMoveItem = { item ->
+                                                viewModel.setFocusedItem(null)
+                                                movingItem = item
+                                            },
+                                            onAddSharedComment = { item, text ->
+                                                viewModel.addSharedComment(item, text)
+                                            }
                                         )
                                     }
                                 }
@@ -524,17 +638,41 @@ fun DXCalendarRootApp(
                                                     viewModel.selectDate(ym.atDay(1))
                                                     viewModel.setViewMode(CalendarViewMode.MONTH)
                                                 },
-                                                onSelectDate = {
-                                                    viewModel.selectDate(it)
+                                                onSelectDate = { tappedDate ->
+                                                    val moveTarget = movingItem
+                                                    val stampTpl = activeStampTemplate
+                                                    when {
+                                                        moveTarget != null -> {
+                                                            viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
+                                                            movingItem = null
+                                                        }
+                                                        stampTpl != null -> {
+                                                            viewModel.stampTemplateOnDate(stampTpl, tappedDate)
+                                                            viewModel.selectDate(tappedDate)
+                                                        }
+                                                        else -> viewModel.selectDate(tappedDate)
+                                                    }
                                                 },
                                                 onTapAlreadySelectedDate = { tappedDate ->
-                                                    // 仿三星 0:18–0:20：再次點擊已選日期即彈出 24h 浮動時間軸卡片！
-                                                    floatingTimelinePopupDate = tappedDate
+                                                    val moveTarget = movingItem
+                                                    val stampTpl = activeStampTemplate
+                                                    when {
+                                                        moveTarget != null -> {
+                                                            viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
+                                                            movingItem = null
+                                                        }
+                                                        stampTpl != null -> viewModel.stampTemplateOnDate(stampTpl, tappedDate)
+                                                        else -> floatingTimelinePopupDate = tappedDate
+                                                    }
                                                 },
                                                 onSelectItem = {
                                                     viewModel.setFocusedItem(it)
                                                     showCompactBottomDayPanel = true
                                                     sheetDragFraction = 1f
+                                                },
+                                                onLongPressItem = { movingItem = it },
+                                                onShiftEventTimeMinutes = { ev, deltaMin ->
+                                                    viewModel.shiftUnifiedItemTimeMinutes(ev, deltaMin)
                                                 },
                                                 onSwipePrevMonth = { viewModel.shiftMonth(-1) },
                                                 onSwipeNextMonth = { viewModel.shiftMonth(1) },
@@ -629,7 +767,22 @@ fun DXCalendarRootApp(
                                                         showCompactBottomDayPanel = false
                                                         sheetDragFraction = 0f
                                                     },
-                                                    dayWeather = weatherByDate[selectedDate]
+                                                    dayWeather = weatherByDate[selectedDate],
+                                                    richMetaMap = richMetaMap,
+                                                    onStartPomodoro = { item ->
+                                                        pomodoroTargetTitle = item.title
+                                                        pomodoroCompleteAction = if (item.isTask) { { viewModel.toggleUnifiedItemComplete(item) } } else null
+                                                        showPomodoroDialog = true
+                                                    },
+                                                    onBeginMoveItem = { item ->
+                                                        viewModel.setFocusedItem(null)
+                                                        showCompactBottomDayPanel = false
+                                                        sheetDragFraction = 0f
+                                                        movingItem = item
+                                                    },
+                                                    onAddSharedComment = { item, text ->
+                                                        viewModel.addSharedComment(item, text)
+                                                    }
                                                 )
                                             }
                                         }
@@ -757,6 +910,11 @@ fun DXCalendarRootApp(
                 onSelectDateInfoDisplay = { viewModel.setDateInfoDisplayMode(it) },
                 onSelectMonthViewLayout = { viewModel.setMonthViewLayoutMode(it) },
                 onSelectTimeZoneOverride = { viewModel.setTimeZoneOverrideId(it) },
+                onSelectSecondaryTimeZone = { viewModel.setSecondaryTimeZoneId(it) },
+                onChangeBackupDeviceName = { viewModel.setBackupDeviceName(it) },
+                onUploadBackupToGoogleDrive = onUploadBackupToGoogleDrive,
+                onExportFullBackupFile = onExportFullBackupFile,
+                onRestoreFullBackupFile = onRestoreFullBackupFile,
                 onUpdateHolidayPrefs = { pub, trad, solar -> viewModel.setHolidayPreferences(pub, trad, solar) },
                 onUpdateDefaultEventReminders = { viewModel.setDefaultEventReminders(it) },
                 onUpdateDefaultTaskReminders = { viewModel.setDefaultTaskReminders(it) },
@@ -857,9 +1015,40 @@ fun DXCalendarRootApp(
                 onSave = { payload -> viewModel.saveFromEditor(payload) },
                 onDelete = if (editorState.editingEvent != null || editorState.editingTask != null || editorState.editingSystemEvent != null) {
                     { viewModel.deleteEditingItem() }
-                } else null
+                } else null,
+                initialRichMeta = when {
+                    editorState.editingEvent != null -> richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(com.dx.calendar.data.repository.UnifiedSourceType.LOCAL_EVENT.name, editorState.editingEvent!!.id)]
+                    editorState.editingTask != null -> richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(com.dx.calendar.data.repository.UnifiedSourceType.TASK.name, editorState.editingTask!!.id)]
+                    editorState.editingSystemEvent != null -> richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(com.dx.calendar.data.repository.UnifiedSourceType.SYSTEM_EVENT.name, editorState.editingSystemEvent!!.rawId)]
+                    else -> null
+                },
+                onPickAttachmentImage = onPickEventAttachment,
+                onSaveAsTemplate = { tpl -> viewModel.saveEventTemplate(tpl) }
             )
         }
+        }
+
+        // === v2.0 快捷效率彈窗：離線一句話／語音快速建行程、新增範本、番茄鐘專注 ===
+        if (showQuickNlpDialog) {
+            com.dx.calendar.ui.components.QuickNaturalLanguageDialog(
+                today = today,
+                onDismiss = { showQuickNlpDialog = false },
+                onLaunchVoice = onLaunchVoiceInput,
+                onConfirmCreate = { text -> viewModel.quickCreateFromNaturalLanguage(text) }
+            )
+        }
+        if (showNewTemplateDialog) {
+            com.dx.calendar.ui.components.NewTemplateDialog(
+                onDismiss = { showNewTemplateDialog = false },
+                onSave = { tpl -> viewModel.saveEventTemplate(tpl) }
+            )
+        }
+        if (showPomodoroDialog) {
+            com.dx.calendar.ui.components.PomodoroFocusDialog(
+                taskTitle = pomodoroTargetTitle,
+                onDismiss = { showPomodoroDialog = false },
+                onCompleteTask = pomodoroCompleteAction
+            )
         }
 
         // === 搜尋對話框 ===
@@ -1107,6 +1296,9 @@ private fun AdaptiveTopHeaderBar(
     onOpenSearch: () -> Unit,
     onOpenSettings: () -> Unit,
     onJumpToToday: () -> Unit = {},
+    onOpenQuickNlp: () -> Unit = {},
+    onToggleTemplateBar: () -> Unit = {},
+    onOpenPomodoro: () -> Unit = {},
     onJumpToDate: () -> Unit,
     onOpenAlmanacDiscovery: () -> Unit,
     onQuickPrivacyAccess: () -> Unit
@@ -1237,6 +1429,21 @@ private fun AdaptiveTopHeaderBar(
                 }
                 DropdownMenu(expanded = showOverflow, onDismissRequest = { showOverflow = false }) {
                     DropdownMenuItem(
+                        text = { Text("🎙️ 一句話／語音快速建行程") },
+                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        onClick = { showOverflow = false; onOpenQuickNlp() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("🏷️ 輪班／常用範本連點排班") },
+                        leadingIcon = { Icon(Icons.Filled.Repeat, contentDescription = null) },
+                        onClick = { showOverflow = false; onToggleTemplateBar() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("🍅 番茄鐘專注計時器") },
+                        leadingIcon = { Icon(Icons.Filled.Today, contentDescription = null) },
+                        onClick = { showOverflow = false; onOpenPomodoro() }
+                    )
+                    DropdownMenuItem(
                         text = { Text("日期重新導向 (跳至指定日)") },
                         leadingIcon = { Icon(Icons.Filled.Today, contentDescription = null) },
                         onClick = { showOverflow = false; onJumpToDate() }
@@ -1327,7 +1534,9 @@ private fun CalendarPrimaryViewport(
     onSwipeNextMonth: () -> Unit,
     onVerticalDragDelta: ((Float) -> Unit)? = null,
     onVerticalDragEnd: (() -> Unit)? = null,
-    onToggleComplete: (com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit
+    onToggleComplete: (com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit,
+    onLongPressItem: ((com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit)? = null,
+    onShiftEventTimeMinutes: ((com.dx.calendar.data.repository.UnifiedCalendarItem, Int) -> Unit)? = null
 ) {
     AnimatedContent(
         targetState = viewMode,
@@ -1394,7 +1603,8 @@ private fun CalendarPrimaryViewport(
                     onSwipeNextMonth = onSwipeNextMonth,
                     onVerticalDragDelta = onVerticalDragDelta,
                     onVerticalDragEnd = onVerticalDragEnd,
-                    onToggleTaskQuick = onToggleComplete
+                    onToggleTaskQuick = onToggleComplete,
+                    onLongPressItem = onLongPressItem
                 )
             }
 
@@ -1405,7 +1615,9 @@ private fun CalendarPrimaryViewport(
                 startWeekOnMonday = settings.startWeekOnMonday,
                 itemsByDate = itemsByDate,
                 onSelectDate = onSelectDate,
-                onSelectItem = onSelectItem
+                onSelectItem = onSelectItem,
+                secondaryTimeZoneId = settings.secondaryTimeZoneId,
+                onShiftEventTimeMinutes = onShiftEventTimeMinutes
             )
 
             CalendarViewMode.DAY -> WeekOrDayTimelineView(
@@ -1415,7 +1627,9 @@ private fun CalendarPrimaryViewport(
                 startWeekOnMonday = settings.startWeekOnMonday,
                 itemsByDate = itemsByDate,
                 onSelectDate = onSelectDate,
-                onSelectItem = onSelectItem
+                onSelectItem = onSelectItem,
+                secondaryTimeZoneId = settings.secondaryTimeZoneId,
+                onShiftEventTimeMinutes = onShiftEventTimeMinutes
             )
 
             CalendarViewMode.AGENDA -> AgendaScheduleListView(

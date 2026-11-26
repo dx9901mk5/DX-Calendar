@@ -154,7 +154,11 @@ data class EditorSavePayload(
     val isPrivacy: Boolean,
     val location: String,
     val url: String,
-    val notes: String
+    val notes: String,
+    val isCountdown: Boolean = false,
+    val anniversaryStartYear: Int? = null,
+    val isBirthday: Boolean = false,
+    val attachmentUris: List<String> = emptyList()
 )
 
 /**
@@ -186,7 +190,10 @@ fun EventEditorScreen(
     parseDateList: (String) -> List<LocalDate>,
     onCancel: () -> Unit,
     onSave: (EditorSavePayload) -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    initialRichMeta: com.dx.calendar.data.local.EventRichMeta? = null,
+    onPickAttachmentImage: ((String) -> Unit) -> Unit = {},
+    onSaveAsTemplate: ((com.dx.calendar.data.local.EventTemplateItem) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
     val context = LocalContext.current
@@ -343,6 +350,14 @@ fun EventEditorScreen(
     var showRecurrenceDialog by remember { mutableStateOf(false) }
     var showExtraDatesDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var isCountdown by remember { mutableStateOf(initialRichMeta?.isCountdown ?: false) }
+    var isBirthday by remember { mutableStateOf(initialRichMeta?.isBirthday ?: false) }
+    var anniversaryYearText by remember { mutableStateOf(initialRichMeta?.anniversaryStartYear?.toString().orEmpty()) }
+    val attachmentUris = remember {
+        androidx.compose.runtime.mutableStateListOf<String>().apply {
+            initialRichMeta?.attachmentUris?.let { addAll(it) }
+        }
+    }
     val isEditingExisting = editingEvent != null || editingTask != null || editingSystemEvent != null
 
     Surface(color = tokens.backgroundColor, modifier = Modifier.fillMaxSize()) {
@@ -413,7 +428,11 @@ fun EventEditorScreen(
                                     isPrivacy = isPrivacy,
                                     location = location.trim(),
                                     url = url.trim(),
-                                    notes = notes.trim()
+                                    notes = notes.trim(),
+                                    isCountdown = isCountdown,
+                                    anniversaryStartYear = anniversaryYearText.trim().toIntOrNull()?.takeIf { it in 1900..2100 },
+                                    isBirthday = isBirthday,
+                                    attachmentUris = attachmentUris.toList()
                                 )
                             )
                         }
@@ -1019,6 +1038,116 @@ fun EventEditorScreen(
                             minLines = 3,
                             modifier = Modifier.fillMaxWidth()
                         )
+                    }
+                }
+
+                // 區塊 8（v2.0 新增）：倒數日／生日週年計算 ＋ 圖片附件 ＋ 存為範本
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "倒數日、紀念日與圖片附件",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = isCountdown,
+                                onClick = { isCountdown = !isCountdown },
+                                label = { Text("⏳ 標記為倒數日", fontSize = 12.sp) }
+                            )
+                            FilterChip(
+                                selected = isBirthday,
+                                onClick = {
+                                    isBirthday = !isBirthday
+                                    if (isBirthday) isCountdown = true
+                                },
+                                label = { Text("🎂 生日自動算歲數", fontSize = 12.sp) }
+                            )
+                        }
+                        if (isCountdown || isBirthday) {
+                            OutlinedTextField(
+                                value = anniversaryYearText,
+                                onValueChange = { s -> anniversaryYearText = s.filter { it.isDigit() }.take(4) },
+                                label = { Text(if (isBirthday) "出生西元年（選填，如 1995）" else "紀念起始西元年（選填，如 2020）") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        HorizontalDivider(color = tokens.gridLineColor)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("圖片附件 (${attachmentUris.size})", color = tokens.primaryTextColor, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            OutlinedButton(
+                                onClick = {
+                                    onPickAttachmentImage { uriStr ->
+                                        if (uriStr.isNotBlank() && !attachmentUris.contains(uriStr)) {
+                                            attachmentUris.add(uriStr)
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text("＋ 附加圖片 / 截圖", fontSize = 12.sp)
+                            }
+                        }
+                        if (attachmentUris.isNotEmpty()) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                attachmentUris.forEach { uriStr ->
+                                    Box(modifier = Modifier.size(64.dp)) {
+                                        coil.compose.AsyncImage(
+                                            model = android.net.Uri.parse(uriStr),
+                                            contentDescription = "附件縮圖",
+                                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .border(1.dp, tokens.gridLineColor, RoundedCornerShape(8.dp))
+                                        )
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.Black.copy(alpha = 0.7f))
+                                                .clickable { attachmentUris.remove(uriStr) }
+                                        ) {
+                                            Text("×", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (onSaveAsTemplate != null) {
+                            OutlinedButton(
+                                onClick = {
+                                    val durMin = java.time.Duration.between(startTime, endTime).toMinutes().toInt()
+                                        .let { if (it <= 0) 60 else it }
+                                    onSaveAsTemplate(
+                                        com.dx.calendar.data.local.EventTemplateItem(
+                                            name = title.trim().ifBlank { "自訂範本" },
+                                            startHour = startTime.hour,
+                                            startMinute = startTime.minute,
+                                            durationMinutes = durMin,
+                                            isAllDay = isAllDay,
+                                            location = location.trim(),
+                                            notes = notes.trim(),
+                                            reminderMinutes = selectedReminders.toList(),
+                                            enableMultiCall = enableMultiCall
+                                        )
+                                    )
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("🏷️ 存為常用／輪班排班範本", fontSize = 12.sp)
+                            }
+                        }
                     }
                 }
 
