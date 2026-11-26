@@ -62,11 +62,11 @@ object DualBiometricHelper {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
                 if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
-                    onFallbackToPin("已切換為雙重隱私 PIN 碼驗證")
+                    onFallbackToPin("請輸入密碼完成驗證")
                 } else if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
                     errorCode != BiometricPrompt.ERROR_CANCELED
                 ) {
-                    onErrorMessage("第一道指紋驗證未通過：$errString")
+                    onErrorMessage("指紋驗證未通過：$errString")
                 }
             }
         }
@@ -74,10 +74,9 @@ object DualBiometricHelper {
         runCatching {
             val prompt1 = BiometricPrompt(activity, executor, stage1Callback)
             val info1 = BiometricPrompt.PromptInfo.Builder()
-                .setTitle(if (requireTwoSteps) "隱私日曆解鎖 — 第一道指紋 (1/2)" else "解鎖隱私日曆")
-                .setSubtitle(if (requireTwoSteps) "請感應您的第一枚指紋" else "請驗證指紋以開啟隱私空間")
-                .setDescription("隱私行程採 AES-256 獨立加密，未解鎖時不會顯示於月曆或桌面小工具")
-                .setNegativeButtonText("使用隱私密碼")
+                .setTitle("指紋驗證")
+                .setSubtitle("請使用指紋驗證")
+                .setNegativeButtonText("使用密碼")
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
                 )
@@ -85,7 +84,7 @@ object DualBiometricHelper {
 
             prompt1.authenticate(info1)
         }.onFailure {
-            onFallbackToPin("生物辨識暫時無法啟動，請使用隱私 PIN 碼驗證")
+            onFallbackToPin("生物辨識暫時無法啟動，請使用密碼驗證")
         }
     }
 
@@ -106,11 +105,11 @@ object DualBiometricHelper {
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 super.onAuthenticationError(errorCode, errString)
                 if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON) {
-                    onFallbackToPin("第一道指紋已通過，請輸入隱私密碼完成第二道驗證")
+                    onFallbackToPin("請輸入密碼完成驗證")
                 } else if (errorCode != BiometricPrompt.ERROR_USER_CANCELED &&
                     errorCode != BiometricPrompt.ERROR_CANCELED
                 ) {
-                    onErrorMessage("第二道指紋驗證未通過：$errString")
+                    onErrorMessage("指紋驗證未通過：$errString")
                 }
             }
         }
@@ -118,10 +117,9 @@ object DualBiometricHelper {
         runCatching {
             val prompt2 = BiometricPrompt(activity, executor, stage2Callback)
             val info2 = BiometricPrompt.PromptInfo.Builder()
-                .setTitle("隱私日曆解鎖 — 第二道指紋 (2/2)")
-                .setSubtitle("第一道驗證成功！請感應第二枚指紋完成雙重解鎖")
-                .setDescription("雙指紋鎖防護機制：防止單指誤觸或非本人解鎖")
-                .setNegativeButtonText("改用隱私密碼確認")
+                .setTitle("指紋驗證")
+                .setSubtitle("請再次使用指紋驗證")
+                .setNegativeButtonText("使用密碼")
                 .setAllowedAuthenticators(
                     BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.BIOMETRIC_WEAK
                 )
@@ -129,7 +127,7 @@ object DualBiometricHelper {
 
             prompt2.authenticate(info2)
         }.onFailure {
-            onFallbackToPin("請輸入隱私密碼完成第二道驗證")
+            onFallbackToPin("請輸入密碼完成驗證")
         }
     }
 }

@@ -3,7 +3,10 @@ package com.dx.calendar
 import android.Manifest
 import android.accounts.AccountManager
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -33,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: CalendarViewModel by viewModels()
     private var hasCalPerm by mutableStateOf(false)
     private var awaitingUnknownSourcesApkPath: String? = null
+    private var screenOffReceiver: BroadcastReceiver? = null
 
     private val calendarPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -118,6 +122,19 @@ class MainActivity : AppCompatActivity() {
 
         handleWidgetIntent(intent)
         DynamicAppIconManager.scheduleMidnightRefresh(this)
+
+        // 監聽螢幕關閉：只要關閉螢幕，立刻重新隱藏隱私日曆內容
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
+                if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                    viewModel.setPrivacyUnlocked(false)
+                }
+            }
+        }
+        screenOffReceiver = receiver
+        runCatching {
+            registerReceiver(receiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        }
 
         setContent {
             val pendingApkPath by viewModel.pendingInstallApkPath.collectAsState()
@@ -292,5 +309,14 @@ class MainActivity : AppCompatActivity() {
                 viewModel.syncDynamicAppIconNow()
             }
         }
+    }
+
+    override fun onDestroy() {
+        viewModel.setPrivacyUnlocked(false)
+        screenOffReceiver?.let { r ->
+            runCatching { unregisterReceiver(r) }
+        }
+        screenOffReceiver = null
+        super.onDestroy()
     }
 }

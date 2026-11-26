@@ -203,7 +203,9 @@ class CalendarRepository(private val context: Context) {
                 val reminders = parseIntList(task.reminderMinutesJson)
                 val timeOfDay = task.dueMinuteOfDay?.let { LocalTime.of((it / 60).coerceIn(0, 23), (it % 60).coerceIn(0, 59)) }
 
-                val baseDueDate = task.dueEpochDay?.let { LocalDate.ofEpochDay(it) } ?: continue
+                // 若 Google Tasks 未設定到期日，未完成項目預設呈現在「今天」，確保所有 Google Tasks 均能於日曆中看見
+                val baseDueDate = task.dueEpochDay?.let { LocalDate.ofEpochDay(it) }
+                    ?: if (!task.isCompleted) LocalDate.now(zone) else continue
                 if (recType == RecurrenceType.NONE) {
                     if (!settings.showCompletedTasks && task.isCompleted) continue
                     if (!baseDueDate.isBefore(rangeStart) && !baseDueDate.isAfter(rangeEnd)) {

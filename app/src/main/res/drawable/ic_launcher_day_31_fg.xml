@@ -4,30 +4,32 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- 金色外框日曆卡片（隨系統自動切換金白／金黑） -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M28,24h52c4.4,0 8,3.6 8,8v48c0,4.4 -3.6,8 -8,8H28c-4.4,0 -8,-3.6 -8,-8V32C20,27.6 23.6,24 28,24z" />
+        android:fillColor="@color/dx_icon_card_fill"
+        android:strokeColor="@color/dx_icon_gold_primary"
+        android:strokeWidth="2.8"
+        android:pathData="M29,25h50c4.8,0 8.5,3.7 8.5,8.5v45c0,4.8 -3.7,8.5 -8.5,8.5H29c-4.8,0 -8.5,-3.7 -8.5,-8.5v-45C20.5,28.7 24.2,25 29,25z" />
+    <!-- 頂部金色眉條 -->
     <path
-        android:fillColor="#FF5238"
-        android:pathData="M28,24h52c4.4,0 8,3.6 8,8v11H20V32C20,27.6 23.6,24 28,24z" />
+        android:fillColor="@color/dx_icon_gold_header"
+        android:pathData="M29,25h50c4.8,0 8.5,3.7 8.5,8.5v8.5H20.5v-8.5C20.5,28.7 24.2,25 29,25z" />
+    <!-- 頂部雙金屬環扣 -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M38,33.5m-2.6,0a2.6,2.6 0,1 1,5.2 0a2.6,2.6 0,1 1,-5.2 0" />
+        android:fillColor="@color/dx_icon_gold_deep"
+        android:pathData="M36,20.5c1.5,0 2.7,1.2 2.7,2.7v6.2c0,1.5 -1.2,2.7 -2.7,2.7s-2.7,-1.2 -2.7,-2.7v-6.2C33.3,21.7 34.5,20.5 36,20.5z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M70,33.5m-2.6,0a2.6,2.6 0,1 1,5.2 0a2.6,2.6 0,1 1,-5.2 0" />
+        android:fillColor="@color/dx_icon_gold_deep"
+        android:pathData="M72,20.5c1.5,0 2.7,1.2 2.7,2.7v6.2c0,1.5 -1.2,2.7 -2.7,2.7s-2.7,-1.2 -2.7,-2.7v-6.2C69.3,21.7 70.5,20.5 72,20.5z" />
+    <!-- 內層金色分隔細線 -->
+    <path
+        android:strokeColor="@color/dx_icon_gold_ring"
+        android:strokeWidth="1.2"
+        android:pathData="M27,46.5h54" />
     <group android:translateX="33.5" android:translateY="51.0" android:scaleX="0.92" android:scaleY="0.92">
         <path
             android:pathData="M4.5,5.5 C5.5,2.5 7.5,1 10.5,1 C14,1 16.5,3.2 16.5,6.8 C16.5,10 14,12.5 10.5,13 C14.5,13.5 17,16 17,20 C17,24.2 14,27 10,27 C7,27 5,25.5 4,22.5"
-            android:strokeColor="#16161B"
-            android:strokeWidth="4.3"
-            android:strokeLineCap="round"
-            android:strokeLineJoin="round" />
-    </group>
-    <group android:translateX="55.0" android:translateY="51.0" android:scaleX="0.92" android:scaleY="0.92">
-        <path
-            android:pathData="M6,6 L11,1.5 L11,26.5 M6,26.5 L16,26.5"
-            android:strokeColor="#16161B"
+            android:strokeColor="@color/dx_icon_digit"
             android:strokeWidth="4.3"
             android:strokeLineCap="round"
             android:strokeLineJoin="round" />

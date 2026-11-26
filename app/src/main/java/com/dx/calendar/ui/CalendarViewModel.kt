@@ -167,6 +167,11 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private val _pendingGoogleTasksConsentIntent = MutableStateFlow<Intent?>(null)
     val pendingGoogleTasksConsentIntent: StateFlow<Intent?> = _pendingGoogleTasksConsentIntent.asStateFlow()
 
+    private val _weatherByDate = MutableStateFlow<Map<LocalDate, com.dx.calendar.data.weather.DailyWeatherInfo>>(
+        com.dx.calendar.data.weather.WeatherForecastManager.loadCachedForecast(app)
+    )
+    val weatherByDate: StateFlow<Map<LocalDate, com.dx.calendar.data.weather.DailyWeatherInfo>> = _weatherByDate.asStateFlow()
+
     private val _refreshTick = MutableStateFlow(0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -219,6 +224,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
             val initSettings = repo.prefs.settingsFlow.first()
+            refreshWeatherForecast(initSettings.effectiveZoneId)
             if (initSettings.googleAccountEmail.isNotBlank()) {
                 autoSyncGoogleTasksSilently(initSettings.googleAccountEmail)
             }
@@ -228,11 +234,26 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun refreshWeatherForecast(zone: ZoneId = settings.value.effectiveZoneId, force: Boolean = false) {
+        viewModelScope.launch {
+            val map = com.dx.calendar.data.weather.WeatherForecastManager.fetchSevenDayForecast(
+                context = getApplication(),
+                zone = zone,
+                forceRefresh = force
+            )
+            if (map.isNotEmpty()) {
+                _weatherByDate.value = map
+            }
+        }
+    }
+
     fun onAppForegroundResumed() {
         refreshSystemCalendars()
         registerSystemCalendarObserverIfPermitted()
         viewModelScope.launch {
-            val email = repo.prefs.getSettingsOnce().googleAccountEmail
+            val s = repo.prefs.getSettingsOnce()
+            refreshWeatherForecast(s.effectiveZoneId)
+            val email = s.googleAccountEmail
             if (email.isNotBlank() && System.currentTimeMillis() - lastAutoTasksSyncMillis >= 120_000L) {
                 autoSyncGoogleTasksSilently(email)
             }
@@ -246,6 +267,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         val res = googleTasksSync.syncWithGoogleAccount(email)
         _isSyncingTasks.value = false
         res.onSuccess {
+            _refreshTick.value += 1
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
         }
     }
@@ -855,7 +877,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             val res = googleTasksSync.syncWithGoogleAccount(email)
             _isSyncingTasks.value = false
             res.onSuccess { cnt ->
-                toast("Google Tasks 已自動同步完成（共 $cnt 項任務，後續開啟 App 將自動同步）")
+                _refreshTick.value += 1
+                toast("Google Tasks 已自動同步完成（共 $cnt 項任務，無日期項目將預設顯示於今日）")
                 WidgetRefreshHelper.refreshAllWidgets(getApplication())
             }.onFailure { err ->
                 if (err is GoogleTasksConsentRequiredException) {

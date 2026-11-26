@@ -1,6 +1,14 @@
 package com.dx.calendar.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import com.dx.calendar.data.weather.DailyWeatherInfo
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,23 +86,40 @@ fun RightDetailPanel(
     onToggleComplete: (UnifiedCalendarItem) -> Unit,
     onHideExternalToRoutine: (UnifiedCalendarItem) -> Unit,
     showCloseDayHeaderButton: Boolean = false,
-    onCloseDayPanel: (() -> Unit)? = null
+    onCloseDayPanel: (() -> Unit)? = null,
+    dayWeather: DailyWeatherInfo? = null
 ) {
     val tokens = LocalBrandTokens.current
 
-    if (focusedItem != null) {
-        FocusedItemDetailCard(
-            item = focusedItem,
-            onBack = onClearFocusedItem,
-            onEdit = { onEditItem(focusedItem) },
-            onDelete = { onDeleteItem(focusedItem) },
-            onShare = { onShareItem(focusedItem) },
-            onHideExternalToRoutine = { onHideExternalToRoutine(focusedItem) }
-        )
-        return
-    }
+    AnimatedContent(
+        targetState = focusedItem,
+        transitionSpec = {
+            val scaleSpec = spring<Float>(dampingRatio = 0.68f, stiffness = 440f)
+            if (targetState != null) {
+                (scaleIn(scaleSpec, initialScale = 0.90f) + fadeIn()).togetherWith(
+                    scaleOut(targetScale = 0.95f) + fadeOut()
+                )
+            } else {
+                (scaleIn(scaleSpec, initialScale = 0.94f) + fadeIn()).togetherWith(
+                    scaleOut(targetScale = 0.92f) + fadeOut()
+                )
+            }
+        },
+        label = "rightDetailPanelTransition"
+    ) { activeFocused ->
+        if (activeFocused != null) {
+            FocusedItemDetailCard(
+                item = activeFocused,
+                onBack = onClearFocusedItem,
+                onEdit = { onEditItem(activeFocused) },
+                onDelete = { onDeleteItem(activeFocused) },
+                onShare = { onShareItem(activeFocused) },
+                onHideExternalToRoutine = { onHideExternalToRoutine(activeFocused) }
+            )
+            return@AnimatedContent
+        }
 
-    val lunar = remember(selectedDate) { LunarCalendarEngine.getLunarInfo(selectedDate) }
+        val lunar = remember(selectedDate) { LunarCalendarEngine.getLunarInfo(selectedDate) }
     val diffDays = ChronoUnit.DAYS.between(today, selectedDate).toInt()
     val relativeLabel = when {
         diffDays == 0 -> "今天"
@@ -149,7 +174,7 @@ fun RightDetailPanel(
         }
 
         Text(
-            text = lunar.fullGanZhiHeader,
+            text = lunar.fullGanZhiHeader + (dayWeather?.let { "  ·  ${it.icon} ${it.label} ${it.tempMinC}°~${it.tempMaxC}°" } ?: ""),
             color = tokens.secondaryTextColor,
             fontSize = 13.sp
         )
@@ -339,6 +364,7 @@ fun RightDetailPanel(
         }
 
         Spacer(modifier = Modifier.height(84.dp))
+    }
     }
 }
 

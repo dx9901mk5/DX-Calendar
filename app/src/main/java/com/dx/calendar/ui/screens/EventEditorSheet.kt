@@ -7,11 +7,13 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -169,6 +171,7 @@ fun EventEditorScreen(
     presetRoutine: Boolean,
     presetPrivacy: Boolean,
     presetTaskMode: Boolean,
+    privacyFeatureEnabled: Boolean = false,
     allowPrivacyEditing: Boolean = false,
     routineDefaultHideFromMonth: Boolean,
     defaultEventReminders: List<Int> = listOf(0, 5),
@@ -420,13 +423,7 @@ fun EventEditorScreen(
                 }
             }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
+            val leftEditorSection: @Composable () -> Unit = {
                 // 模式快速切換：一般活動 / 待辦(Task) / 例行事務(Routine)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     listOf("一般活動", "待辦 Task", "例行事務").forEachIndexed { index, label ->
@@ -549,28 +546,30 @@ fun EventEditorScreen(
                                 }
                             }
 
-                            // 按鈕 B：不在月曆佔空間（收納至例行中心）
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (!showInMonthGrid) tokens.accentColor.copy(alpha = 0.22f) else tokens.elevatedSurfaceColor)
-                                    .border(
-                                        width = if (!showInMonthGrid) 1.5.dp else 0.dp,
-                                        color = if (!showInMonthGrid) tokens.accentColor else Color.Transparent,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .clickable {
-                                        showInMonthGrid = false
-                                        isRoutine = true
+                            // 按鈕 B：不在月曆佔空間（僅在設定內啟用隱私開關後顯示，預設隱藏）
+                            if (privacyFeatureEnabled) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (!showInMonthGrid) tokens.accentColor.copy(alpha = 0.22f) else tokens.elevatedSurfaceColor)
+                                        .border(
+                                            width = if (!showInMonthGrid) 1.5.dp else 0.dp,
+                                            color = if (!showInMonthGrid) tokens.accentColor else Color.Transparent,
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                        .clickable {
+                                            showInMonthGrid = false
+                                            isRoutine = true
+                                        }
+                                        .padding(vertical = 12.dp, horizontal = 8.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Filled.VisibilityOff, contentDescription = null, tint = if (!showInMonthGrid) tokens.accentColor else tokens.secondaryTextColor, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("不在月曆佔空間", color = tokens.primaryTextColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                     }
-                                    .padding(vertical = 12.dp, horizontal = 8.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Filled.VisibilityOff, contentDescription = null, tint = if (!showInMonthGrid) tokens.accentColor else tokens.secondaryTextColor, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("不在月曆佔空間", color = tokens.primaryTextColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -592,13 +591,15 @@ fun EventEditorScreen(
                                     selected = isPrivacy,
                                     onClick = { isPrivacy = !isPrivacy },
                                     leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                                    label = { Text("雙指紋鎖隱私加密", fontSize = 12.sp) }
+                                    label = { Text("隱私加密", fontSize = 12.sp) }
                                 )
                             }
                         }
                     }
                 }
+            }
 
+            val rightEditorSection: @Composable () -> Unit = {
                 // 區塊 4：整日活動、開始、結束（仿截圖 2）
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
@@ -1033,6 +1034,53 @@ fun EventEditorScreen(
                 }
 
                 Spacer(modifier = Modifier.height(40.dp))
+            }
+
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                val useSideBySide = maxWidth >= 600.dp
+                if (useSideBySide) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            leftEditorSection()
+                            Spacer(modifier = Modifier.height(24.dp))
+                        }
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rightEditorSection()
+                        }
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        leftEditorSection()
+                        rightEditorSection()
+                    }
+                }
             }
         }
     }

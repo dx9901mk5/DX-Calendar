@@ -1,6 +1,19 @@
 package com.dx.calendar.ui.screens
 
 import android.os.Build
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -115,13 +128,13 @@ private enum class DxSettingsSection(
     val subtitle: String,
     val icon: ImageVector
 ) {
-    ABOUT_UPDATE("GitHub 與自動更新", "GitHub 專案連結、點擊檢查更新與自動下載安裝", Icons.Filled.SystemUpdate),
     APPEARANCE("外觀主題與底圖", "金白明亮預設、金色灰黑暗色預設與跟隨系統", Icons.Filled.Palette),
     ACCOUNTS_AND_TASKS("行事曆與 Google Tasks", "行事曆顯示開關、本機類型與 Tasks 自動同步", Icons.Filled.AccountCircle),
-    ICON_AND_ISLAND("動態島圖示", "日曆通知上動態島、1–31 日期圖示", Icons.Filled.NotificationsActive),
+    ICON_AND_ISLAND("動態通知與日期圖示", "Android 16+ 國際版 Live Updates 即時動態通知與 1–31 金色日期圖示", Icons.Filled.NotificationsActive),
     CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線、透視例行與連段測試", Icons.Filled.Tune),
     IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport),
-    PRIVACY("隱私日曆設定", "預設隱藏入口；於此啟用後才顯示雙指紋隱私日曆", Icons.Filled.Lock)
+    PRIVACY("隱私日曆設定", "預設隱藏入口；於此啟用後才於月曆顯示眼睛按鈕", Icons.Filled.Lock),
+    ABOUT_UPDATE("GitHub 與自動更新", "GitHub 專案連結、點擊檢查更新與自動下載安裝", Icons.Filled.SystemUpdate)
 }
 
 /**
@@ -190,7 +203,12 @@ fun SettingsAndManageScreen(
     onCancelLiveUpdateIsland: () -> Unit
 ) {
     val tokens = LocalBrandTokens.current
-    var selectedSection by remember { mutableStateOf(DxSettingsSection.ABOUT_UPDATE) }
+    var selectedSection by remember { mutableStateOf(DxSettingsSection.APPEARANCE) }
+    val phoneExpandedMap = remember {
+        androidx.compose.runtime.mutableStateMapOf<DxSettingsSection, Boolean>().apply {
+            DxSettingsSection.entries.forEach { put(it, true) }
+        }
+    }
     val phoneListState = rememberLazyListState()
     val uiScope = rememberCoroutineScope()
     var showNewCatDialog by remember { mutableStateOf(false) }
@@ -271,8 +289,13 @@ fun SettingsAndManageScreen(
                         Button(
                             onClick = {
                                 selectedSection = DxSettingsSection.ABOUT_UPDATE
+                                phoneExpandedMap[DxSettingsSection.ABOUT_UPDATE] = true
                                 if (!isTwoPane) {
-                                    uiScope.launch { runCatching { phoneListState.animateScrollToItem(0) } }
+                                    uiScope.launch {
+                                        runCatching {
+                                            phoneListState.animateScrollToItem(DxSettingsSection.entries.lastIndex * 2)
+                                        }
+                                    }
                                 }
                                 onManualCheckUpdate()
                             },
@@ -368,27 +391,44 @@ fun SettingsAndManageScreen(
 
                         VerticalDivider(color = tokens.gridLineColor)
 
-                        // 右頁：所選分類的詳細設定頁
-                        LazyColumn(
-                            contentPadding = PaddingValues(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        // 右頁：所選分類的詳細設定頁（套用與主頁一致的 Q 彈縮放＋滑入過渡動畫）
+                        AnimatedContent(
+                            targetState = selectedSection,
+                            transitionSpec = {
+                                val forward = targetState.ordinal >= initialState.ordinal
+                                val slideSpec = spring<androidx.compose.ui.unit.IntOffset>(dampingRatio = 0.72f, stiffness = 420f)
+                                val scaleSpec = spring<Float>(dampingRatio = 0.72f, stiffness = 420f)
+                                (slideInHorizontally(slideSpec) { if (forward) it / 5 else -it / 5 } +
+                                    scaleIn(scaleSpec, initialScale = 0.94f) +
+                                    fadeIn()).togetherWith(
+                                    slideOutHorizontally { if (forward) -it / 8 else it / 8 } +
+                                        scaleOut(targetScale = 0.96f) +
+                                        fadeOut()
+                                )
+                            },
+                            label = "settingsTwoPaneTransition",
                             modifier = Modifier
                                 .weight(0.63f)
                                 .fillMaxHeight()
-                        ) {
-                            item {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(selectedSection.icon, contentDescription = null, tint = tokens.accentColor, modifier = Modifier.size(22.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Column {
-                                        Text(selectedSection.title, color = tokens.primaryTextColor, fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                                        Text(selectedSection.subtitle, color = tokens.secondaryTextColor, fontSize = 12.sp)
+                        ) { activeSection ->
+                            LazyColumn(
+                                contentPadding = PaddingValues(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                item {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(activeSection.icon, contentDescription = null, tint = tokens.accentColor, modifier = Modifier.size(22.dp))
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(activeSection.title, color = tokens.primaryTextColor, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                                            Text(activeSection.subtitle, color = tokens.secondaryTextColor, fontSize = 12.sp)
+                                        }
                                     }
                                 }
-                            }
-                            item {
-                                DxSettingsSectionContent(
-                                    section = selectedSection,
+                                item {
+                                    DxSettingsSectionContent(
+                                        section = activeSection,
                                     settings = settings,
                                     updateState = updateState,
                                     categories = categories,
@@ -444,25 +484,31 @@ fun SettingsAndManageScreen(
                                     onToggleLiveUpdateIsland = onToggleLiveUpdateIsland,
                                     onOpenLiveUpdateSettings = onOpenLiveUpdateSettings,
                                     onTestLiveUpdateIsland = onTestLiveUpdateIsland,
-                                    onCancelLiveUpdateIsland = onCancelLiveUpdateIsland
-                                )
+                                        onCancelLiveUpdateIsland = onCancelLiveUpdateIsland
+                                    )
+                                }
+                                item { Spacer(modifier = Modifier.height(36.dp)) }
                             }
-                            item { Spacer(modifier = Modifier.height(36.dp)) }
                         }
                     }
                 } else {
-                    // 手機單欄：全設定區塊由上往下垂直單頁捲動排列（無左右橫向分頁切換）
+                    // 手機單欄：全設定區塊由上往下垂直排列，點擊任一分類標頭即觸發 Q 彈展開／收合過渡動畫
                     LazyColumn(
                         state = phoneListState,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
                         DxSettingsSection.entries.forEach { sec ->
+                            val expanded = phoneExpandedMap[sec] != false
                             item(key = "hdr_${sec.name}") {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(top = 4.dp)
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { phoneExpandedMap[sec] = !expanded }
+                                        .padding(horizontal = 4.dp, vertical = 6.dp)
                                 ) {
                                     Icon(sec.icon, contentDescription = null, tint = tokens.accentColor, modifier = Modifier.size(19.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -470,13 +516,28 @@ fun SettingsAndManageScreen(
                                         text = sec.title,
                                         color = tokens.primaryTextColor,
                                         fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = if (expanded) "收合" else "展開",
+                                        color = tokens.secondaryTextColor,
+                                        fontSize = 11.sp
                                     )
                                 }
                             }
                             item(key = "body_${sec.name}") {
-                                DxSettingsSectionContent(
-                                    section = sec,
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = expanded,
+                                    enter = expandVertically(spring(dampingRatio = 0.72f, stiffness = 420f)) +
+                                        scaleIn(spring(dampingRatio = 0.72f, stiffness = 420f), initialScale = 0.95f) +
+                                        fadeIn(),
+                                    exit = shrinkVertically(spring(dampingRatio = 0.88f, stiffness = 500f)) +
+                                        scaleOut(targetScale = 0.96f) +
+                                        fadeOut()
+                                ) {
+                                    DxSettingsSectionContent(
+                                        section = sec,
                                     settings = settings,
                                     updateState = updateState,
                                     categories = categories,
@@ -531,9 +592,10 @@ fun SettingsAndManageScreen(
                                     onToggleDynamicDayIcon = onToggleDynamicDayIcon,
                                     onToggleLiveUpdateIsland = onToggleLiveUpdateIsland,
                                     onOpenLiveUpdateSettings = onOpenLiveUpdateSettings,
-                                    onTestLiveUpdateIsland = onTestLiveUpdateIsland,
-                                    onCancelLiveUpdateIsland = onCancelLiveUpdateIsland
-                                )
+                                        onTestLiveUpdateIsland = onTestLiveUpdateIsland,
+                                        onCancelLiveUpdateIsland = onCancelLiveUpdateIsland
+                                    )
+                                }
                             }
                         }
                         item { Spacer(modifier = Modifier.height(40.dp)) }

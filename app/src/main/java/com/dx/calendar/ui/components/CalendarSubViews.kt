@@ -1,7 +1,11 @@
 package com.dx.calendar.ui.components
 
 import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.graphicsLayer
+import com.dx.calendar.data.weather.DailyWeatherInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -219,6 +223,7 @@ fun MonthGridView(
     selectedDate: LocalDate,
     today: LocalDate,
     itemsByDate: Map<LocalDate, List<UnifiedCalendarItem>>,
+    weatherByDate: Map<LocalDate, DailyWeatherInfo> = emptyMap(),
     settings: UserSettings,
     maxEventsPerCell: Int,
     compactSheetProgress: Float = 0f,
@@ -235,6 +240,12 @@ fun MonthGridView(
     var dragAccumX by remember { mutableFloatStateOf(0f) }
     var dragAccumY by remember { mutableFloatStateOf(0f) }
     var lockedAxis by remember { mutableStateOf(0) } // 0=未定, 1=水平翻月, 2=垂直展開/收合時間表
+    var isHorizontalDragging by remember { mutableStateOf(false) }
+    val animatedDragX by animateFloatAsState(
+        targetValue = if (isHorizontalDragging) (dragAccumX * 0.42f).coerceIn(-180f, 180f) else 0f,
+        animationSpec = spring(dampingRatio = 0.66f, stiffness = 420f),
+        label = "samsungMonthDragX"
+    )
 
     val datesGrid = remember(yearMonth, settings.startWeekOnMonday) {
         buildSixWeekGrid(yearMonth, settings.startWeekOnMonday)
@@ -249,29 +260,33 @@ fun MonthGridView(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .graphicsLayer { translationX = animatedDragX }
             .pointerInput(yearMonth, onVerticalDragDelta != null) {
                 detectDragGestures(
                     onDragStart = {
                         dragAccumX = 0f
                         dragAccumY = 0f
                         lockedAxis = 0
+                        isHorizontalDragging = false
                     },
                     onDragEnd = {
                         if (lockedAxis == 1) {
-                            if (dragAccumX > 90f) onSwipePrevMonth()
-                            else if (dragAccumX < -90f) onSwipeNextMonth()
+                            if (dragAccumX > 80f) onSwipePrevMonth()
+                            else if (dragAccumX < -80f) onSwipeNextMonth()
                         } else if (lockedAxis == 2) {
                             onVerticalDragEnd?.invoke()
                         }
                         dragAccumX = 0f
                         dragAccumY = 0f
                         lockedAxis = 0
+                        isHorizontalDragging = false
                     },
                     onDragCancel = {
                         if (lockedAxis == 2) onVerticalDragEnd?.invoke()
                         dragAccumX = 0f
                         dragAccumY = 0f
                         lockedAxis = 0
+                        isHorizontalDragging = false
                     },
                     onDrag = { _, dragAmount ->
                         dragAccumX += dragAmount.x
@@ -283,7 +298,9 @@ fun MonthGridView(
                                 lockedAxis = if (onVerticalDragDelta != null && absY > absX * 1.15f) 2 else 1
                             }
                         }
-                        if (lockedAxis == 2) {
+                        if (lockedAxis == 1) {
+                            isHorizontalDragging = true
+                        } else if (lockedAxis == 2) {
                             onVerticalDragDelta?.invoke(dragAmount.y)
                         }
                     }
@@ -400,6 +417,7 @@ fun MonthGridView(
                             isHoliday = cellSubHighlight,
                             showGridLine = settings.showMonthGridLines,
                             compactSheetProgress = compactSheetProgress.coerceIn(0f, 1f),
+                            weather = weatherByDate[cellDate],
                             items = visibleCellItems,
                             maxVisible = maxEventsPerCell,
                             onClick = {
@@ -430,6 +448,7 @@ private fun MonthDayCell(
     isHoliday: Boolean,
     showGridLine: Boolean,
     compactSheetProgress: Float,
+    weather: DailyWeatherInfo? = null,
     items: List<UnifiedCalendarItem>,
     maxVisible: Int,
     onClick: () -> Unit,
@@ -437,6 +456,11 @@ private fun MonthDayCell(
 ) {
     val tokens = LocalBrandTokens.current
     val contentAlpha = if (isInMonth) 1f else 0.36f
+    val selectedScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.0f else 0.985f,
+        animationSpec = spring(dampingRatio = 0.58f, stiffness = 460f),
+        label = "cellSelectBounce"
+    )
     val dow = date.dayOfWeek.value
     val dayNumberColor = when {
         isToday -> tokens.accentColor
@@ -447,6 +471,10 @@ private fun MonthDayCell(
 
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = selectedScale
+                scaleY = selectedScale
+            }
             .then(
                 if (showGridLine) Modifier.border(0.5.dp, tokens.gridLineColor)
                 else Modifier.padding(1.dp)
@@ -469,6 +497,16 @@ private fun MonthDayCell(
             .padding(horizontal = 2.dp, vertical = 2.dp)
             .alpha(contentAlpha)
     ) {
+        // 當日起 7 天預設天氣預報圖示（顯示於日期格右上角）
+        if (weather != null) {
+            Text(
+                text = weather.icon,
+                fontSize = 10.sp,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 1.dp, top = 0.dp)
+            )
+        }
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = if (tokens.inlineDateAndLunar) Alignment.CenterHorizontally else Alignment.Start

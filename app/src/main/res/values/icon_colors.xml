@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 亮色主題：奢華金色白底 -->
+    <color name="dx_icon_bg">#FFFFFF</color>
+    <color name="dx_icon_card_fill">#FFFDF8</color>
+    <color name="dx_icon_gold_primary">#C8962E</color>
+    <color name="dx_icon_gold_header">#D4A23A</color>
+    <color name="dx_icon_gold_deep">#8F6516</color>
+    <color name="dx_icon_gold_ring">#F4DFAA</color>
+    <color name="dx_icon_digit">#B68320</color>
+</resources>

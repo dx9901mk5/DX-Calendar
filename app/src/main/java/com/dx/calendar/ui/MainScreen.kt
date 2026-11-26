@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -12,6 +13,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.graphicsLayer
+import com.dx.calendar.data.weather.DailyWeatherInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -152,6 +160,7 @@ fun DXCalendarRootApp(
     val isSyncingTasks by viewModel.isSyncingTasks.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     val rangeItems by viewModel.visibleRangeItems.collectAsState()
+    val weatherByDate by viewModel.weatherByDate.collectAsState()
 
     val context = LocalContext.current
     val today = remember { LocalDate.now() }
@@ -180,137 +189,15 @@ fun DXCalendarRootApp(
     ) {
         val tokens = LocalBrandTokens.current
 
-        // 全畫面覆蓋：活動/待辦/例行編輯器（系統返回鍵優先關閉編輯器回到日曆！）
-        if (editorState.isOpen) {
-            BackHandler { viewModel.closeEditor() }
-            EventEditorScreen(
-                initialDate = editorState.initialDate,
-                editingEvent = editorState.editingEvent,
-                editingTask = editorState.editingTask,
-                editingSystemEvent = editorState.editingSystemEvent,
-                editingSystemCalendarId = editorState.editingSystemCalendarId,
-                presetRoutine = editorState.presetRoutine,
-                presetPrivacy = editorState.presetPrivacy,
-                presetTaskMode = editorState.presetTaskMode,
-                allowPrivacyEditing = settings.privacyFeatureEnabled && isPrivacyUnlocked,
-                routineDefaultHideFromMonth = settings.routineDefaultHideFromMonth,
-                defaultEventReminders = settings.defaultEventReminders,
-                defaultTaskReminders = settings.defaultTaskReminders,
-                categories = categories,
-                writableSystemCalendars = systemCalendars.filter { it.isWritable },
-                defaultGoogleEmail = settings.googleAccountEmail,
-                hasCalendarPermission = hasCalendarPermission,
-                onRequestCalendarPermission = onRequestCalendarPermission,
-                titleHistory = titleHistory,
-                parseIntList = { viewModel.repo.parseIntList(it) },
-                parseDateList = { viewModel.repo.parseDateStrings(it) },
-                onCancel = { viewModel.closeEditor() },
-                onSave = { payload -> viewModel.saveFromEditor(payload) },
-                onDelete = if (editorState.editingEvent != null || editorState.editingTask != null || editorState.editingSystemEvent != null) {
-                    { viewModel.deleteEditingItem() }
-                } else null
-            )
-            return@DXCalendarTheme
-        }
-
-        // 全畫面覆蓋：DX 設定工作台（系統返回鍵優先返回上一頁日曆，不退出 App！）
-        if (isSettingsOpen) {
-            BackHandler { viewModel.openSettings(false) }
-            SettingsAndManageScreen(
-                settings = settings,
-                updateState = updateState,
-                categories = categories,
-                systemCalendars = systemCalendars,
-                hasCalendarPermission = hasCalendarPermission,
-                isSyncingTasks = isSyncingTasks,
-                onClose = { viewModel.openSettings(false) },
-                onOpenUrl = { url ->
-                    runCatching {
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    }
-                },
-                onToggleAutoCheckUpdate = { viewModel.setAutoCheckUpdate(it) },
-                onManualCheckUpdate = { viewModel.checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = false) },
-                onStartUpdateDownload = { viewModel.startUpdateDownload() },
-                onCancelUpdateDownload = { viewModel.cancelUpdateDownload() },
-                onInstallDownloadedApk = { viewModel.installDownloadedUpdate() },
-                onSelectBrand = { viewModel.setBrandStyle(it) },
-                onSelectDarkMode = { viewModel.setDarkThemeMode(it) },
-                onToggleStartMonday = { viewModel.setStartMonday(it) },
-                onSelectWeekStartMode = { viewModel.setWeekStartMode(it) },
-                onToggleShowLunar = { viewModel.setShowLunar(it) },
-                onSelectAlternateCalendar = { viewModel.setAlternateCalendarMode(it) },
-                onSelectDateInfoDisplay = { viewModel.setDateInfoDisplayMode(it) },
-                onSelectMonthViewLayout = { viewModel.setMonthViewLayoutMode(it) },
-                onSelectTimeZoneOverride = { viewModel.setTimeZoneOverrideId(it) },
-                onUpdateHolidayPrefs = { pub, trad, solar -> viewModel.setHolidayPreferences(pub, trad, solar) },
-                onUpdateDefaultEventReminders = { viewModel.setDefaultEventReminders(it) },
-                onUpdateDefaultTaskReminders = { viewModel.setDefaultTaskReminders(it) },
-                onToggleShowWeekNum = { viewModel.setShowWeekNum(it) },
-                onToggleGridLines = { viewModel.setShowGridLines(it) },
-                onTogglePeekHiddenInMonth = { viewModel.setPeekHiddenInMonth(it) },
-                onToggleRoutineMedicationFeature = { viewModel.setRoutineMedicationFeatureEnabled(it) },
-                onTogglePrivacyFeature = { enable ->
-                    if (enable) {
-                        onTriggerDualBiometric {
-                            viewModel.setPrivacyFeatureEnabled(true)
-                            android.widget.Toast.makeText(
-                                context,
-                                "🔓 雙指紋驗證通過！隱私日曆已建立，請至月曆頂欄點擊鎖頭按鈕臨時解鎖顯示",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    } else {
-                        viewModel.setPrivacyUnlocked(false)
-                        viewModel.setPrivacyFeatureEnabled(false)
-                    }
-                },
-                onToggleRequireDualFingerprint = { viewModel.setRequireDualFingerprint(true) },
-                onOpenPrivacyVault = {
-                    viewModel.openSettings(false)
-                    viewModel.setMainSection(MainSection.CALENDAR)
-                },
-                onToggleShowCompletedTasks = { viewModel.setShowCompletedTasks(it) },
-                onSyncGoogleTasks = onLaunchGoogleAccountPicker,
-                onSyncGoogleTasksForEmail = { email -> viewModel.syncGoogleTasksWithEmail(email) },
-                onAddGoogleAccount = onAddGoogleAccount,
-                onAddSystemGoogleAccount = onAddSystemGoogleAccount,
-                onRemoveGoogleAccount = { email -> viewModel.removeGoogleAccountEmail(email) },
-                onPickWallpaper = onPickWallpaperImage,
-                onClearWallpaper = { viewModel.setWallpaper("", settings.wallpaperAlpha) },
-                onChangeWallpaperAlpha = { viewModel.setWallpaper(settings.customWallpaperUri, it) },
-                onChangeWidgetAppearance = { d, o -> viewModel.setWidgetAppearance(d, o) },
-                onToggleCategoryVisible = { viewModel.toggleCategoryVisible(it) },
-                onCreateCategory = { n, c -> viewModel.createCategory(n, c) },
-                onRequestCalendarPermission = onRequestCalendarPermission,
-                onToggleSystemCalendarVisible = { id, v -> viewModel.toggleSystemCalVisible(id, v) },
-                onImportIcsFile = onPickIcsFile,
-                onImportIcsUrl = { viewModel.importIcsFromUrl(it) },
-                onExportIcsShare = {
-                    viewModel.buildShareIcsIntent()?.let {
-                        runCatching {
-                            context.startActivity(Intent.createChooser(it, "匯出分享 DX日曆 (.ics)"))
-                        }
-                    }
-                },
-                onTestMultiCallAlarmDemo = { MultiCallAlarmScheduler.triggerImmediateDemoAlarm(context) },
-                liveUpdateStatus = com.dx.calendar.alarm.LiveUpdateIslandHelper.getStatus(context),
-                onToggleDynamicDayIcon = { viewModel.setDynamicDayIconEnabled(it) },
-                onToggleLiveUpdateIsland = { viewModel.setLiveUpdateIslandEnabled(it) },
-                onOpenLiveUpdateSettings = { com.dx.calendar.alarm.LiveUpdateIslandHelper.openPromotionSettings(context) },
-                onTestLiveUpdateIsland = { viewModel.triggerLiveUpdateIslandDemo() },
-                onCancelLiveUpdateIsland = { viewModel.cancelLiveUpdateIslandDemo() }
-            )
-            return@DXCalendarTheme
-        }
-
-        // 主畫面階層式返回鍵邏輯：浮動時間軸彈窗 → 詳情面板 → 收合手機時間表 → 返回日曆分頁 → 返回月檢視 → 最後才退出 App
+        // 主畫面階層式返回鍵邏輯：編輯器 → 設定頁 → 浮動時間軸彈窗 → 詳情面板 → 收合手機時間表 → 返回日曆分頁 → 返回月檢視
         BackHandler(
-            enabled = floatingTimelinePopupDate != null ||
-                focusedItem != null ||
-                showCompactBottomDayPanel ||
-                mainSection != MainSection.CALENDAR ||
-                viewMode != CalendarViewMode.MONTH
+            enabled = !editorState.isOpen &&
+                !isSettingsOpen &&
+                (floatingTimelinePopupDate != null ||
+                    focusedItem != null ||
+                    showCompactBottomDayPanel ||
+                    mainSection != MainSection.CALENDAR ||
+                    viewMode != CalendarViewMode.MONTH)
         ) {
             when {
                 floatingTimelinePopupDate != null -> floatingTimelinePopupDate = null
@@ -327,7 +214,8 @@ fun DXCalendarRootApp(
         val itemsByDate = remember(rangeItems) { rangeItems.groupBy { it.date } }
         val selectedDayItems = itemsByDate[selectedDate] ?: emptyList()
 
-        // 響應式主容器（適配手機、8吋平板、10吋平板、Pixelbook 桌面與小視窗）
+        Box(modifier = Modifier.fillMaxSize()) {
+        // 響應式主容器（適配手機、8吋平板、10吋平板、Pixelbook 桌面與小視窗；不巢狀 BoxWithConstraints）
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
@@ -407,15 +295,20 @@ fun DXCalendarRootApp(
                             viewModel.setPrivacyUnlocked(false)
                             android.widget.Toast.makeText(
                                 context,
-                                "🔒 已重新上鎖，隱私日曆內容已自月曆與時間表隱藏",
+                                "已隱藏隱私內容",
                                 android.widget.Toast.LENGTH_SHORT
                             ).show()
                         } else {
+                            android.widget.Toast.makeText(
+                                context,
+                                "請使用指紋驗證",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
                             onTriggerDualBiometric {
                                 viewModel.setPrivacyUnlocked(true)
                                 android.widget.Toast.makeText(
                                     context,
-                                    "🔓 雙指紋解鎖成功！已臨時於月曆與時間表顯示隱私內容",
+                                    "已顯示隱私內容",
                                     android.widget.Toast.LENGTH_SHORT
                                 ).show()
                             }
@@ -509,6 +402,7 @@ fun DXCalendarRootApp(
                                             selectedDate = selectedDate,
                                             today = today,
                                             itemsByDate = itemsByDate,
+                                            weatherByDate = weatherByDate,
                                             allRangeItems = rangeItems,
                                             focusedItem = focusedItem,
                                             settings = settings,
@@ -551,7 +445,8 @@ fun DXCalendarRootApp(
                                                 }
                                             },
                                             onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
-                                            onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) }
+                                            onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) },
+                                            dayWeather = weatherByDate[selectedDate]
                                         )
                                     }
                                 }
@@ -568,8 +463,8 @@ fun DXCalendarRootApp(
                                 val animatedSheetProgress by animateFloatAsState(
                                     targetValue = targetProgress,
                                     animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioNoBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
+                                        dampingRatio = 0.74f,
+                                        stiffness = 400f
                                     ),
                                     label = "samsungMonthSheetProgress"
                                 )
@@ -609,6 +504,7 @@ fun DXCalendarRootApp(
                                                 selectedDate = selectedDate,
                                                 today = today,
                                                 itemsByDate = itemsByDate,
+                                                weatherByDate = weatherByDate,
                                                 allRangeItems = rangeItems,
                                                 focusedItem = focusedItem,
                                                 settings = settings,
@@ -724,7 +620,8 @@ fun DXCalendarRootApp(
                                                         viewModel.setFocusedItem(null)
                                                         showCompactBottomDayPanel = false
                                                         sheetDragFraction = 0f
-                                                    }
+                                                    },
+                                                    dayWeather = weatherByDate[selectedDate]
                                                 )
                                             }
                                         }
@@ -782,11 +679,14 @@ fun DXCalendarRootApp(
                 }
             }
 
-            // 仿三星日曆 0:18–0:20 浮動 24 小時時間軸卡片彈窗（縮放＋淡入平滑動畫）
+            // 仿三星日曆 0:18–0:20 浮動 24 小時時間軸卡片彈窗（Q 彈縮放＋淡入動畫）
             AnimatedVisibility(
                 visible = floatingTimelinePopupDate != null,
-                enter = fadeIn() + scaleIn(initialScale = 0.88f),
-                exit = fadeOut() + scaleOut(targetScale = 0.90f),
+                enter = fadeIn() + scaleIn(
+                    initialScale = 0.82f,
+                    animationSpec = spring(dampingRatio = 0.62f, stiffness = 460f)
+                ),
+                exit = fadeOut() + scaleOut(targetScale = 0.88f),
                 modifier = Modifier.fillMaxSize()
             ) {
                 floatingTimelinePopupDate?.let { popupDate ->
@@ -806,6 +706,152 @@ fun DXCalendarRootApp(
                     )
                 }
             }
+        }
+
+        // Q 彈全畫面覆蓋：DX 設定工作台
+        AnimatedVisibility(
+            visible = isSettingsOpen,
+            enter = slideInHorizontally(spring(dampingRatio = 0.74f, stiffness = 440f)) { it / 2 } +
+                scaleIn(spring(dampingRatio = 0.74f, stiffness = 440f), initialScale = 0.94f) +
+                fadeIn(),
+            exit = slideOutHorizontally(spring(dampingRatio = 0.90f, stiffness = 520f)) { it / 2 } +
+                scaleOut(targetScale = 0.96f) +
+                fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            BackHandler(enabled = isSettingsOpen && !editorState.isOpen) {
+                viewModel.openSettings(false)
+            }
+            SettingsAndManageScreen(
+                settings = settings,
+                updateState = updateState,
+                categories = categories,
+                systemCalendars = systemCalendars,
+                hasCalendarPermission = hasCalendarPermission,
+                isSyncingTasks = isSyncingTasks,
+                onClose = { viewModel.openSettings(false) },
+                onOpenUrl = { url ->
+                    runCatching {
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    }
+                },
+                onToggleAutoCheckUpdate = { viewModel.setAutoCheckUpdate(it) },
+                onManualCheckUpdate = { viewModel.checkGitHubUpdate(autoDownloadIfFound = true, showDialogIfOnMain = false) },
+                onStartUpdateDownload = { viewModel.startUpdateDownload() },
+                onCancelUpdateDownload = { viewModel.cancelUpdateDownload() },
+                onInstallDownloadedApk = { viewModel.installDownloadedUpdate() },
+                onSelectBrand = { viewModel.setBrandStyle(it) },
+                onSelectDarkMode = { viewModel.setDarkThemeMode(it) },
+                onToggleStartMonday = { viewModel.setStartMonday(it) },
+                onSelectWeekStartMode = { viewModel.setWeekStartMode(it) },
+                onToggleShowLunar = { viewModel.setShowLunar(it) },
+                onSelectAlternateCalendar = { viewModel.setAlternateCalendarMode(it) },
+                onSelectDateInfoDisplay = { viewModel.setDateInfoDisplayMode(it) },
+                onSelectMonthViewLayout = { viewModel.setMonthViewLayoutMode(it) },
+                onSelectTimeZoneOverride = { viewModel.setTimeZoneOverrideId(it) },
+                onUpdateHolidayPrefs = { pub, trad, solar -> viewModel.setHolidayPreferences(pub, trad, solar) },
+                onUpdateDefaultEventReminders = { viewModel.setDefaultEventReminders(it) },
+                onUpdateDefaultTaskReminders = { viewModel.setDefaultTaskReminders(it) },
+                onToggleShowWeekNum = { viewModel.setShowWeekNum(it) },
+                onToggleGridLines = { viewModel.setShowGridLines(it) },
+                onTogglePeekHiddenInMonth = { viewModel.setPeekHiddenInMonth(it) },
+                onToggleRoutineMedicationFeature = { viewModel.setRoutineMedicationFeatureEnabled(it) },
+                onTogglePrivacyFeature = { enable ->
+                    if (enable) {
+                        onTriggerDualBiometric {
+                            viewModel.setPrivacyFeatureEnabled(true)
+                            android.widget.Toast.makeText(
+                                context,
+                                "驗證通過！已建立隱私日曆，請至月曆頂欄點擊眼睛按鈕檢視",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } else {
+                        viewModel.setPrivacyUnlocked(false)
+                        viewModel.setPrivacyFeatureEnabled(false)
+                    }
+                },
+                onToggleRequireDualFingerprint = { viewModel.setRequireDualFingerprint(true) },
+                onOpenPrivacyVault = {
+                    viewModel.openSettings(false)
+                    viewModel.setMainSection(MainSection.CALENDAR)
+                },
+                onToggleShowCompletedTasks = { viewModel.setShowCompletedTasks(it) },
+                onSyncGoogleTasks = onLaunchGoogleAccountPicker,
+                onSyncGoogleTasksForEmail = { email -> viewModel.syncGoogleTasksWithEmail(email) },
+                onAddGoogleAccount = onAddGoogleAccount,
+                onAddSystemGoogleAccount = onAddSystemGoogleAccount,
+                onRemoveGoogleAccount = { email -> viewModel.removeGoogleAccountEmail(email) },
+                onPickWallpaper = onPickWallpaperImage,
+                onClearWallpaper = { viewModel.setWallpaper("", settings.wallpaperAlpha) },
+                onChangeWallpaperAlpha = { viewModel.setWallpaper(settings.customWallpaperUri, it) },
+                onChangeWidgetAppearance = { d, o -> viewModel.setWidgetAppearance(d, o) },
+                onToggleCategoryVisible = { viewModel.toggleCategoryVisible(it) },
+                onCreateCategory = { n, c -> viewModel.createCategory(n, c) },
+                onRequestCalendarPermission = onRequestCalendarPermission,
+                onToggleSystemCalendarVisible = { id, v -> viewModel.toggleSystemCalVisible(id, v) },
+                onImportIcsFile = onPickIcsFile,
+                onImportIcsUrl = { viewModel.importIcsFromUrl(it) },
+                onExportIcsShare = {
+                    viewModel.buildShareIcsIntent()?.let {
+                        runCatching {
+                            context.startActivity(Intent.createChooser(it, "匯出分享 DX日曆 (.ics)"))
+                        }
+                    }
+                },
+                onTestMultiCallAlarmDemo = { MultiCallAlarmScheduler.triggerImmediateDemoAlarm(context) },
+                liveUpdateStatus = com.dx.calendar.alarm.LiveUpdateIslandHelper.getStatus(context),
+                onToggleDynamicDayIcon = { viewModel.setDynamicDayIconEnabled(it) },
+                onToggleLiveUpdateIsland = { viewModel.setLiveUpdateIslandEnabled(it) },
+                onOpenLiveUpdateSettings = { com.dx.calendar.alarm.LiveUpdateIslandHelper.openPromotionSettings(context) },
+                onTestLiveUpdateIsland = { viewModel.triggerLiveUpdateIslandDemo() },
+                onCancelLiveUpdateIsland = { viewModel.cancelLiveUpdateIslandDemo() }
+            )
+        }
+
+        // Q 彈全畫面覆蓋：活動／待辦／例行編輯器
+        AnimatedVisibility(
+            visible = editorState.isOpen,
+            enter = slideInVertically(spring(dampingRatio = 0.70f, stiffness = 420f)) { it / 2 } +
+                scaleIn(spring(dampingRatio = 0.70f, stiffness = 420f), initialScale = 0.92f) +
+                fadeIn(),
+            exit = slideOutVertically(spring(dampingRatio = 0.90f, stiffness = 520f)) { it / 2 } +
+                scaleOut(targetScale = 0.94f) +
+                fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            BackHandler(enabled = editorState.isOpen) {
+                viewModel.closeEditor()
+            }
+            EventEditorScreen(
+                initialDate = editorState.initialDate,
+                editingEvent = editorState.editingEvent,
+                editingTask = editorState.editingTask,
+                editingSystemEvent = editorState.editingSystemEvent,
+                editingSystemCalendarId = editorState.editingSystemCalendarId,
+                presetRoutine = editorState.presetRoutine,
+                presetPrivacy = editorState.presetPrivacy,
+                presetTaskMode = editorState.presetTaskMode,
+                privacyFeatureEnabled = settings.privacyFeatureEnabled,
+                allowPrivacyEditing = settings.privacyFeatureEnabled && isPrivacyUnlocked,
+                routineDefaultHideFromMonth = settings.routineDefaultHideFromMonth,
+                defaultEventReminders = settings.defaultEventReminders,
+                defaultTaskReminders = settings.defaultTaskReminders,
+                categories = categories,
+                writableSystemCalendars = systemCalendars.filter { it.isWritable },
+                defaultGoogleEmail = settings.googleAccountEmail,
+                hasCalendarPermission = hasCalendarPermission,
+                onRequestCalendarPermission = onRequestCalendarPermission,
+                titleHistory = titleHistory,
+                parseIntList = { viewModel.repo.parseIntList(it) },
+                parseDateList = { viewModel.repo.parseDateStrings(it) },
+                onCancel = { viewModel.closeEditor() },
+                onSave = { payload -> viewModel.saveFromEditor(payload) },
+                onDelete = if (editorState.editingEvent != null || editorState.editingTask != null || editorState.editingSystemEvent != null) {
+                    { viewModel.deleteEditingItem() }
+                } else null
+            )
+        }
         }
 
         // === 搜尋對話框 ===
@@ -1110,13 +1156,41 @@ private fun AdaptiveTopHeaderBar(
                 Spacer(modifier = Modifier.weight(1f))
             }
 
-            // 唯有在設定頁通過雙指紋建立隱私日曆後，才於月曆頂欄顯示專屬鎖頭按鈕（點擊雙指紋臨時解鎖／再次點擊上鎖）
+            // 唯有在設定頁建立隱私日曆後，才於月曆頂欄顯示「眼睛」按鈕（點擊閃爍並提示使用指紋，不透露雙指紋機制）
             if (privacyFeatureEnabled && mainSection == MainSection.CALENDAR) {
-                IconButton(onClick = onQuickPrivacyAccess, modifier = Modifier.size(iconBtnSize)) {
+                var eyePulseStep by remember { mutableIntStateOf(0) }
+                val eyeScale by animateFloatAsState(
+                    targetValue = if (eyePulseStep % 2 == 1) 1.28f else 1.0f,
+                    animationSpec = spring(dampingRatio = 0.45f, stiffness = 500f),
+                    label = "privacyEyeScale"
+                )
+                val eyeAlpha by animateFloatAsState(
+                    targetValue = if (eyePulseStep % 2 == 1) 0.35f else 1.0f,
+                    animationSpec = spring(dampingRatio = 0.6f, stiffness = 500f),
+                    label = "privacyEyeAlpha"
+                )
+                LaunchedEffect(eyePulseStep) {
+                    if (eyePulseStep > 0 && eyePulseStep % 2 == 1) {
+                        kotlinx.coroutines.delay(140L)
+                        eyePulseStep += 1
+                    }
+                }
+                IconButton(
+                    onClick = {
+                        eyePulseStep += 1
+                        onQuickPrivacyAccess()
+                    },
+                    modifier = Modifier.size(iconBtnSize)
+                ) {
                     Icon(
-                        imageVector = if (isPrivacyUnlocked) Icons.Filled.LockOpen else Icons.Filled.Lock,
-                        contentDescription = if (isPrivacyUnlocked) "鎖定隱藏隱私日曆" else "雙指紋臨時解鎖隱私日曆",
-                        tint = if (isPrivacyUnlocked) tokens.accentColor else tokens.secondaryTextColor
+                        imageVector = if (isPrivacyUnlocked) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = if (isPrivacyUnlocked) "隱藏隱私日曆" else "使用指紋檢視隱私日曆",
+                        tint = if (isPrivacyUnlocked) tokens.accentColor else tokens.secondaryTextColor,
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = eyeScale
+                            scaleY = eyeScale
+                            alpha = eyeAlpha
+                        }
                     )
                 }
             }
@@ -1174,9 +1248,18 @@ private fun ViewModeSegmentedPill(
     ) {
         CalendarViewMode.entries.forEach { mode ->
             val selected = current == mode
+            val pillScale by animateFloatAsState(
+                targetValue = if (selected) 1.0f else 0.94f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 460f),
+                label = "viewModePillScale_${mode.name}"
+            )
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = pillScale
+                        scaleY = pillScale
+                    }
                     .clip(RoundedCornerShape(15.dp))
                     .background(if (selected) tokens.elevatedSurfaceColor else Color.Transparent)
                     .clickable { onSelect(mode) }
@@ -1200,6 +1283,7 @@ private fun CalendarPrimaryViewport(
     selectedDate: LocalDate,
     today: LocalDate,
     itemsByDate: Map<LocalDate, List<com.dx.calendar.data.repository.UnifiedCalendarItem>>,
+    weatherByDate: Map<LocalDate, DailyWeatherInfo> = emptyMap(),
     allRangeItems: List<com.dx.calendar.data.repository.UnifiedCalendarItem>,
     focusedItem: com.dx.calendar.data.repository.UnifiedCalendarItem?,
     settings: com.dx.calendar.data.local.UserSettings,
@@ -1217,59 +1301,102 @@ private fun CalendarPrimaryViewport(
     onVerticalDragEnd: (() -> Unit)? = null,
     onToggleComplete: (com.dx.calendar.data.repository.UnifiedCalendarItem) -> Unit
 ) {
-    when (viewMode) {
-        CalendarViewMode.YEAR -> YearGridView(
-            year = currentYm.year,
-            today = today,
-            startWeekOnMonday = settings.startWeekOnMonday,
-            columns = yearColumns,
-            onSelectMonth = onSelectMonthFromYear
-        )
+    AnimatedContent(
+        targetState = viewMode,
+        transitionSpec = {
+            val zoomingIn = targetState.ordinal > initialState.ordinal
+            val bounceSpec = spring<Float>(dampingRatio = 0.72f, stiffness = 420f)
+            if (zoomingIn) {
+                (scaleIn(bounceSpec, initialScale = 0.88f) + fadeIn()).togetherWith(
+                    scaleOut(targetScale = 1.08f) + fadeOut()
+                )
+            } else {
+                (scaleIn(bounceSpec, initialScale = 1.12f) + fadeIn()).togetherWith(
+                    scaleOut(targetScale = 0.88f) + fadeOut()
+                )
+            }
+        },
+        label = "calendarViewModeZoomTransition"
+    ) { activeMode ->
+        when (activeMode) {
+            CalendarViewMode.YEAR -> AnimatedContent(
+                targetState = currentYm.year,
+                transitionSpec = {
+                    val forward = targetState >= initialState
+                    val slideSpec = spring<androidx.compose.ui.unit.IntOffset>(dampingRatio = 0.74f, stiffness = 420f)
+                    (slideInHorizontally(slideSpec) { if (forward) it / 3 else -it / 3 } + fadeIn()).togetherWith(
+                        slideOutHorizontally { if (forward) -it / 4 else it / 4 } + fadeOut()
+                    )
+                },
+                label = "yearSlideTransition"
+            ) { animYear ->
+                YearGridView(
+                    year = animYear,
+                    today = today,
+                    startWeekOnMonday = settings.startWeekOnMonday,
+                    columns = yearColumns,
+                    onSelectMonth = onSelectMonthFromYear
+                )
+            }
 
-        CalendarViewMode.MONTH -> MonthGridView(
-            yearMonth = currentYm,
-            selectedDate = selectedDate,
-            today = today,
-            itemsByDate = itemsByDate,
-            settings = settings,
-            maxEventsPerCell = maxEventsInCell,
-            compactSheetProgress = compactSheetProgress,
-            hideLunarForCompactHeight = hideLunarForCompactHeight,
-            onSelectDate = onSelectDate,
-            onTapAlreadySelectedDate = onTapAlreadySelectedDate,
-            onSwipePrevMonth = onSwipePrevMonth,
-            onSwipeNextMonth = onSwipeNextMonth,
-            onVerticalDragDelta = onVerticalDragDelta,
-            onVerticalDragEnd = onVerticalDragEnd,
-            onToggleTaskQuick = onToggleComplete
-        )
+            CalendarViewMode.MONTH -> AnimatedContent(
+                targetState = currentYm,
+                transitionSpec = {
+                    val forward = !targetState.isBefore(initialState)
+                    val slideSpec = spring<androidx.compose.ui.unit.IntOffset>(dampingRatio = 0.74f, stiffness = 420f)
+                    (slideInHorizontally(slideSpec) { if (forward) it / 2 else -it / 2 } + fadeIn()).togetherWith(
+                        slideOutHorizontally { if (forward) -it / 3 else it / 3 } + fadeOut()
+                    )
+                },
+                label = "monthSlideTransition"
+            ) { animYm ->
+                MonthGridView(
+                    yearMonth = animYm,
+                    selectedDate = selectedDate,
+                    today = today,
+                    itemsByDate = itemsByDate,
+                    weatherByDate = weatherByDate,
+                    settings = settings,
+                    maxEventsPerCell = maxEventsInCell,
+                    compactSheetProgress = compactSheetProgress,
+                    hideLunarForCompactHeight = hideLunarForCompactHeight,
+                    onSelectDate = onSelectDate,
+                    onTapAlreadySelectedDate = onTapAlreadySelectedDate,
+                    onSwipePrevMonth = onSwipePrevMonth,
+                    onSwipeNextMonth = onSwipeNextMonth,
+                    onVerticalDragDelta = onVerticalDragDelta,
+                    onVerticalDragEnd = onVerticalDragEnd,
+                    onToggleTaskQuick = onToggleComplete
+                )
+            }
 
-        CalendarViewMode.WEEK -> WeekOrDayTimelineView(
-            isSingleDay = false,
-            selectedDate = selectedDate,
-            today = today,
-            startWeekOnMonday = settings.startWeekOnMonday,
-            itemsByDate = itemsByDate,
-            onSelectDate = onSelectDate,
-            onSelectItem = onSelectItem
-        )
+            CalendarViewMode.WEEK -> WeekOrDayTimelineView(
+                isSingleDay = false,
+                selectedDate = selectedDate,
+                today = today,
+                startWeekOnMonday = settings.startWeekOnMonday,
+                itemsByDate = itemsByDate,
+                onSelectDate = onSelectDate,
+                onSelectItem = onSelectItem
+            )
 
-        CalendarViewMode.DAY -> WeekOrDayTimelineView(
-            isSingleDay = true,
-            selectedDate = selectedDate,
-            today = today,
-            startWeekOnMonday = settings.startWeekOnMonday,
-            itemsByDate = itemsByDate,
-            onSelectDate = onSelectDate,
-            onSelectItem = onSelectItem
-        )
+            CalendarViewMode.DAY -> WeekOrDayTimelineView(
+                isSingleDay = true,
+                selectedDate = selectedDate,
+                today = today,
+                startWeekOnMonday = settings.startWeekOnMonday,
+                itemsByDate = itemsByDate,
+                onSelectDate = onSelectDate,
+                onSelectItem = onSelectItem
+            )
 
-        CalendarViewMode.AGENDA -> AgendaScheduleListView(
-            items = allRangeItems,
-            selectedItem = focusedItem,
-            onSelectItem = onSelectItem,
-            onToggleTaskComplete = onToggleComplete
-        )
+            CalendarViewMode.AGENDA -> AgendaScheduleListView(
+                items = allRangeItems,
+                selectedItem = focusedItem,
+                onSelectItem = onSelectItem,
+                onToggleTaskComplete = onToggleComplete
+            )
+        }
     }
 }
 
