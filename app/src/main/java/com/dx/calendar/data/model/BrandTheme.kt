@@ -7,36 +7,43 @@ enum class BrandStyle(
     val secondaryHex: Long,
     val cardCornerDp: Int
 ) {
+    GOLD_WHITE(
+        displayName = "金白風格 (預設)",
+        subtitle = "預設基底：純淨珍珠白底、18K 香檳曜金點綴與溫潤懸浮卡片",
+        primaryHex = 0xFFC6922C,
+        secondaryHex = 0xFFE0B458,
+        cardCornerDp = 22
+    ),
     VIVO(
-        displayName = "類 vivo 風格",
-        subtitle = "預設基底：黑紅橘雙色年標、懸浮雙膠囊與東方節氣美學",
+        displayName = "仿V 風格",
+        subtitle = "雙色年標、懸浮雙膠囊與東方節氣美學",
         primaryHex = 0xFFFF5238,
         secondaryHex = 0xFFFF8A65,
         cardCornerDp = 22
     ),
     OPPO(
-        displayName = "類 OPPO 風格",
+        displayName = "仿O 風格",
         subtitle = "水生美學：舒緩翡翠青綠、輕盈留白與溫潤圓角",
         primaryHex = 0xFF00B884,
         secondaryHex = 0xFF2EC4B6,
         cardCornerDp = 20
     ),
     XIAOMI(
-        displayName = "類小米風格",
-        subtitle = "澎湃科技藍、純淨幾何排版與精準資訊流",
+        displayName = "仿M 風格",
+        subtitle = "科技湛藍、純淨幾何排版與精準資訊流",
         primaryHex = 0xFF0D84FF,
         secondaryHex = 0xFF53A8FF,
         cardCornerDp = 18
     ),
     GOOGLE(
-        displayName = "類 Google 風格",
-        subtitle = "Material You：滿版高密度網格、多彩膠囊與 Tasks 融合",
+        displayName = "仿G 風格",
+        subtitle = "滿版高密度網格、多彩膠囊與待辦事項融合",
         primaryHex = 0xFF1A73E8,
         secondaryHex = 0xFF8AB4F8,
         cardCornerDp = 14
     ),
     SAMSUNG(
-        displayName = "類三星風格",
+        displayName = "仿S 風格",
         subtitle = "單手友善：大圓角分組區塊、沉穩靛藍與週末紅藍雙色",
         primaryHex = 0xFF3E69FF,
         secondaryHex = 0xFF6F8EFF,
@@ -45,8 +52,8 @@ enum class BrandStyle(
 }
 
 enum class DarkThemeMode(val label: String) {
-    DARK("深色模式 (預設)"),
-    LIGHT("淺色模式"),
+    LIGHT("淺色白底 (預設)"),
+    DARK("深色模式"),
     SYSTEM("跟隨系統")
 }
 

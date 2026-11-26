@@ -20,8 +20,8 @@ import java.security.MessageDigest
 private val Context.dataStore by preferencesDataStore(name = "dx_calendar_prefs")
 
 data class UserSettings(
-    val brandStyle: BrandStyle = BrandStyle.VIVO,
-    val darkThemeMode: DarkThemeMode = DarkThemeMode.DARK,
+    val brandStyle: BrandStyle = BrandStyle.GOLD_WHITE,
+    val darkThemeMode: DarkThemeMode = DarkThemeMode.LIGHT,
     val startWeekOnMonday: Boolean = false,
     val showLunar: Boolean = true,
     val showWeekNumber: Boolean = false,
@@ -36,8 +36,8 @@ data class UserSettings(
     val privacyPinHash: String = "",
     val googleAccountEmail: String = "",
     val hiddenSystemCalIds: Set<String> = emptySet(),
-    val widgetDarkStyle: Boolean = true,
-    val widgetOpacity: Float = 0.85f,
+    val widgetDarkStyle: Boolean = false,
+    val widgetOpacity: Float = 0.88f,
     val autoCheckUpdate: Boolean = true,
     val dynamicDayIconEnabled: Boolean = true,
     val liveUpdateIslandEnabled: Boolean = true
@@ -57,6 +57,7 @@ class AppPreferences(context: Context) {
         private val KEY_PEEK_HIDDEN = booleanPreferencesKey("peek_hidden_in_month")
         private val KEY_ROUTINE_MED_FEATURE_ENABLED = booleanPreferencesKey("routine_med_feature_enabled")
         private val KEY_LEGACY_MED_DEMO_CLEANED = booleanPreferencesKey("legacy_med_demo_cleaned_v1")
+        private val KEY_GOLD_WHITE_DEFAULT_APPLIED = booleanPreferencesKey("gold_white_default_applied_v1")
         private val KEY_ROUTINE_DEFAULT_HIDE = booleanPreferencesKey("routine_default_hide")
         private val KEY_WALLPAPER_URI = stringPreferencesKey("wallpaper_uri")
         private val KEY_WALLPAPER_ALPHA = floatPreferencesKey("wallpaper_alpha")
@@ -82,38 +83,38 @@ class AppPreferences(context: Context) {
             if (e is IOException) emit(emptyPreferences()) else throw e
         }
         .map { prefs ->
-        val brand = runCatching {
-            BrandStyle.valueOf(prefs[KEY_BRAND_STYLE] ?: BrandStyle.VIVO.name)
-        }.getOrDefault(BrandStyle.VIVO)
+            val brand = runCatching {
+                BrandStyle.valueOf(prefs[KEY_BRAND_STYLE] ?: BrandStyle.GOLD_WHITE.name)
+            }.getOrDefault(BrandStyle.GOLD_WHITE)
 
-        val dark = runCatching {
-            DarkThemeMode.valueOf(prefs[KEY_DARK_MODE] ?: DarkThemeMode.DARK.name)
-        }.getOrDefault(DarkThemeMode.DARK)
+            val dark = runCatching {
+                DarkThemeMode.valueOf(prefs[KEY_DARK_MODE] ?: DarkThemeMode.LIGHT.name)
+            }.getOrDefault(DarkThemeMode.LIGHT)
 
-        UserSettings(
-            brandStyle = brand,
-            darkThemeMode = dark,
-            startWeekOnMonday = prefs[KEY_START_MONDAY] ?: false,
-            showLunar = prefs[KEY_SHOW_LUNAR] ?: true,
-            showWeekNumber = prefs[KEY_SHOW_WEEK_NUM] ?: false,
-            showCompletedTasks = prefs[KEY_SHOW_COMPLETED_TASKS] ?: true,
-            peekHiddenInMonth = prefs[KEY_PEEK_HIDDEN] ?: false,
-            routineMedicationFeatureEnabled = prefs[KEY_ROUTINE_MED_FEATURE_ENABLED] ?: false,
-            routineDefaultHideFromMonth = prefs[KEY_ROUTINE_DEFAULT_HIDE] ?: true,
-            customWallpaperUri = prefs[KEY_WALLPAPER_URI] ?: "",
-            wallpaperAlpha = prefs[KEY_WALLPAPER_ALPHA] ?: 0.28f,
-            showMonthGridLines = prefs[KEY_SHOW_GRID_LINES] ?: true,
-            requireDualFingerprint = prefs[KEY_DUAL_FINGERPRINT] ?: true,
-            privacyPinHash = prefs[KEY_PRIVACY_PIN_HASH] ?: "",
-            googleAccountEmail = prefs[KEY_GOOGLE_EMAIL] ?: "",
-            hiddenSystemCalIds = prefs[KEY_HIDDEN_SYS_CALS] ?: emptySet(),
-            widgetDarkStyle = prefs[KEY_WIDGET_DARK] ?: true,
-            widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.85f,
-            autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true,
-            dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: true,
-            liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true
-        )
-    }
+            UserSettings(
+                brandStyle = brand,
+                darkThemeMode = dark,
+                startWeekOnMonday = prefs[KEY_START_MONDAY] ?: false,
+                showLunar = prefs[KEY_SHOW_LUNAR] ?: true,
+                showWeekNumber = prefs[KEY_SHOW_WEEK_NUM] ?: false,
+                showCompletedTasks = prefs[KEY_SHOW_COMPLETED_TASKS] ?: true,
+                peekHiddenInMonth = prefs[KEY_PEEK_HIDDEN] ?: false,
+                routineMedicationFeatureEnabled = prefs[KEY_ROUTINE_MED_FEATURE_ENABLED] ?: false,
+                routineDefaultHideFromMonth = prefs[KEY_ROUTINE_DEFAULT_HIDE] ?: true,
+                customWallpaperUri = prefs[KEY_WALLPAPER_URI] ?: "",
+                wallpaperAlpha = prefs[KEY_WALLPAPER_ALPHA] ?: 0.28f,
+                showMonthGridLines = prefs[KEY_SHOW_GRID_LINES] ?: true,
+                requireDualFingerprint = prefs[KEY_DUAL_FINGERPRINT] ?: true,
+                privacyPinHash = prefs[KEY_PRIVACY_PIN_HASH] ?: "",
+                googleAccountEmail = prefs[KEY_GOOGLE_EMAIL] ?: "",
+                hiddenSystemCalIds = prefs[KEY_HIDDEN_SYS_CALS] ?: emptySet(),
+                widgetDarkStyle = prefs[KEY_WIDGET_DARK] ?: false,
+                widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.88f,
+                autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true,
+                dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: true,
+                liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true
+            )
+        }
 
     suspend fun getSettingsOnce(): UserSettings = settingsFlow.first()
 
@@ -158,6 +159,22 @@ class AppPreferences(context: Context) {
 
     suspend fun markLegacyMedicationDemoCleaned() {
         appContext.dataStore.edit { it[KEY_LEGACY_MED_DEMO_CLEANED] = true }
+    }
+
+    /**
+     * 升級至新版「金白風格 (預設)」時執行一次性預設套用（之後使用者仍可自由切換任意風格與深淺色）
+     */
+    suspend fun applyGoldWhiteDefaultMigrationOnce() {
+        appContext.dataStore.edit { prefs ->
+            if (prefs[KEY_GOLD_WHITE_DEFAULT_APPLIED] != true) {
+                prefs[KEY_BRAND_STYLE] = BrandStyle.GOLD_WHITE.name
+                prefs[KEY_DARK_MODE] = DarkThemeMode.LIGHT.name
+                if (prefs[KEY_WIDGET_DARK] == null) {
+                    prefs[KEY_WIDGET_DARK] = false
+                }
+                prefs[KEY_GOLD_WHITE_DEFAULT_APPLIED] = true
+            }
+        }
     }
 
     suspend fun setRoutineDefaultHideFromMonth(hide: Boolean) {

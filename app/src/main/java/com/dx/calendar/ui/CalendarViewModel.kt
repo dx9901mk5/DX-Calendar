@@ -200,6 +200,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     init {
         refreshSystemCalendars()
         viewModelScope.launch {
+            repo.prefs.applyGoldWhiteDefaultMigrationOnce()
             cleanupLegacyMedicationDemoOnce()
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
@@ -688,6 +689,9 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     // === 設定與匯入匯出操作 ===
     fun setBrandStyle(style: BrandStyle) = viewModelScope.launch {
         repo.prefs.setBrandStyle(style)
+        if (style == BrandStyle.GOLD_WHITE) {
+            repo.prefs.setDarkThemeMode(DarkThemeMode.LIGHT)
+        }
         WidgetRefreshHelper.refreshAllWidgets(getApplication())
     }
 

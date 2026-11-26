@@ -22,11 +22,11 @@
 - **🖥️ 全尺寸與自由小視窗響應式設計（Phone / 8" & 10" Tablet / Pixelbook）**
   - 自動偵測視窗實際寬高動態切換版面：**8 吋平板與摺疊機展開**採用 vivo 經典左右雙欄（左主視圖＋右農曆干支、節氣詩詞卡與活動詳情）；**10 吋大平板與 Pixelbook** 支援三欄常駐分類篩選與外接鍵盤方向鍵／翻頁快捷鍵；**手機與懸浮小視窗**（最小支援至 `300×360dp`）則提供緊湊單欄與可一鍵收合的當日行程面板。
   - 完整支援 **年、月、週、日、時間表** 五種檢視模式，內建精準 1900–2100 農曆、天干地支生肖、二十四節氣、傳統黃曆宜忌與台灣節慶假日。
-- **🎨 五大品牌主題風格（vivo 為預設基底）＋ 自訂月曆底圖**
-  - 一鍵切換 **vivo OriginOS**（黑紅橘雙色年份標題＋懸浮毛玻璃雙膠囊導覽）、**OPPO ColorOS**（水生翡翠綠）、**小米 HyperOS**（澎湃科技藍）、**Google 日曆**（Material You 滿版高密度網格）與 **Samsung One UI**（大圓角分組卡片與週末紅藍雙色）。
-  - 支援深色／淺色／跟隨系統，並可挑選**自訂月曆背景圖片與調整透明度**。
-- **🧩 四款桌面自由縮放小工具（vivo ＋ Google 雙系列）**
-  - 包含 **vivo 月曆小工具**（支援桌面直接點 `‹` `›` 切換前後月份、`今` 回當月、`＋` 快速新增）、**vivo 待辦與例行小工具**、**Google 月檢視小工具** 與 **Google 日曆時間表可捲動小工具**。
+- **🎨 六大主題視覺風格（金白風格預設）＋ 自訂月曆底圖**
+  - 預設採用 **金白風格**（純淨珍珠白底、18K 香檳曜金點綴、雙色年份標題與懸浮毛玻璃雙膠囊導覽），並可一鍵切換 **仿V 風格**、**仿O 風格**、**仿M 風格**、**仿G 風格** 與 **仿S 風格** 等共 6 款風格。
+  - 支援淺色／深色／跟隨系統，並可挑選**自訂月曆背景圖片與調整透明度**。
+- **🧩 四款桌面自由縮放小工具（支援 0%–100% 透明度與單週展開動畫）**
+  - 包含 **DX 月曆小工具 (仿V)**（支援桌面點擊任意一週平滑展開／收合當週詳細行程動畫、點 `‹` `›` 翻月、`now` 回當日、`⚙` 直調 0%–100% 透明度）、**DX 待辦與例行小工具 (仿V)**、**DX 月檢視小工具 (仿G)** 與 **DX 時間表可捲動小工具 (仿G)**。
   - 全部支援桌面水平與垂直無段自由縮放，隨格子大小自動重繪農曆與彩色行程膠囊數量。
 - **🔄 例行事務「月曆顯示獨立開關」＋「例行事務與隱藏提醒中心」**
   - 徹底解決傳統日曆（如簡單日曆）只能按整個帳號開關、或每日例行事項把月曆塞滿的痛點！建立提醒時可直接選擇 **「顯示於月曆格」** 或 **「不在月曆佔空間」**（如每日吃藥提醒不佔月曆空間，仍照常響鈴提醒）；連 Google 帳號同步進來的重複活動也能單獨將該系列隱藏收納。
@@ -61,10 +61,10 @@ Grab the latest signed APK directly from [**GitHub Releases**](https://github.co
 - **🖥️ Full-Spectrum Adaptive & Freeform Window UI (Phone / 8" & 10" Tablet / Pixelbook)**
   - Dynamically adapts to any window size: **8" tablets & unfolded foldables** feature a vivo-inspired master-detail split pane (calendar viewport on the left; Lunar stem-branch header, solar-term poetry card, almanac & event details on the right); **10" tablets & Pixelbooks** unlock a 3-pane layout with a persistent category filter rail and hardware keyboard shortcuts (`←`/`→`, `PageUp`/`PageDown`); **phones & mini floating windows** (down to `300×360dp`) use a clean single-column layout with a collapsible daily panel.
   - Supports **Year, Month, Week, Day, and Schedule (Agenda)** views with accurate 1900–2100 Lunar calendar, 24 Solar Terms, traditional Yi/Ji almanac, and regional holidays.
-- **🎨 5 Signature Brand Themes (vivo Base) + Custom Calendar Wallpaper**
-  - Switch effortlessly between **vivo OriginOS** (default base with dual-tone year header & frosted floating navigation capsules), **OPPO ColorOS** (Aquamorphic emerald), **Xiaomi HyperOS** (clean tech blue), **Google Calendar** (Material You high-density grid), and **Samsung One UI** (large rounded grouped cards & red/blue weekend accents), plus custom semi-transparent calendar background images.
-- **🧩 4 Freely Resizable Home Screen Widgets (vivo & Google Styles)**
-  - Includes **vivo Month Widget** (interactive `<` `>` month switching right on the home screen, `Today` reset & quick `+`), **vivo Tasks & Routines Widget**, **Google Month Grid Widget**, and **Google Scrollable Schedule Widget**.
+- **🎨 6 Signature Visual Themes (Gold-White Default) + Custom Calendar Wallpaper**
+  - Defaults to **Gold & White** (pearl white surfaces, 18K champagne gold accents, dual-tone year header & frosted floating navigation capsules), plus one-tap switching across **V-Style**, **O-Style**, **M-Style**, **G-Style**, and **S-Style** themes, alongside custom semi-transparent calendar background images.
+- **🧩 4 Freely Resizable Home Screen Widgets (0%–100% Opacity & Week-Expand Animation)**
+  - Includes **DX Month Widget (V-Style)** (interactive tap-to-expand week accordion animation, `<` `>` month switching, `now` reset, and `⚙` 0%–100% live opacity popup), **DX Tasks & Routines Widget (V-Style)**, **DX Month Grid Widget (G-Style)**, and **DX Scrollable Schedule Widget (G-Style)**.
   - Every widget supports smooth `horizontal|vertical` resizing from compact `2×2` tiles up to full-screen tablet/desktop dashboards.
 - **🔄 Per-Reminder Month Visibility Toggle & Centralized Routine Hub**
   - Say goodbye to cluttered month grids or apps that only let you hide entire accounts! Choose per item whether to **Show on Month Grid** or **Keep Hidden from Grid (Alert Only)**—ideal for daily medication or recurring chores, and even works as an override for synced Google Calendar series.

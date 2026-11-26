@@ -388,7 +388,7 @@ fun EventEditorScreen(
                             .clickable { showCategoryDialog = true }
                             .padding(horizontal = 16.dp, vertical = 15.dp)
                     ) {
-                        Text("日曆 / 類型", color = tokens.primaryTextColor, fontSize = 15.sp)
+                        Text("行事曆", color = tokens.primaryTextColor, fontSize = 15.sp)
                         val taskCat = categories.find { it.isTaskCategory }
                         val currentCat = if (entryMode == 1 && taskCat != null) taskCat else categories.find { it.id == categoryId }
                         val sysCal = if (entryMode == 1) null else writableSystemCalendars.find { it.id == selectedSystemCalId }
@@ -403,8 +403,7 @@ fun EventEditorScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = sysCal?.let { "${it.displayName} (${it.accountName})" }
-                                    ?: "${currentCat?.name ?: "個人"} (${currentCat?.accountName ?: "本機"})",
+                                text = sysCal?.displayName ?: (currentCat?.name ?: "個人"),
                                 color = tokens.primaryTextColor,
                                 fontSize = 14.sp
                             )
@@ -958,14 +957,14 @@ fun EventEditorScreen(
         )
     }
 
-    // === 日曆分類選擇對話框 ===
+    // === 行事曆選擇對話框（簡潔無帳號顯示） ===
     if (showCategoryDialog) {
         AlertDialog(
             onDismissRequest = { showCategoryDialog = false },
-            title = { Text("選擇日曆類型或同步帳號") },
+            title = { Text("選擇行事曆") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("DX 本機日曆與 Google Tasks", fontSize = 12.sp, color = tokens.secondaryTextColor)
+                    Text("本機行事曆與待辦", fontSize = 12.sp, color = tokens.secondaryTextColor)
                     categories.forEach { cat ->
                         val isSelectedCat = if (cat.isTaskCategory) {
                             entryMode == 1
@@ -991,7 +990,7 @@ fun EventEditorScreen(
                         ) {
                             Box(modifier = Modifier.size(12.dp).background(Color(cat.colorArgb), CircleShape))
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text("${cat.name} (${cat.accountName})", modifier = Modifier.weight(1f))
+                            Text(cat.name, modifier = Modifier.weight(1f), fontSize = 14.sp)
                             if (isSelectedCat) {
                                 Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
                             }
@@ -1000,7 +999,7 @@ fun EventEditorScreen(
 
                     if (writableSystemCalendars.isNotEmpty() && !isPrivacy) {
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("同步寫入設備 Google / 系統日曆", fontSize = 12.sp, color = tokens.secondaryTextColor)
+                        Text("同步行事曆", fontSize = 12.sp, color = tokens.secondaryTextColor)
                         writableSystemCalendars.forEach { sc ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -1014,7 +1013,7 @@ fun EventEditorScreen(
                             ) {
                                 Box(modifier = Modifier.size(12.dp).background(Color(sc.colorArgb), CircleShape))
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("${sc.displayName} (${sc.accountName})", modifier = Modifier.weight(1f), fontSize = 13.sp)
+                                Text(sc.displayName, modifier = Modifier.weight(1f), fontSize = 14.sp)
                                 if (selectedSystemCalId == sc.id) {
                                     Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
                                 }

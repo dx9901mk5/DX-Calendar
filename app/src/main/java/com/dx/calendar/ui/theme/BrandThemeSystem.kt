@@ -36,17 +36,41 @@ data class BrandVisualTokens(
     val selectedCellBorder: Color,
     val cardCorner: Dp,
     val cellCorner: Dp,
-    val useDualToneYearHeader: Boolean,     // vivo 特色：20(白)26(橘紅)/11
-    val useFloatingOriginCapsule: Boolean,  // vivo 特色：懸浮毛玻璃雙膠囊導覽
-    val inlineDateAndLunar: Boolean         // Google 特色：25 (十七) 同行緊湊排列
+    val useDualToneYearHeader: Boolean,     // 雙色年標：20(深/白) + 26(主題金/橘紅)/11
+    val useFloatingOriginCapsule: Boolean,  // 懸浮毛玻璃雙膠囊導覽
+    val inlineDateAndLunar: Boolean         // 仿G 特色：25 (十七) 同行緊湊排列
 )
 
 val LocalBrandTokens = staticCompositionLocalOf {
-    buildBrandTokens(BrandStyle.VIVO, isDark = true)
+    buildBrandTokens(BrandStyle.GOLD_WHITE, isDark = false)
 }
 
 fun buildBrandTokens(style: BrandStyle, isDark: Boolean): BrandVisualTokens {
     return when (style) {
+        BrandStyle.GOLD_WHITE -> BrandVisualTokens(
+            brandStyle = style,
+            isDark = isDark,
+            accentColor = if (isDark) Color(0xFFD8A63A) else Color(0xFFB8841E),
+            secondaryAccent = if (isDark) Color(0xFFF0C96B) else Color(0xFFD9A948),
+            backgroundColor = if (isDark) Color(0xFF0F0E0B) else Color(0xFFFAF8F3),
+            surfaceCardColor = if (isDark) Color(0xFF1B1914) else Color(0xFFFFFFFF),
+            elevatedSurfaceColor = if (isDark) Color(0xFF28241B) else Color(0xFFF4EEE1),
+            floatingPillColor = if (isDark) Color(0xEE211E17) else Color(0xF7FFFFFF),
+            gridLineColor = if (isDark) Color(0x2BD8A63A) else Color(0x28C6922C),
+            primaryTextColor = if (isDark) Color(0xFFFAF6EE) else Color(0xFF221E17),
+            secondaryTextColor = if (isDark) Color(0xFFA89E8C) else Color(0xFF7A6F5D),
+            weekendSundayColor = if (isDark) Color(0xFFE57368) else Color(0xFFC45646),
+            weekendSaturdayColor = if (isDark) Color(0xFFD8A63A) else Color(0xFFB8841E),
+            holidayBadgeColor = if (isDark) Color(0xFFD8A63A) else Color(0xFFB8841E),
+            selectedCellFill = if (isDark) Color(0xFF332B19) else Color(0xFFFFF5DC),
+            selectedCellBorder = if (isDark) Color(0xFFD8A63A) else Color(0xFFC6922C),
+            cardCorner = 22.dp,
+            cellCorner = 12.dp,
+            useDualToneYearHeader = true,
+            useFloatingOriginCapsule = true,
+            inlineDateAndLunar = false
+        )
+
         BrandStyle.VIVO -> BrandVisualTokens(
             brandStyle = style,
             isDark = isDark,

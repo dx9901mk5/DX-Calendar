@@ -35,6 +35,56 @@ data class SystemEventInstance(
 
 class SystemCalendarBridge(private val context: Context) {
 
+    companion object {
+        private val PAREN_EMAIL_REGEX = Regex("""\s*\([^()]*@[^()]*\)\s*$""")
+
+        /**
+         * 過濾移除手機內建的 vivo 系統日曆（如「vivo日曆」、「vivo 日曆」、com.bbk.calendar / com.vivo），
+         * 避免與 DX 本機行事曆及 Google 行事曆重複混雜。
+         */
+        fun isExcludedVendorCalendar(
+            displayName: String?,
+            accountName: String?,
+            accountType: String? = null
+        ): Boolean {
+            val normDisplay = displayName.orEmpty().replace(" ", "").lowercase()
+            val normAcc = accountName.orEmpty().replace(" ", "").lowercase()
+            val normType = accountType.orEmpty().replace(" ", "").lowercase()
+
+            if (normDisplay.contains("vivo") || normDisplay.contains("bbk")) return true
+            if (normAcc.contains("vivo") || normAcc.contains("bbk")) return true
+            if (normType.contains("vivo") || normType.contains("bbk")) return true
+            return false
+        }
+
+        /**
+         * 將行事曆名稱精簡化，隱藏所有帳號／Email 資訊：
+         * - 移除尾端括號內的 Email（如 `家庭 (xxx@gmail.com)` -> `家庭`）
+         * - 若 Google 主行事曆名稱本身即為 Email（如 `xxx@gmail.com`），自動轉為簡潔的「主要行事曆」
+         */
+        fun formatConciseCalendarName(rawDisplayName: String?, accountName: String? = null): String {
+            var cleaned = rawDisplayName.orEmpty().trim()
+                .replace(PAREN_EMAIL_REGEX, "")
+                .trim()
+
+            if (!accountName.isNullOrBlank() && cleaned.endsWith("($accountName)", ignoreCase = true)) {
+                cleaned = cleaned.removeSuffix("($accountName)").trim()
+            }
+
+            if (cleaned.isEmpty()) return "主要行事曆"
+
+            if (cleaned.contains("@")) {
+                val lower = cleaned.lowercase()
+                return when {
+                    lower.contains("#holiday@") -> "節慶假日"
+                    lower.contains("#contacts@") || lower.contains("addressbook#") -> "聯絡人生日"
+                    else -> "主要行事曆"
+                }
+            }
+            return cleaned
+        }
+    }
+
     fun hasReadPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             context,
@@ -67,13 +117,17 @@ class SystemCalendarBridge(private val context: Context) {
                 projection,
                 null,
                 null,
-                "${CalendarContract.Calendars.ACCOUNT_NAME} ASC, ${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} ASC"
+                "${CalendarContract.Calendars.CALENDAR_DISPLAY_NAME} ASC"
             )?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(0)
-                    val displayName = cursor.getString(1) ?: "未命名日曆"
-                    val accountName = cursor.getString(2) ?: "本機帳號"
+                    val rawDisplayName = cursor.getString(1)
+                    val accountName = cursor.getString(2) ?: ""
                     val accountType = cursor.getString(3) ?: ""
+                    if (isExcludedVendorCalendar(rawDisplayName, accountName, accountType)) {
+                        continue
+                    }
+                    val displayName = formatConciseCalendarName(rawDisplayName, accountName)
                     val rawColor = cursor.getInt(4)
                     val color = if (rawColor == 0) 0xFF4285F4.toInt() else (rawColor or 0xFF000000.toInt())
                     val access = cursor.getInt(5)
@@ -113,7 +167,8 @@ class SystemCalendarBridge(private val context: Context) {
             CalendarContract.Instances.END,
             CalendarContract.Instances.ALL_DAY,
             CalendarContract.Instances.DISPLAY_COLOR,
-            CalendarContract.Instances.RRULE
+            CalendarContract.Instances.RRULE,
+            CalendarContract.Calendars.ACCOUNT_TYPE
         )
 
         runCatching {
@@ -127,8 +182,13 @@ class SystemCalendarBridge(private val context: Context) {
                 while (cursor.moveToNext()) {
                     val eventId = cursor.getLong(0)
                     val calId = cursor.getLong(1)
-                    val calName = cursor.getString(2) ?: "系統日曆"
+                    val rawCalName = cursor.getString(2)
                     val accName = cursor.getString(3) ?: ""
+                    val accType = cursor.getString(12) ?: ""
+                    if (isExcludedVendorCalendar(rawCalName, accName, accType)) {
+                        continue
+                    }
+                    val calName = formatConciseCalendarName(rawCalName, accName)
                     val title = cursor.getString(4)?.takeIf { it.isNotBlank() } ?: "(無標題)"
                     val desc = cursor.getString(5) ?: ""
                     val loc = cursor.getString(6) ?: ""

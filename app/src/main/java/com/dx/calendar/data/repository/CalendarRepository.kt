@@ -123,7 +123,7 @@ class CalendarRepository(private val context: Context) {
             val cleanNotes = PrivacyCryptoManager.decryptIfNeeded(ev.notes)
             val cleanLoc = PrivacyCryptoManager.decryptIfNeeded(ev.location)
             val color = ev.customColorArgb ?: cat?.colorArgb ?: 0xFFFF5238.toInt()
-            val catLabel = if (ev.isPrivacy) "隱私日曆" else "${cat?.name ?: "個人"} · ${cat?.accountName ?: "本機"}"
+            val catLabel = if (ev.isPrivacy) "隱私日曆" else (cat?.name ?: "個人")
             val reminders = parseIntList(ev.reminderMinutesJson)
             val recType = runCatching { RecurrenceType.valueOf(ev.recurrenceType) }.getOrDefault(RecurrenceType.NONE)
 
@@ -222,7 +222,7 @@ class CalendarRepository(private val context: Context) {
                                 endMillis = startMs + 1_800_000L,
                                 isAllDay = timeOfDay == null,
                                 colorArgb = task.colorArgb,
-                                categoryOrAccountLabel = task.googleTaskListTitle,
+                                categoryOrAccountLabel = SystemCalendarBridge.formatConciseCalendarName(task.googleTaskListTitle),
                                 isTask = true,
                                 isCompleted = task.isCompleted,
                                 isRoutine = task.isRoutine,
@@ -262,7 +262,7 @@ class CalendarRepository(private val context: Context) {
                                         endMillis = startMs + 1_800_000L,
                                         isAllDay = timeOfDay == null,
                                         colorArgb = task.colorArgb,
-                                        categoryOrAccountLabel = task.googleTaskListTitle,
+                                        categoryOrAccountLabel = SystemCalendarBridge.formatConciseCalendarName(task.googleTaskListTitle),
                                         isTask = true,
                                         isCompleted = doneToday,
                                         isRoutine = task.isRoutine,
@@ -331,7 +331,7 @@ class CalendarRepository(private val context: Context) {
                             endMillis = inst.endMillis,
                             isAllDay = inst.isAllDay,
                             colorArgb = inst.colorArgb,
-                            categoryOrAccountLabel = "${inst.calendarDisplayName} (${inst.accountName})",
+                            categoryOrAccountLabel = inst.calendarDisplayName,
                             isTask = false,
                             isCompleted = false,
                             isRoutine = ov?.isRoutine ?: false,

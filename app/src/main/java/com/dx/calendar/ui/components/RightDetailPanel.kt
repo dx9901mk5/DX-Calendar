@@ -431,7 +431,7 @@ private fun FocusedItemDetailCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("類型 / 帳號", color = tokens.primaryTextColor, fontSize = 14.sp)
+                    Text("行事曆", color = tokens.primaryTextColor, fontSize = 14.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(modifier = Modifier.size(10.dp).background(Color(item.colorArgb), CircleShape))
                         Spacer(modifier = Modifier.width(6.dp))

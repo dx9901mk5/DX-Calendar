@@ -107,8 +107,8 @@ private enum class DxSettingsSection(
     val subtitle: String,
     val icon: ImageVector
 ) {
-    ACCOUNTS_AND_TASKS("帳號、Google Tasks 與日曆", "Google Tasks 同步、本機類型、系統日曆", Icons.Filled.AccountCircle),
-    APPEARANCE("外觀主題與底圖", "類 vivo / 類三星等 5 款風格與桌布", Icons.Filled.Palette),
+    ACCOUNTS_AND_TASKS("行事曆與 Google Tasks", "行事曆顯示開關、本機類型與 Tasks 同步", Icons.Filled.AccountCircle),
+    APPEARANCE("外觀主題與底圖", "金白預設與 仿V / 仿O / 仿M / 仿G / 仿S 風格", Icons.Filled.Palette),
     ICON_AND_ISLAND("動態圖示與原子島", "1–31 日期圖示、Android 16 上島通知", Icons.Filled.NotificationsActive),
     CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線與連段測試", Icons.Filled.Tune),
     IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport),
@@ -585,9 +585,9 @@ private fun DxSettingsSectionContent(
                         }
                         Text(
                             text = if (settings.googleAccountEmail.isNotBlank()) {
-                                "已連結帳號：${settings.googleAccountEmail}"
+                                "已連結 Google Tasks 雲端同步"
                             } else {
-                                "尚未連結 Google 帳號，點擊下方按鈕即可連結並將 Google Tasks 顯示於月曆、時間表與桌面小工具。"
+                                "尚未連結，點擊下方按鈕即可同步 Google Tasks 並顯示於月曆、時間表與桌面小工具。"
                             },
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
@@ -627,7 +627,7 @@ private fun DxSettingsSectionContent(
                     }
                 }
 
-                // 本機時間表類型 + 系統 Google 日曆帳號管理
+                // 本機行事曆 + 雲端同步行事曆簡潔管理（不顯示繁雜帳號，且已移除內建 vivo 日曆）
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
@@ -635,10 +635,10 @@ private fun DxSettingsSectionContent(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("本機日曆類型管理", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text("本機行事曆", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             TextButton(onClick = onOpenNewCategoryDialog) {
                                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Text("新增類型")
+                                Text("新增行事曆")
                             }
                         }
 
@@ -656,42 +656,39 @@ private fun DxSettingsSectionContent(
                                 )
                                 Box(modifier = Modifier.size(12.dp).background(Color(cat.colorArgb), CircleShape))
                                 Spacer(modifier = Modifier.width(10.dp))
-                                Text("${cat.name} (${cat.accountName})", color = tokens.primaryTextColor, fontSize = 14.sp)
+                                Text(cat.name, color = tokens.primaryTextColor, fontSize = 14.sp)
                             }
                         }
 
                         HorizontalDivider(color = tokens.gridLineColor)
-                        Text("設備 Google / 系統日曆雙向同步", color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("同步行事曆", color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         if (!hasCalendarPermission) {
-                            Text("授權日曆權限即可載入裝置上所有 Google 日曆與子日曆（學務處、家庭、節慶等）", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                            Text("授權日曆權限即可載入裝置上的 Google 行事曆（主要行事曆、家庭、節慶假日等）", color = tokens.secondaryTextColor, fontSize = 12.sp)
                             Button(
                                 onClick = onRequestCalendarPermission,
                                 colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor)
                             ) {
-                                Text("授權讀取與同步系統日曆")
+                                Text("授權讀取與同步行事曆")
                             }
                         } else if (systemCalendars.isEmpty()) {
-                            Text("此裝置目前尚未登入系統 Google 日曆帳號", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                            Text("目前尚無可顯示的同步行事曆", color = tokens.secondaryTextColor, fontSize = 12.sp)
                         } else {
-                            systemCalendars.groupBy { it.accountName }.forEach { (acc, cals) ->
-                                Text(acc, color = tokens.accentColor, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
-                                cals.forEach { sc ->
-                                    val isVis = !settings.hiddenSystemCalIds.contains(sc.id.toString())
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { onToggleSystemCalendarVisible(sc.id, !isVis) }
-                                            .padding(vertical = 2.dp)
-                                    ) {
-                                        Checkbox(
-                                            checked = isVis,
-                                            onCheckedChange = { onToggleSystemCalendarVisible(sc.id, it) }
-                                        )
-                                        Box(modifier = Modifier.size(10.dp).background(Color(sc.colorArgb), CircleShape))
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
-                                    }
+                            systemCalendars.forEach { sc ->
+                                val isVis = !settings.hiddenSystemCalIds.contains(sc.id.toString())
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onToggleSystemCalendarVisible(sc.id, !isVis) }
+                                        .padding(vertical = 3.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = isVis,
+                                        onCheckedChange = { onToggleSystemCalendarVisible(sc.id, it) }
+                                    )
+                                    Box(modifier = Modifier.size(11.dp).background(Color(sc.colorArgb), CircleShape))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
                                 }
                             }
                         }
@@ -705,7 +702,7 @@ private fun DxSettingsSectionContent(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.Palette, contentDescription = null, tint = tokens.accentColor)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("五大類品牌視覺風格", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text("六大主題視覺風格", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
 
                         BrandStyle.entries.forEach { style ->

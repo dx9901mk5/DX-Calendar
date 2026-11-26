@@ -543,7 +543,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
             )
 
             val views = RemoteViews(context.packageName, R.layout.widget_month_canvas)
-            applyMonthContainerThemeAndOpacity(views, darkStyle, opacity)
+            applyMonthContainerThemeAndOpacity(views, darkStyle, opacity, accentArgb)
 
             views.setTextViewText(
                 R.id.widget_month_title,
@@ -667,6 +667,7 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
 
                                 val (minW, minH) = readSafeWidgetDp(mgr, id, defaultW = 260, defaultH = 260)
 
+                                val googleAccent = if (darkStyle) 0xFF8AB4F8.toInt() else 0xFF1A73E8.toInt()
                                 val bmp = MonthCanvasRenderer.renderMonthBitmap(
                                     context = appCtx,
                                     yearMonth = ym,
@@ -676,12 +677,12 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                                     startMonday = settings.startWeekOnMonday,
                                     showLunar = settings.showLunar,
                                     darkStyle = darkStyle,
-                                    accentArgb = if (darkStyle) 0xFF8AB4F8.toInt() else 0xFF1A73E8.toInt(),
+                                    accentArgb = googleAccent,
                                     googleGridStyle = true
                                 )
 
                                 val views = RemoteViews(appCtx.packageName, R.layout.widget_month_canvas)
-                                applyMonthContainerThemeAndOpacity(views, darkStyle, opacity)
+                                applyMonthContainerThemeAndOpacity(views, darkStyle, opacity, googleAccent)
 
                                 views.setTextViewText(R.id.widget_month_title, "%d年%d月".format(ym.year, ym.monthValue))
                                 views.setViewVisibility(R.id.btn_widget_mode, android.view.View.GONE)
@@ -806,7 +807,7 @@ class GoogleScheduleWidgetProvider : AppWidgetProvider() {
                             appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity
                         )
                         val views = RemoteViews(appCtx.packageName, R.layout.widget_scrollable_list)
-                        applyListContainerThemeAndOpacity(views, darkStyle, opacity)
+                        applyListContainerThemeAndOpacity(views, darkStyle, opacity, settings.brandStyle.primaryHex.toInt())
 
                         views.setTextViewText(R.id.widget_list_header_title, header)
                         views.setTextViewText(R.id.widget_list_badge, "")
@@ -882,7 +883,7 @@ class VivoTasksWidgetProvider : AppWidgetProvider() {
                             appCtx, id, settings.widgetDarkStyle, settings.widgetOpacity
                         )
                         val views = RemoteViews(appCtx.packageName, R.layout.widget_scrollable_list)
-                        applyListContainerThemeAndOpacity(views, darkStyle, opacity)
+                        applyListContainerThemeAndOpacity(views, darkStyle, opacity, settings.brandStyle.primaryHex.toInt())
 
                         views.setTextViewText(R.id.widget_list_header_title, "待辦與例行")
                         views.setViewVisibility(R.id.widget_list_badge, android.view.View.VISIBLE)
@@ -1076,7 +1077,12 @@ private fun safePartiallyUpdateWidget(mgr: AppWidgetManager, widgetId: Int, view
     runCatching { mgr.partiallyUpdateAppWidget(widgetId, views) }
 }
 
-private fun applyMonthContainerThemeAndOpacity(views: RemoteViews, darkStyle: Boolean, opacity: Float) {
+private fun applyMonthContainerThemeAndOpacity(
+    views: RemoteViews,
+    darkStyle: Boolean,
+    opacity: Float,
+    accentArgb: Int
+) {
     val alpha255 = (opacity.coerceIn(0f, 1f) * 255f).roundToInt().coerceIn(0, 255)
     views.setImageViewResource(
         R.id.widget_bg_layer,
@@ -1087,15 +1093,27 @@ private fun applyMonthContainerThemeAndOpacity(views: RemoteViews, darkStyle: Bo
     val titleColor = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF161618.toInt()
     val iconMutedColor = if (darkStyle) 0xFFA8A8B4.toInt() else 0xFF5A5A66.toInt()
     val modeChipTextColor = if (darkStyle) 0xFFD8D8E0.toInt() else 0xFF282830.toInt()
+    val modeChipBgColor = if (darkStyle) 0x26FFFFFF else 0x16000000
+    val safeAccent = accentArgb or 0xFF000000.toInt()
+    val todayChipBg = (safeAccent and 0x00FFFFFF) or 0x28000000
 
     views.setTextColor(R.id.widget_month_title, titleColor)
     views.setTextColor(R.id.btn_widget_prev, iconMutedColor)
     views.setTextColor(R.id.btn_widget_next, iconMutedColor)
     views.setTextColor(R.id.btn_widget_config, iconMutedColor)
     views.setTextColor(R.id.btn_widget_mode, modeChipTextColor)
+    views.setInt(R.id.btn_widget_mode, "setBackgroundColor", modeChipBgColor)
+    views.setTextColor(R.id.btn_widget_today, safeAccent)
+    views.setInt(R.id.btn_widget_today, "setBackgroundColor", todayChipBg)
+    views.setTextColor(R.id.btn_widget_add, safeAccent)
 }
 
-private fun applyListContainerThemeAndOpacity(views: RemoteViews, darkStyle: Boolean, opacity: Float) {
+private fun applyListContainerThemeAndOpacity(
+    views: RemoteViews,
+    darkStyle: Boolean,
+    opacity: Float,
+    accentArgb: Int
+) {
     val alpha255 = (opacity.coerceIn(0f, 1f) * 255f).roundToInt().coerceIn(0, 255)
     views.setImageViewResource(
         R.id.widget_bg_layer,
@@ -1106,10 +1124,13 @@ private fun applyListContainerThemeAndOpacity(views: RemoteViews, darkStyle: Boo
     val titleColor = if (darkStyle) 0xFFF5F5F7.toInt() else 0xFF161618.toInt()
     val iconMutedColor = if (darkStyle) 0xFFA8A8B4.toInt() else 0xFF5A5A66.toInt()
     val emptyColor = if (darkStyle) 0xFF8E8E96.toInt() else 0xFF64646E.toInt()
+    val safeAccent = accentArgb or 0xFF000000.toInt()
 
     views.setTextColor(R.id.widget_list_header_title, titleColor)
     views.setTextColor(R.id.btn_widget_list_config, iconMutedColor)
     views.setTextColor(R.id.widget_empty_text, emptyColor)
+    views.setTextColor(R.id.widget_list_badge, safeAccent)
+    views.setTextColor(R.id.btn_widget_list_add, safeAccent)
 }
 
 /**

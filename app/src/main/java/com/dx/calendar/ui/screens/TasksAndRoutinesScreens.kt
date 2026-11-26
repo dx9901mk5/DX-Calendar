@@ -127,7 +127,7 @@ fun TasksCenterView(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (googleEmail.isNotBlank()) "已連結 Google 帳號：$googleEmail"
+                            text = if (googleEmail.isNotBlank()) "已連結雲端同步 · 可自由決定待辦是否顯示於月曆格"
                             else "支援本機待辦與連結 Google Tasks 同步顯示於日曆",
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp

@@ -2,7 +2,11 @@ package com.dx.calendar
 
 import android.content.pm.PackageManager
 import com.dx.calendar.alarm.LiveUpdateIslandHelper
+import com.dx.calendar.data.local.UserSettings
+import com.dx.calendar.data.model.BrandStyle
+import com.dx.calendar.data.model.DarkThemeMode
 import com.dx.calendar.data.model.RecurrenceType
+import com.dx.calendar.data.sync.SystemCalendarBridge
 import com.dx.calendar.update.GitHubAutoUpdater
 import com.dx.calendar.util.DynamicAppIconManager
 import com.dx.calendar.util.LunarCalendarEngine
@@ -115,5 +119,37 @@ class LunarAndCalendarTest {
         assertFalse(DynamicAppIconManager.isAliasEffectivelyEnabled(day26, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT))
         assertTrue(DynamicAppIconManager.isAliasEffectivelyEnabled(day26, PackageManager.COMPONENT_ENABLED_STATE_ENABLED))
         assertFalse(DynamicAppIconManager.isAliasEffectivelyEnabled(def, PackageManager.COMPONENT_ENABLED_STATE_DISABLED))
+    }
+
+    @Test
+    fun verifyConciseCalendarNameAndVivoCalendarRemoval() {
+        // 1. 確保內建 vivo 日曆在各種命名/帳號形式下皆被過濾移除
+        assertTrue(SystemCalendarBridge.isExcludedVendorCalendar("vivo日曆", "LOCAL", "LOCAL"))
+        assertTrue(SystemCalendarBridge.isExcludedVendorCalendar("vivo 日曆", "Phone", "LOCAL"))
+        assertTrue(SystemCalendarBridge.isExcludedVendorCalendar("我的日曆", "vivo", "com.bbk.calendar"))
+        assertFalse(SystemCalendarBridge.isExcludedVendorCalendar("家庭", "user@gmail.com", "com.google"))
+
+        // 2. 確保行事曆名稱完全不顯示 Email / 帳號，呈現簡潔
+        assertEquals("主要行事曆", SystemCalendarBridge.formatConciseCalendarName("dx9901mk5@gmail.com", "dx9901mk5@gmail.com"))
+        assertEquals("學務處", SystemCalendarBridge.formatConciseCalendarName("學務處 (dx9901mk5@gmail.com)", "dx9901mk5@gmail.com"))
+        assertEquals("節慶假日", SystemCalendarBridge.formatConciseCalendarName("zh_tw.taiwan#holiday@group.v.calendar.google.com", "user@gmail.com"))
+        assertEquals("家庭", SystemCalendarBridge.formatConciseCalendarName("家庭", "user@gmail.com"))
+    }
+
+    @Test
+    fun verifyGoldWhiteDefaultThemeAndBrandRenaming() {
+        val defaultSettings = UserSettings()
+        assertEquals(BrandStyle.GOLD_WHITE, defaultSettings.brandStyle)
+        assertEquals(DarkThemeMode.LIGHT, defaultSettings.darkThemeMode)
+
+        val entries = BrandStyle.entries
+        assertEquals(6, entries.size)
+        assertEquals(BrandStyle.GOLD_WHITE, entries[0])
+        assertEquals("金白風格 (預設)", BrandStyle.GOLD_WHITE.displayName)
+        assertEquals("仿V 風格", BrandStyle.VIVO.displayName)
+        assertEquals("仿O 風格", BrandStyle.OPPO.displayName)
+        assertEquals("仿M 風格", BrandStyle.XIAOMI.displayName)
+        assertEquals("仿G 風格", BrandStyle.GOOGLE.displayName)
+        assertEquals("仿S 風格", BrandStyle.SAMSUNG.displayName)
     }
 }
