@@ -18,6 +18,7 @@ object PrivacyCryptoManager {
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val ENC_PREFIX = "ENC::"
 
+    @Synchronized
     private fun getOrCreateSecretKey(): SecretKey {
         val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         val existingKey = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry

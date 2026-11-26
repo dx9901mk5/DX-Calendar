@@ -5,6 +5,22 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.5.1] - 2026-11-26 (`versionCode = 7`)
+
+### ✨ 新增功能與優化 / Added & Improved
+- **🎞️ 類 vivo 月曆小工具「展開／收合週次平滑微動畫特效」**：
+  - 於桌面點擊任意一週展開（或再次點擊收合、直接切換至另一週）時，透過 `partiallyUpdateAppWidget` 多幀平滑插值呈現手風琴列高伸縮、主題色柔光邊框微閃與當週日程卡片向下滑入漸顯動畫，最後自動定格高解析畫面，手感輕巧流暢。
+
+### 🐛 問題修復 / Fixed
+- **修復從桌面小工具點擊開啟 App 閃退問題**：
+  - 移除 `MainActivity` 於 `onCreate` / `onNewIntent` / `onResume` 前景啟動過渡期間呼叫 `PackageManager.setComponentEnabledSetting` 停用 `<activity-alias>` 的競爭行為（改為退回背景且非組態變更時才安全同步，且最多僅執行 2 次必要 IPC），徹底根除 Android 14–16 與 vivo OriginOS / Samsung One UI 因組件狀態變更強制終止啟動任務造成的閃退。
+  - 為 `targetSdk = 36` 之所有小工具 `PendingIntent` 補齊明確 `action`、`package`、`singleTop` 與 API 34–36 背景啟動授權 (`setPendingIntentCreatorBackgroundActivityStartMode`)，並修正待辦／例行小工具直接支援點擊打卡完成，不再由背景 `BroadcastReceiver` 違規呼叫 `startActivity`。
+- **修復摺疊機開啟 App 與滑至小工具桌面頁閃退問題**：
+  - 新增 `MonthCanvasRenderer` 智慧像素預算保護 (`computeSafeCanvasDimensions`) 與全域 `SupervisorJob` 防護域，確保摺疊機展開大尺寸小工具絕不超出系統 `RemoteViews` 點陣圖記憶體與 Binder 1MB 上限 (`TransactionTooLargeException` / `exceeds maximum bitmap memory usage`)。
+  - 為 `MainActivity` 補齊 `launchMode="singleTop"` 與摺疊機內外螢幕切換必備之 `density|fontScale|layoutDirection|navigation` `configChanges`，實現內外螢幕折疊／展開零重建無縫流暢切換，並強化 `AdaptiveLayoutSpec`、`DualBiometricHelper` 與 `AppPreferences` 邊界容錯。
+
+---
+
 ## [v1.5.0] - 2026-11-26 (`versionCode = 6`)
 
 ### ✨ 新增功能與優化 / Added & Improved

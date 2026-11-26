@@ -25,52 +25,55 @@ data class AdaptiveLayoutSpec(
 )
 
 fun computeAdaptiveLayoutSpec(widthDp: Dp, heightDp: Dp): AdaptiveLayoutSpec {
+    // 摺疊機展開/收合過渡幀防呆：確保長寬永遠為安全正值，絕不產生 0 或負數權重
+    val safeW = widthDp.coerceAtLeast(240.dp)
+    val safeH = heightDp.coerceAtLeast(240.dp)
     return when {
-        widthDp < 420.dp || heightDp < 460.dp -> AdaptiveLayoutSpec(
+        safeW < 420.dp || safeH < 460.dp -> AdaptiveLayoutSpec(
             formFactor = WindowFormFactor.MINI_FLOATING,
-            widthDp = widthDp,
-            heightDp = heightDp,
-            showDualPane = widthDp >= 560.dp, // 橫扁小視窗仍可雙欄
+            widthDp = safeW,
+            heightDp = safeH,
+            showDualPane = safeW >= 560.dp, // 橫扁小視窗仍可雙欄
             showPermanentCategoryRail = false,
             leftPaneWeight = 0.58f,
             rightPaneWeight = 0.42f,
-            maxEventsInMonthCell = if (heightDp < 420.dp) 1 else 2,
+            maxEventsInMonthCell = if (safeH < 420.dp) 1 else 2,
             compactTopBar = true
         )
 
-        widthDp < 600.dp -> AdaptiveLayoutSpec(
+        safeW < 600.dp -> AdaptiveLayoutSpec(
             formFactor = WindowFormFactor.PHONE_COMPACT,
-            widthDp = widthDp,
-            heightDp = heightDp,
+            widthDp = safeW,
+            heightDp = safeH,
             showDualPane = false,
             showPermanentCategoryRail = false,
             leftPaneWeight = 1f,
             rightPaneWeight = 0f,
-            maxEventsInMonthCell = if (heightDp > 760.dp) 3 else 2,
+            maxEventsInMonthCell = if (safeH > 760.dp) 3 else 2,
             compactTopBar = true
         )
 
-        widthDp < 960.dp -> AdaptiveLayoutSpec(
+        safeW < 960.dp -> AdaptiveLayoutSpec(
             formFactor = WindowFormFactor.TABLET_8_DUAL_PANE,
-            widthDp = widthDp,
-            heightDp = heightDp,
+            widthDp = safeW,
+            heightDp = safeH,
             showDualPane = true,
             showPermanentCategoryRail = false,
             leftPaneWeight = 0.57f,
             rightPaneWeight = 0.43f,
-            maxEventsInMonthCell = if (heightDp > 700.dp) 4 else 3,
-            compactTopBar = false
+            maxEventsInMonthCell = if (safeH > 700.dp) 4 else 3,
+            compactTopBar = safeW < 720.dp
         )
 
         else -> AdaptiveLayoutSpec(
             formFactor = WindowFormFactor.TABLET_10_PIXELBOOK,
-            widthDp = widthDp,
-            heightDp = heightDp,
+            widthDp = safeW,
+            heightDp = safeH,
             showDualPane = true,
-            showPermanentCategoryRail = widthDp >= 1120.dp,
+            showPermanentCategoryRail = safeW >= 1120.dp,
             leftPaneWeight = 0.60f,
             rightPaneWeight = 0.40f,
-            maxEventsInMonthCell = if (heightDp > 720.dp) 5 else 3,
+            maxEventsInMonthCell = if (safeH > 720.dp) 5 else 3,
             compactTopBar = false
         )
     }

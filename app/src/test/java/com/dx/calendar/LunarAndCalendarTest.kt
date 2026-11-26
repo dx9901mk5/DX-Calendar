@@ -1,11 +1,14 @@
 package com.dx.calendar
 
+import android.content.pm.PackageManager
 import com.dx.calendar.alarm.LiveUpdateIslandHelper
 import com.dx.calendar.data.model.RecurrenceType
 import com.dx.calendar.update.GitHubAutoUpdater
 import com.dx.calendar.util.DynamicAppIconManager
 import com.dx.calendar.util.LunarCalendarEngine
+import com.dx.calendar.widget.MonthCanvasRenderer
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
@@ -74,5 +77,43 @@ class LunarAndCalendarTest {
             LiveUpdateIslandHelper.formatShortCriticalText("這是一段超過七個字元的超長提醒").length <=
                 LiveUpdateIslandHelper.MAX_SHORT_CRITICAL_CHARS
         )
+    }
+
+    @Test
+    fun verifyWidgetCanvasFoldableMemoryBudgetAndAccordionWeights() {
+        // 摺疊機展開大桌面 (例如 680x650dp, density=3.0f) 必須嚴格限制在像素預算上限內，根絕 TransactionTooLargeException
+        val (wLarge, hLarge) = MonthCanvasRenderer.computeSafeCanvasDimensions(
+            widthDp = 680,
+            heightDp = 650,
+            density = 3.0f,
+            maxPixels = MonthCanvasRenderer.DEFAULT_MAX_PIXELS
+        )
+        assertTrue(wLarge * hLarge <= MonthCanvasRenderer.DEFAULT_MAX_PIXELS + 1500)
+        assertTrue(wLarge >= 160 && hLarge >= 120)
+
+        // 極端過渡 0dp 防呆保護
+        val (wZero, hZero) = MonthCanvasRenderer.computeSafeCanvasDimensions(0, -10, 2.5f)
+        assertTrue(wZero >= 160 && hZero >= 120)
+
+        // 手風琴展開與切換週次動畫權重平滑插值驗證 (-1 -> 第2週, 第2週 -> 第4週)
+        val wMidExpand = MonthCanvasRenderer.computeAccordionRowWeights(6, -1, 2, 0.5f)
+        assertEquals(6, wMidExpand.size)
+        assertEquals(2.5f, wMidExpand[2], 0.001f)
+        assertEquals(1.0f, wMidExpand[0], 0.001f)
+
+        val wSwitch = MonthCanvasRenderer.computeAccordionRowWeights(6, 1, 4, 0.34f)
+        assertTrue(wSwitch[1] in 1.0f..4.0f)
+        assertTrue(wSwitch[4] in 1.0f..4.0f)
+        assertEquals(9.0f, wSwitch.sum(), 0.001f)
+    }
+
+    @Test
+    fun verifyDynamicAliasEffectiveStateAvoidsRedundantDisables() {
+        val def = DynamicAppIconManager.DEFAULT_ALIAS
+        val day26 = DynamicAppIconManager.dayAliasName(26)
+        assertTrue(DynamicAppIconManager.isAliasEffectivelyEnabled(def, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT))
+        assertFalse(DynamicAppIconManager.isAliasEffectivelyEnabled(day26, PackageManager.COMPONENT_ENABLED_STATE_DEFAULT))
+        assertTrue(DynamicAppIconManager.isAliasEffectivelyEnabled(day26, PackageManager.COMPONENT_ENABLED_STATE_ENABLED))
+        assertFalse(DynamicAppIconManager.isAliasEffectivelyEnabled(def, PackageManager.COMPONENT_ENABLED_STATE_DISABLED))
     }
 }

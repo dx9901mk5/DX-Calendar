@@ -3,6 +3,7 @@ package com.dx.calendar.data.local
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -10,8 +11,10 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.dx.calendar.data.model.BrandStyle
 import com.dx.calendar.data.model.DarkThemeMode
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 import java.security.MessageDigest
 
 private val Context.dataStore by preferencesDataStore(name = "dx_calendar_prefs")
@@ -40,7 +43,9 @@ data class UserSettings(
     val liveUpdateIslandEnabled: Boolean = true
 )
 
-class AppPreferences(private val context: Context) {
+class AppPreferences(context: Context) {
+
+    private val appContext: Context = context.applicationContext ?: context
 
     companion object {
         private val KEY_BRAND_STYLE = stringPreferencesKey("brand_style")
@@ -72,7 +77,11 @@ class AppPreferences(private val context: Context) {
         }
     }
 
-    val settingsFlow: Flow<UserSettings> = context.dataStore.data.map { prefs ->
+    val settingsFlow: Flow<UserSettings> = appContext.dataStore.data
+        .catch { e ->
+            if (e is IOException) emit(emptyPreferences()) else throw e
+        }
+        .map { prefs ->
         val brand = runCatching {
             BrandStyle.valueOf(prefs[KEY_BRAND_STYLE] ?: BrandStyle.VIVO.name)
         }.getOrDefault(BrandStyle.VIVO)
@@ -109,76 +118,79 @@ class AppPreferences(private val context: Context) {
     suspend fun getSettingsOnce(): UserSettings = settingsFlow.first()
 
     suspend fun setBrandStyle(style: BrandStyle) {
-        context.dataStore.edit { it[KEY_BRAND_STYLE] = style.name }
+        appContext.dataStore.edit { it[KEY_BRAND_STYLE] = style.name }
     }
 
     suspend fun setDarkThemeMode(mode: DarkThemeMode) {
-        context.dataStore.edit { it[KEY_DARK_MODE] = mode.name }
+        appContext.dataStore.edit { it[KEY_DARK_MODE] = mode.name }
     }
 
     suspend fun setStartWeekOnMonday(monday: Boolean) {
-        context.dataStore.edit { it[KEY_START_MONDAY] = monday }
+        appContext.dataStore.edit { it[KEY_START_MONDAY] = monday }
     }
 
     suspend fun setShowLunar(show: Boolean) {
-        context.dataStore.edit { it[KEY_SHOW_LUNAR] = show }
+        appContext.dataStore.edit { it[KEY_SHOW_LUNAR] = show }
     }
 
     suspend fun setShowWeekNumber(show: Boolean) {
-        context.dataStore.edit { it[KEY_SHOW_WEEK_NUM] = show }
+        appContext.dataStore.edit { it[KEY_SHOW_WEEK_NUM] = show }
     }
 
     suspend fun setShowCompletedTasks(show: Boolean) {
-        context.dataStore.edit { it[KEY_SHOW_COMPLETED_TASKS] = show }
+        appContext.dataStore.edit { it[KEY_SHOW_COMPLETED_TASKS] = show }
     }
 
     suspend fun setPeekHiddenInMonth(peek: Boolean) {
-        context.dataStore.edit { it[KEY_PEEK_HIDDEN] = peek }
+        appContext.dataStore.edit { it[KEY_PEEK_HIDDEN] = peek }
     }
 
     suspend fun setRoutineMedicationFeatureEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[KEY_ROUTINE_MED_FEATURE_ENABLED] = enabled }
+        appContext.dataStore.edit { it[KEY_ROUTINE_MED_FEATURE_ENABLED] = enabled }
     }
 
     suspend fun isLegacyMedicationDemoCleaned(): Boolean {
-        return context.dataStore.data.map { it[KEY_LEGACY_MED_DEMO_CLEANED] ?: false }.first()
+        return appContext.dataStore.data
+            .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+            .map { it[KEY_LEGACY_MED_DEMO_CLEANED] ?: false }
+            .first()
     }
 
     suspend fun markLegacyMedicationDemoCleaned() {
-        context.dataStore.edit { it[KEY_LEGACY_MED_DEMO_CLEANED] = true }
+        appContext.dataStore.edit { it[KEY_LEGACY_MED_DEMO_CLEANED] = true }
     }
 
     suspend fun setRoutineDefaultHideFromMonth(hide: Boolean) {
-        context.dataStore.edit { it[KEY_ROUTINE_DEFAULT_HIDE] = hide }
+        appContext.dataStore.edit { it[KEY_ROUTINE_DEFAULT_HIDE] = hide }
     }
 
     suspend fun setWallpaper(uri: String, alpha: Float) {
-        context.dataStore.edit {
+        appContext.dataStore.edit {
             it[KEY_WALLPAPER_URI] = uri
             it[KEY_WALLPAPER_ALPHA] = alpha.coerceIn(0.05f, 0.75f)
         }
     }
 
     suspend fun setShowMonthGridLines(show: Boolean) {
-        context.dataStore.edit { it[KEY_SHOW_GRID_LINES] = show }
+        appContext.dataStore.edit { it[KEY_SHOW_GRID_LINES] = show }
     }
 
     suspend fun setRequireDualFingerprint(require: Boolean) {
-        context.dataStore.edit { it[KEY_DUAL_FINGERPRINT] = require }
+        appContext.dataStore.edit { it[KEY_DUAL_FINGERPRINT] = require }
     }
 
     suspend fun setPrivacyPin(rawPin: String) {
-        context.dataStore.edit {
+        appContext.dataStore.edit {
             it[KEY_PRIVACY_PIN_HASH] = if (rawPin.isBlank()) "" else sha256(rawPin.trim())
         }
     }
 
     suspend fun setGoogleAccountEmail(email: String) {
-        context.dataStore.edit { it[KEY_GOOGLE_EMAIL] = email }
+        appContext.dataStore.edit { it[KEY_GOOGLE_EMAIL] = email }
     }
 
     suspend fun toggleSystemCalendarVisibility(calId: String, visible: Boolean) {
-        context.dataStore.edit { prefs ->
+        appContext.dataStore.edit { prefs ->
             val current = prefs[KEY_HIDDEN_SYS_CALS]?.toMutableSet() ?: mutableSetOf()
             if (visible) current.remove(calId) else current.add(calId)
             prefs[KEY_HIDDEN_SYS_CALS] = current
@@ -186,21 +198,21 @@ class AppPreferences(private val context: Context) {
     }
 
     suspend fun setWidgetAppearance(dark: Boolean, opacity: Float) {
-        context.dataStore.edit {
+        appContext.dataStore.edit {
             it[KEY_WIDGET_DARK] = dark
             it[KEY_WIDGET_OPACITY] = opacity.coerceIn(0.0f, 1.0f)
         }
     }
 
     suspend fun setAutoCheckUpdate(enabled: Boolean) {
-        context.dataStore.edit { it[KEY_AUTO_CHECK_UPDATE] = enabled }
+        appContext.dataStore.edit { it[KEY_AUTO_CHECK_UPDATE] = enabled }
     }
 
     suspend fun setDynamicDayIconEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[KEY_DYNAMIC_DAY_ICON] = enabled }
+        appContext.dataStore.edit { it[KEY_DYNAMIC_DAY_ICON] = enabled }
     }
 
     suspend fun setLiveUpdateIslandEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[KEY_LIVE_UPDATE_ISLAND] = enabled }
+        appContext.dataStore.edit { it[KEY_LIVE_UPDATE_ISLAND] = enabled }
     }
 }

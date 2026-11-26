@@ -28,12 +28,17 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                val pending = runCatching { goAsync() }.getOrNull()
                 CoroutineScope(Dispatchers.IO).launch {
-                    val settings = AppPreferences(context).getSettingsOnce()
-                    DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
-                    DynamicAppIconManager.scheduleMidnightRefresh(context)
-                    MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(context)
-                    WidgetRefreshHelper.refreshAllWidgets(context)
+                    try {
+                        val settings = AppPreferences(context).getSettingsOnce()
+                        DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
+                        DynamicAppIconManager.scheduleMidnightRefresh(context)
+                        MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(context)
+                        WidgetRefreshHelper.refreshAllWidgets(context)
+                    } finally {
+                        runCatching { pending?.finish() }
+                    }
                 }
             }
 
@@ -41,11 +46,16 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
             DynamicAppIconManager.ACTION_UPDATE_DYNAMIC_ICON -> {
+                val pending = runCatching { goAsync() }.getOrNull()
                 CoroutineScope(Dispatchers.IO).launch {
-                    val settings = AppPreferences(context).getSettingsOnce()
-                    DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
-                    DynamicAppIconManager.scheduleMidnightRefresh(context)
-                    WidgetRefreshHelper.refreshAllWidgets(context)
+                    try {
+                        val settings = AppPreferences(context).getSettingsOnce()
+                        DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
+                        DynamicAppIconManager.scheduleMidnightRefresh(context)
+                        WidgetRefreshHelper.refreshAllWidgets(context)
+                    } finally {
+                        runCatching { pending?.finish() }
+                    }
                 }
             }
 

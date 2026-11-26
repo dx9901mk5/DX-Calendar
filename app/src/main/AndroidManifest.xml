@@ -38,13 +38,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DXCalendar">
 
-        <!-- 支援手機、8吋/10吋平板、Pixelbook 桌面視窗與自由小視窗任意縮放 -->
+        <!-- 支援手機、8吋/10吋平板、摺疊機內外螢幕無縫切換、Pixelbook 桌面視窗與自由小視窗任意縮放 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:resizeableActivity="true"
             android:windowSoftInputMode="adjustResize"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode|keyboard|keyboardHidden">
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|layoutDirection|keyboard|keyboardHidden|navigation">
             <layout
                 android:defaultWidth="980dp"
                 android:defaultHeight="700dp"
@@ -553,6 +554,7 @@
                 <action android:name="com.dx.calendar.widget.ACTION_NEXT_MONTH" />
                 <action android:name="com.dx.calendar.widget.ACTION_RESET_TODAY" />
                 <action android:name="com.dx.calendar.widget.ACTION_TOGGLE_WEEK_MODE" />
+                <action android:name="com.dx.calendar.widget.ACTION_TOGGLE_WEEK_ROW" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"

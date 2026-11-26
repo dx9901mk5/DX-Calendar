@@ -304,11 +304,13 @@ fun DXCalendarRootApp(
                     onOpenSearch = { showSearchDialog = true },
                     onOpenSettings = { viewModel.openSettings(true) },
                     onJumpToDate = {
-                        DatePickerDialog(
-                            context,
-                            { _, y, m, d -> viewModel.selectDate(LocalDate.of(y, m + 1, d)) },
-                            selectedDate.year, selectedDate.monthValue - 1, selectedDate.dayOfMonth
-                        ).show()
+                        runCatching {
+                            DatePickerDialog(
+                                context,
+                                { _, y, m, d -> viewModel.selectDate(LocalDate.of(y, m + 1, d)) },
+                                selectedDate.year, selectedDate.monthValue - 1, selectedDate.dayOfMonth
+                            ).show()
+                        }
                     },
                     onOpenAlmanacDiscovery = { showAlmanacDiscoveryDialog = true },
                     onQuickPrivacyAccess = {
