@@ -370,15 +370,34 @@ fun MonthGridView(
                             }
                         }
 
+                        val (cellSubText, cellSubHighlight) = remember(
+                            cellDate,
+                            settings.alternateCalendarMode,
+                            settings.dateInfoDisplayMode,
+                            settings.showPublicHolidays,
+                            settings.showTraditionalFestivals,
+                            settings.showSolarTerms
+                        ) {
+                            LunarCalendarEngine.formatCellSubtitle(
+                                date = cellDate,
+                                info = lunar,
+                                altMode = settings.effectiveAlternateCalendar,
+                                displayMode = settings.dateInfoDisplayMode,
+                                showPublicHolidays = settings.showPublicHolidays,
+                                showTraditionalFestivals = settings.showTraditionalFestivals,
+                                showSolarTerms = settings.showSolarTerms
+                            )
+                        }
+
                         MonthDayCell(
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             date = cellDate,
                             isInMonth = isInMonth,
                             isToday = isToday,
                             isSelected = isSelected,
-                            showLunar = settings.showLunar && !hideLunarForCompactHeight,
-                            lunarShort = lunar.shortDisplay,
-                            isHoliday = lunar.isTaiwanHoliday || lunar.solarTerm != null,
+                            showLunar = settings.showLunar && !hideLunarForCompactHeight && cellSubText.isNotEmpty(),
+                            lunarShort = cellSubText,
+                            isHoliday = cellSubHighlight,
                             showGridLine = settings.showMonthGridLines,
                             compactSheetProgress = compactSheetProgress.coerceIn(0f, 1f),
                             items = visibleCellItems,

@@ -85,7 +85,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dx.calendar.BuildConfig
 import com.dx.calendar.alarm.LiveUpdateIslandStatus
+import com.dx.calendar.data.local.AlternateCalendarMode
+import com.dx.calendar.data.local.DateInfoDisplayMode
+import com.dx.calendar.data.local.MonthViewLayoutMode
 import com.dx.calendar.data.local.UserSettings
+import com.dx.calendar.data.local.WeekStartMode
 import com.dx.calendar.data.model.BrandStyle
 import com.dx.calendar.data.model.CalendarCategoryEntity
 import com.dx.calendar.data.model.DarkThemeMode
@@ -144,7 +148,15 @@ fun SettingsAndManageScreen(
     onSelectBrand: (BrandStyle) -> Unit,
     onSelectDarkMode: (DarkThemeMode) -> Unit,
     onToggleStartMonday: (Boolean) -> Unit,
+    onSelectWeekStartMode: (WeekStartMode) -> Unit = { onToggleStartMonday(it == WeekStartMode.MONDAY) },
     onToggleShowLunar: (Boolean) -> Unit,
+    onSelectAlternateCalendar: (AlternateCalendarMode) -> Unit = { onToggleShowLunar(it != AlternateCalendarMode.NONE) },
+    onSelectDateInfoDisplay: (DateInfoDisplayMode) -> Unit = { onToggleShowLunar(it != DateInfoDisplayMode.NONE) },
+    onSelectMonthViewLayout: (MonthViewLayoutMode) -> Unit = {},
+    onSelectTimeZoneOverride: (String) -> Unit = {},
+    onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
+    onUpdateDefaultTaskReminders: (List<Int>) -> Unit = {},
     onToggleShowWeekNum: (Boolean) -> Unit,
     onToggleGridLines: (Boolean) -> Unit,
     onTogglePeekHiddenInMonth: (Boolean) -> Unit,
@@ -394,7 +406,15 @@ fun SettingsAndManageScreen(
                                     onSelectBrand = onSelectBrand,
                                     onSelectDarkMode = onSelectDarkMode,
                                     onToggleStartMonday = onToggleStartMonday,
+                                    onSelectWeekStartMode = onSelectWeekStartMode,
                                     onToggleShowLunar = onToggleShowLunar,
+                                    onSelectAlternateCalendar = onSelectAlternateCalendar,
+                                    onSelectDateInfoDisplay = onSelectDateInfoDisplay,
+                                    onSelectMonthViewLayout = onSelectMonthViewLayout,
+                                    onSelectTimeZoneOverride = onSelectTimeZoneOverride,
+                                    onUpdateHolidayPrefs = onUpdateHolidayPrefs,
+                                    onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
+                                    onUpdateDefaultTaskReminders = onUpdateDefaultTaskReminders,
                                     onToggleShowWeekNum = onToggleShowWeekNum,
                                     onToggleGridLines = onToggleGridLines,
                                     onTogglePeekHiddenInMonth = onTogglePeekHiddenInMonth,
@@ -474,7 +494,15 @@ fun SettingsAndManageScreen(
                                     onSelectBrand = onSelectBrand,
                                     onSelectDarkMode = onSelectDarkMode,
                                     onToggleStartMonday = onToggleStartMonday,
+                                    onSelectWeekStartMode = onSelectWeekStartMode,
                                     onToggleShowLunar = onToggleShowLunar,
+                                    onSelectAlternateCalendar = onSelectAlternateCalendar,
+                                    onSelectDateInfoDisplay = onSelectDateInfoDisplay,
+                                    onSelectMonthViewLayout = onSelectMonthViewLayout,
+                                    onSelectTimeZoneOverride = onSelectTimeZoneOverride,
+                                    onUpdateHolidayPrefs = onUpdateHolidayPrefs,
+                                    onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
+                                    onUpdateDefaultTaskReminders = onUpdateDefaultTaskReminders,
                                     onToggleShowWeekNum = onToggleShowWeekNum,
                                     onToggleGridLines = onToggleGridLines,
                                     onTogglePeekHiddenInMonth = onTogglePeekHiddenInMonth,
@@ -614,7 +642,15 @@ private fun DxSettingsSectionContent(
     onSelectBrand: (BrandStyle) -> Unit,
     onSelectDarkMode: (DarkThemeMode) -> Unit,
     onToggleStartMonday: (Boolean) -> Unit,
+    onSelectWeekStartMode: (WeekStartMode) -> Unit = { onToggleStartMonday(it == WeekStartMode.MONDAY) },
     onToggleShowLunar: (Boolean) -> Unit,
+    onSelectAlternateCalendar: (AlternateCalendarMode) -> Unit = { onToggleShowLunar(it != AlternateCalendarMode.NONE) },
+    onSelectDateInfoDisplay: (DateInfoDisplayMode) -> Unit = { onToggleShowLunar(it != DateInfoDisplayMode.NONE) },
+    onSelectMonthViewLayout: (MonthViewLayoutMode) -> Unit = {},
+    onSelectTimeZoneOverride: (String) -> Unit = {},
+    onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
+    onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
+    onUpdateDefaultTaskReminders: (List<Int>) -> Unit = {},
     onToggleShowWeekNum: (Boolean) -> Unit,
     onToggleGridLines: (Boolean) -> Unit,
     onTogglePeekHiddenInMonth: (Boolean) -> Unit,
@@ -1096,29 +1132,110 @@ private fun DxSettingsSectionContent(
             }
 
             DxSettingsSection.CALENDAR_PREFS -> {
-                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("日曆檢視偏好", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                var showAltCalDialog by remember { mutableStateOf(false) }
+                var showTzDialog by remember { mutableStateOf(false) }
+                var showWeekStartDialog by remember { mutableStateOf(false) }
+                var showDateInfoDialog by remember { mutableStateOf(false) }
+                var showMonthLayoutDialog by remember { mutableStateOf(false) }
+                var showHolidayManageDialog by remember { mutableStateOf(false) }
+                var showDefaultEventRemDialog by remember { mutableStateOf(false) }
+                var showDefaultTaskRemDialog by remember { mutableStateOf(false) }
 
-                        SettingSwitchRow("一週起始日設為週一 (關閉則為週日)", settings.startWeekOnMonday, onToggleStartMonday)
-                        SettingSwitchRow("顯示農曆、二十四節氣與台灣節慶", settings.showLunar, onToggleShowLunar)
-                        SettingSwitchRow("顯示全年週次編號", settings.showWeekNumber, onToggleShowWeekNum)
+                val altCalValueText = if (settings.alternateCalendarMode == AlternateCalendarMode.AUTO_BY_REGION) {
+                    "自動（${settings.effectiveAlternateCalendar.label}）"
+                } else {
+                    settings.alternateCalendarMode.label
+                }
+                val tzValueText = if (settings.timeZoneOverrideId.isBlank()) "已關閉" else settings.timeZoneOverrideId
+                val holidaySummary = buildList {
+                    if (settings.showPublicHolidays) add("國定假日")
+                    if (settings.showTraditionalFestivals) add("傳統節日")
+                    if (settings.showSolarTerms) add("節氣")
+                }.ifEmpty { listOf("已關閉") }.joinToString("、")
+
+                fun formatRemList(list: List<Int>): String {
+                    if (list.isEmpty()) return "無提醒"
+                    return list.sorted().joinToString("、") { m ->
+                        REMINDER_PRESET_OPTIONS.firstOrNull { it.first == m }?.second ?: "${m} 分鐘前"
+                    }
+                }
+
+                // 卡片 1：日曆檢視（完整對應：其他曆法、時區優先、一週起始日、顯示週數、日期資訊顯示、月檢視選擇、節日管理）
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("日曆檢視", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+                        SettingClickableValueRow(
+                            title = "其他曆法",
+                            subtitle = "預設依所在地自動選取所屬農曆（例如台灣農曆）",
+                            value = altCalValueText,
+                            onClick = { showAltCalDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingClickableValueRow(
+                            title = "時區優先",
+                            value = tzValueText,
+                            onClick = { showTzDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingClickableValueRow(
+                            title = "一週起始日",
+                            value = settings.weekStartMode.label,
+                            onClick = { showWeekStartDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingSwitchRow("顯示週數", settings.showWeekNumber, onToggleShowWeekNum)
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingClickableValueRow(
+                            title = "日期資訊顯示",
+                            subtitle = "設定日期上農曆、節慶與節氣資訊的顯示",
+                            value = settings.dateInfoDisplayMode.label,
+                            onClick = { showDateInfoDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingClickableValueRow(
+                            title = "月檢視選擇",
+                            value = settings.monthViewLayoutMode.label,
+                            onClick = { showMonthLayoutDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingClickableValueRow(
+                            title = "節日管理",
+                            value = holidaySummary,
+                            onClick = { showHolidayManageDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
                         SettingSwitchRow("顯示月曆格線", settings.showMonthGridLines, onToggleGridLines)
                         SettingSwitchRow("在月曆暫時透視隱藏例行事務", settings.peekHiddenInMonth, onTogglePeekHiddenInMonth)
+                    }
+                }
 
-                        HorizontalDivider(color = tokens.gridLineColor)
-                        SettingSwitchRow(
-                            label = "啟用吃藥／例行提醒功能（預設關閉）",
-                            checked = settings.routineMedicationFeatureEnabled,
-                            onCheckedChange = onToggleRoutineMedicationFeature
-                        )
-                        Text(
-                            text = "預設關閉且不自動建立任何吃藥項目；開啟後可依需求於「例行中心」自行新增與管理提醒規則。",
-                            color = tokens.secondaryTextColor,
-                            fontSize = 12.sp
-                        )
+                // 卡片 2：提醒（預設日程提醒時間、預設待辦事項提醒時間與連段鬧鐘測試）
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("提醒", color = tokens.primaryTextColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
 
-                        HorizontalDivider(color = tokens.gridLineColor)
+                        SettingClickableValueRow(
+                            title = "預設日程提醒時間",
+                            value = formatRemList(settings.defaultEventReminders),
+                            onClick = { showDefaultEventRemDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        SettingClickableValueRow(
+                            title = "預設待辦事項提醒時間",
+                            value = formatRemList(settings.defaultTaskReminders),
+                            onClick = { showDefaultTaskRemDialog = true }
+                        )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
                         OutlinedButton(
                             onClick = onTestMultiCallAlarmDemo,
                             modifier = Modifier.fillMaxWidth()
@@ -1126,6 +1243,268 @@ private fun DxSettingsSectionContent(
                             Text("測試「多重呼叫全螢幕鬧鐘提醒」立即預覽")
                         }
                     }
+                }
+
+                if (showAltCalDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showAltCalDialog = false },
+                        title = { Text("其他曆法") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                AlternateCalendarMode.entries.forEach { mode ->
+                                    val lbl = if (mode == AlternateCalendarMode.AUTO_BY_REGION) {
+                                        "${mode.label}（目前：${AlternateCalendarMode.resolveRegionDefault().label}）"
+                                    } else mode.label
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSelectAlternateCalendar(mode)
+                                                showAltCalDialog = false
+                                            }
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = lbl,
+                                            color = if (settings.alternateCalendarMode == mode) tokens.accentColor else tokens.primaryTextColor,
+                                            fontWeight = if (settings.alternateCalendarMode == mode) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (settings.alternateCalendarMode == mode) {
+                                            Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showAltCalDialog = false }) { Text("關閉") } }
+                    )
+                }
+
+                if (showTzDialog) {
+                    val tzOptions = listOf(
+                        "" to "已關閉（跟隨系統所在地時區）",
+                        "Asia/Taipei" to "台北 (Asia/Taipei, UTC+8)",
+                        "Asia/Tokyo" to "東京 (Asia/Tokyo, UTC+9)",
+                        "Asia/Hong_Kong" to "香港 (Asia/Hong_Kong, UTC+8)",
+                        "Asia/Shanghai" to "上海 (Asia/Shanghai, UTC+8)",
+                        "Asia/Singapore" to "新加坡 (Asia/Singapore, UTC+8)",
+                        "America/Los_Angeles" to "洛杉磯 (Pacific Time)",
+                        "America/New_York" to "紐約 (Eastern Time)",
+                        "Europe/London" to "倫敦 (UTC/BST)",
+                        "UTC" to "世界協調時間 (UTC)"
+                    )
+                    AlertDialog(
+                        onDismissRequest = { showTzDialog = false },
+                        title = { Text("時區優先") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                tzOptions.forEach { (id, label) ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSelectTimeZoneOverride(id)
+                                                showTzDialog = false
+                                            }
+                                            .padding(vertical = 7.dp)
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 13.sp,
+                                            color = if (settings.timeZoneOverrideId == id) tokens.accentColor else tokens.primaryTextColor,
+                                            fontWeight = if (settings.timeZoneOverrideId == id) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (settings.timeZoneOverrideId == id) {
+                                            Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor, modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showTzDialog = false }) { Text("關閉") } }
+                    )
+                }
+
+                if (showWeekStartDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showWeekStartDialog = false },
+                        title = { Text("一週起始日") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                WeekStartMode.entries.forEach { mode ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSelectWeekStartMode(mode)
+                                                showWeekStartDialog = false
+                                            }
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = mode.label,
+                                            color = if (settings.weekStartMode == mode) tokens.accentColor else tokens.primaryTextColor,
+                                            fontWeight = if (settings.weekStartMode == mode) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (settings.weekStartMode == mode) {
+                                            Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showWeekStartDialog = false }) { Text("關閉") } }
+                    )
+                }
+
+                if (showDateInfoDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showDateInfoDialog = false },
+                        title = { Text("日期資訊顯示") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                DateInfoDisplayMode.entries.forEach { mode ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSelectDateInfoDisplay(mode)
+                                                showDateInfoDialog = false
+                                            }
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = mode.label,
+                                            color = if (settings.dateInfoDisplayMode == mode) tokens.accentColor else tokens.primaryTextColor,
+                                            fontWeight = if (settings.dateInfoDisplayMode == mode) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (settings.dateInfoDisplayMode == mode) {
+                                            Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showDateInfoDialog = false }) { Text("關閉") } }
+                    )
+                }
+
+                if (showMonthLayoutDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showMonthLayoutDialog = false },
+                        title = { Text("月檢視選擇") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                MonthViewLayoutMode.entries.forEach { mode ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onSelectMonthViewLayout(mode)
+                                                showMonthLayoutDialog = false
+                                            }
+                                            .padding(vertical = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = mode.label,
+                                            color = if (settings.monthViewLayoutMode == mode) tokens.accentColor else tokens.primaryTextColor,
+                                            fontWeight = if (settings.monthViewLayoutMode == mode) FontWeight.Bold else FontWeight.Normal,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (settings.monthViewLayoutMode == mode) {
+                                            Icon(Icons.Filled.Check, contentDescription = null, tint = tokens.accentColor)
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { showMonthLayoutDialog = false }) { Text("關閉") } }
+                    )
+                }
+
+                if (showHolidayManageDialog) {
+                    var pub by remember { mutableStateOf(settings.showPublicHolidays) }
+                    var trad by remember { mutableStateOf(settings.showTraditionalFestivals) }
+                    var solar by remember { mutableStateOf(settings.showSolarTerms) }
+                    AlertDialog(
+                        onDismissRequest = { showHolidayManageDialog = false },
+                        title = { Text("節日管理") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                SettingSwitchRow("顯示國定假日（如台灣國定假日）", pub) { pub = it }
+                                SettingSwitchRow("顯示傳統農曆節日（春節、端午、中秋等）", trad) { trad = it }
+                                SettingSwitchRow("顯示二十四節氣（立春、冬至等）", solar) { solar = it }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                onUpdateHolidayPrefs(pub, trad, solar)
+                                showHolidayManageDialog = false
+                            }) { Text("儲存") }
+                        },
+                        dismissButton = { TextButton(onClick = { showHolidayManageDialog = false }) { Text("取消") } }
+                    )
+                }
+
+                if (showDefaultEventRemDialog || showDefaultTaskRemDialog) {
+                    val isTask = showDefaultTaskRemDialog
+                    val initSet = (if (isTask) settings.defaultTaskReminders else settings.defaultEventReminders).toMutableSet()
+                    var picked by remember(isTask) { mutableStateOf(initSet.toSet()) }
+                    val quickOptions = listOf(0, 5, 10, 15, 30, 60, 1440)
+                    AlertDialog(
+                        onDismissRequest = {
+                            showDefaultEventRemDialog = false
+                            showDefaultTaskRemDialog = false
+                        },
+                        title = { Text(if (isTask) "預設待辦事項提醒時間" else "預設日程提醒時間") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                quickOptions.forEach { m ->
+                                    val lbl = REMINDER_PRESET_OPTIONS.firstOrNull { it.first == m }?.second ?: "${m} 分鐘前"
+                                    val checked = picked.contains(m)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                picked = if (checked) picked - m else picked + m
+                                            }
+                                            .padding(vertical = 4.dp)
+                                    ) {
+                                        Checkbox(
+                                            checked = checked,
+                                            onCheckedChange = { c -> picked = if (c) picked + m else picked - m }
+                                        )
+                                        Text(lbl, color = tokens.primaryTextColor, fontSize = 14.sp)
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                val sorted = picked.sorted()
+                                if (isTask) onUpdateDefaultTaskReminders(sorted)
+                                else onUpdateDefaultEventReminders(sorted)
+                                showDefaultEventRemDialog = false
+                                showDefaultTaskRemDialog = false
+                            }) { Text("確認") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = {
+                                showDefaultEventRemDialog = false
+                                showDefaultTaskRemDialog = false
+                            }) { Text("取消") }
+                        }
+                    )
                 }
             }
 
@@ -1207,6 +1586,78 @@ private fun DxSettingsSectionContent(
                     onCancelDownload = onCancelUpdateDownload,
                     onInstallApk = onInstallDownloadedApk
                 )
+
+                // 內建崩潰診斷紀錄卡（摺疊機／實機異常精準定位）
+                CrashLogDiagnosticsCard()
+            }
+        }
+    }
+}
+
+@Composable
+private fun CrashLogDiagnosticsCard() {
+    val tokens = LocalBrandTokens.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var crashText by remember { mutableStateOf(com.dx.calendar.util.CrashLogManager.readLastCrash(context)) }
+
+    Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = "穩定性診斷與最近崩潰紀錄",
+                color = tokens.primaryTextColor,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (crashText.isNullOrBlank()) {
+                Text(
+                    text = "✓ 尚未偵測到異常閃退紀錄（若日後發生閃退，系統將自動留存完整堆疊供除錯）",
+                    color = Color(0xFF00C853),
+                    fontSize = 12.sp
+                )
+            } else {
+                Text(
+                    text = "偵測到最近一次未捕捉例外紀錄：",
+                    color = Color(0xFFFFB300),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(tokens.elevatedSurfaceColor)
+                        .padding(10.dp)
+                ) {
+                    Text(
+                        text = crashText!!.lines().take(12).joinToString("\n"),
+                        color = tokens.secondaryTextColor,
+                        fontSize = 11.sp
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            runCatching {
+                                val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                cm.setPrimaryClip(android.content.ClipData.newPlainText("DX日曆崩潰紀錄", crashText))
+                                android.widget.Toast.makeText(context, "已複製完整崩潰堆疊至剪貼簿", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("複製完整堆疊", fontSize = 12.sp)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            com.dx.calendar.util.CrashLogManager.clearLastCrash(context)
+                            crashText = null
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("清除紀錄", fontSize = 12.sp)
+                    }
+                }
             }
         }
     }
@@ -1345,7 +1796,7 @@ private fun GitHubUpdateCard(
                                 )
                                 Text(
                                     text = if (updateState.totalBytes > 0) {
-                                        "$pct% (%.1f / %.1f MB)".format(dlMb, totMb)
+                                        "$pct% (" + "%.1f / %.1f MB".format(dlMb, totMb) + ")"
                                     } else "$pct%",
                                     color = tokens.primaryTextColor,
                                     fontSize = 12.sp,
@@ -1477,5 +1928,37 @@ private fun SettingSwitchRow(label: String, checked: Boolean, onCheckedChange: (
     ) {
         Text(label, color = tokens.primaryTextColor, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun SettingClickableValueRow(
+    title: String,
+    value: String,
+    subtitle: String? = null,
+    onClick: () -> Unit
+) {
+    val tokens = LocalBrandTokens.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = tokens.primaryTextColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            if (!subtitle.isNullOrBlank()) {
+                Text(subtitle, color = tokens.secondaryTextColor, fontSize = 11.sp)
+            }
+        }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "$value ⌄",
+            color = tokens.secondaryTextColor,
+            fontSize = 13.sp,
+            maxLines = 1
+        )
     }
 }

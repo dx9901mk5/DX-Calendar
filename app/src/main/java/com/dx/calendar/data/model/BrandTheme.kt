@@ -85,7 +85,52 @@ enum class RecurrenceType(val label: String) {
     WEEKDAYS("每個工作日 (週一至週五)"),
     WEEKLY("每週"),
     BIWEEKLY("每兩週"),
+    CUSTOM_WEEKS("隔 N 週重複"),
     MONTHLY("每月"),
     YEARLY("每年 (國曆)"),
     LUNAR_YEARLY("每年 (農曆生日/紀念)")
+}
+
+object RecurrenceCodec {
+    private const val PREFIX_EVERY_N_WEEKS = "EVERY_N_WEEKS:"
+
+    fun encode(type: RecurrenceType, intervalWeeks: Int = 1): String {
+        return if (type == RecurrenceType.CUSTOM_WEEKS) {
+            "$PREFIX_EVERY_N_WEEKS${intervalWeeks.coerceIn(2, 52)}"
+        } else {
+            type.name
+        }
+    }
+
+    fun decode(raw: String?): Pair<RecurrenceType, Int> {
+        val text = raw?.trim().orEmpty()
+        if (text.startsWith(PREFIX_EVERY_N_WEEKS)) {
+            val n = text.removePrefix(PREFIX_EVERY_N_WEEKS).toIntOrNull()?.coerceIn(2, 52) ?: 2
+            return RecurrenceType.CUSTOM_WEEKS to n
+        }
+        val type = runCatching { RecurrenceType.valueOf(text) }.getOrDefault(RecurrenceType.NONE)
+        val interval = if (type == RecurrenceType.BIWEEKLY) 2 else 1
+        return type to interval
+    }
+
+    fun formatLabel(type: RecurrenceType, intervalWeeks: Int = 1): String {
+        return if (type == RecurrenceType.CUSTOM_WEEKS) {
+            "隔 ${intervalWeeks.coerceIn(2, 52)} 週重複"
+        } else {
+            type.label
+        }
+    }
+
+    fun toRRule(type: RecurrenceType, intervalWeeks: Int = 1): String? {
+        return when (type) {
+            RecurrenceType.DAILY -> "FREQ=DAILY"
+            RecurrenceType.WEEKDAYS -> "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
+            RecurrenceType.WEEKLY -> "FREQ=WEEKLY"
+            RecurrenceType.BIWEEKLY -> "FREQ=WEEKLY;INTERVAL=2"
+            RecurrenceType.CUSTOM_WEEKS -> "FREQ=WEEKLY;INTERVAL=${intervalWeeks.coerceIn(2, 52)}"
+            RecurrenceType.MONTHLY -> "FREQ=MONTHLY"
+            RecurrenceType.YEARLY -> "FREQ=YEARLY"
+            else -> null
+        }
+    }
 }

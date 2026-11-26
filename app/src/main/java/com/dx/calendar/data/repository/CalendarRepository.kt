@@ -125,7 +125,8 @@ class CalendarRepository(private val context: Context) {
             val color = ev.customColorArgb ?: cat?.colorArgb ?: 0xFFFF5238.toInt()
             val catLabel = if (ev.isPrivacy) "隱私日曆" else (cat?.name ?: "個人")
             val reminders = parseIntList(ev.reminderMinutesJson)
-            val recType = runCatching { RecurrenceType.valueOf(ev.recurrenceType) }.getOrDefault(RecurrenceType.NONE)
+            val (recType, recIntervalWeeks) = com.dx.calendar.data.model.RecurrenceCodec.decode(ev.recurrenceType)
+            val recLabelText = com.dx.calendar.data.model.RecurrenceCodec.formatLabel(recType, recIntervalWeeks)
 
             val baseStartZdt = Instant.ofEpochMilli(ev.startEpochMillis).atZone(zone)
             val baseEndZdt = Instant.ofEpochMilli(ev.endEpochMillis).atZone(zone)
@@ -173,7 +174,7 @@ class CalendarRepository(private val context: Context) {
                 var cursorDate = if (rangeStart.isAfter(baseDate)) rangeStart else baseDate
                 while (!cursorDate.isAfter(rangeEnd)) {
                     if (recEndDate != null && cursorDate.isAfter(recEndDate)) break
-                    if (matchesRecurrence(baseDate, cursorDate, recType)) {
+                    if (matchesRecurrence(baseDate, cursorDate, recType, recIntervalWeeks)) {
                         val occStart = cursorDate.atTime(baseStartZdt.toLocalTime()).atZone(zone).toInstant().toEpochMilli()
                         val occEnd = cursorDate.plusDays(spanDays).atTime(baseEndZdt.toLocalTime()).atZone(zone).toInstant().toEpochMilli()
                         val isDone = checkInSet.contains("EVENT:${ev.id}:${cursorDate.toEpochDay()}")
@@ -181,7 +182,7 @@ class CalendarRepository(private val context: Context) {
                             createEventUnifiedItem(
                                 ev, cleanTitle, cleanNotes, cleanLoc, cursorDate,
                                 occStart, occEnd, color, catLabel,
-                                isDone, reminders, recType.label
+                                isDone, reminders, recLabelText
                             )
                         )
                     }
@@ -196,7 +197,7 @@ class CalendarRepository(private val context: Context) {
             for (task in tasks) {
                 if (task.isPrivacy && !isPrivacyUnlocked) continue
                 if (task.isPaused) continue
-                val recType = runCatching { RecurrenceType.valueOf(task.recurrenceType) }.getOrDefault(RecurrenceType.NONE)
+                val (recType, taskIntervalWeeks) = com.dx.calendar.data.model.RecurrenceCodec.decode(task.recurrenceType)
                 val cleanTitle = PrivacyCryptoManager.decryptIfNeeded(task.title)
                 val cleanNotes = PrivacyCryptoManager.decryptIfNeeded(task.notes)
                 val reminders = parseIntList(task.reminderMinutesJson)
@@ -243,7 +244,7 @@ class CalendarRepository(private val context: Context) {
                     // 重複型待辦 / 例行待辦（每日打卡制）
                     var d = if (rangeStart.isAfter(baseDueDate)) rangeStart else baseDueDate
                     while (!d.isAfter(rangeEnd)) {
-                        if (matchesRecurrence(baseDueDate, d, recType)) {
+                        if (matchesRecurrence(baseDueDate, d, recType, taskIntervalWeeks)) {
                             val doneToday = checkInSet.contains("TASK:${task.id}:${d.toEpochDay()}")
                             if (settings.showCompletedTasks || !doneToday) {
                                 val startMs = (timeOfDay?.let { d.atTime(it) } ?: d.atStartOfDay())
@@ -408,7 +409,12 @@ class CalendarRepository(private val context: Context) {
         )
     }
 
-    fun matchesRecurrence(baseDate: LocalDate, candidate: LocalDate, type: RecurrenceType): Boolean {
+    fun matchesRecurrence(
+        baseDate: LocalDate,
+        candidate: LocalDate,
+        type: RecurrenceType,
+        intervalWeeks: Int = 1
+    ): Boolean {
         if (candidate.isBefore(baseDate)) return false
         if (candidate == baseDate) return true
         return when (type) {
@@ -417,6 +423,10 @@ class CalendarRepository(private val context: Context) {
             RecurrenceType.WEEKDAYS -> candidate.dayOfWeek.value in 1..5
             RecurrenceType.WEEKLY -> ChronoUnit.DAYS.between(baseDate, candidate) % 7L == 0L
             RecurrenceType.BIWEEKLY -> ChronoUnit.DAYS.between(baseDate, candidate) % 14L == 0L
+            RecurrenceType.CUSTOM_WEEKS -> {
+                val periodDays = intervalWeeks.coerceIn(2, 52) * 7L
+                ChronoUnit.DAYS.between(baseDate, candidate) % periodDays == 0L
+            }
             RecurrenceType.MONTHLY -> candidate.dayOfMonth == baseDate.dayOfMonth
             RecurrenceType.YEARLY -> candidate.monthValue == baseDate.monthValue && candidate.dayOfMonth == baseDate.dayOfMonth
             RecurrenceType.LUNAR_YEARLY -> {

@@ -365,9 +365,9 @@ object MultiCallAlarmScheduler {
         val baseZdt = Instant.ofEpochMilli(event.startEpochMillis).atZone(zone)
         val baseDate = baseZdt.toLocalDate()
         val baseTime = if (event.isAllDay) LocalTime.of(9, 0) else baseZdt.toLocalTime()
-        val recType = runCatching { RecurrenceType.valueOf(event.recurrenceType) }.getOrDefault(RecurrenceType.NONE)
+        val (recType, recIntervalWeeks) = com.dx.calendar.data.model.RecurrenceCodec.decode(event.recurrenceType)
 
-        val nextDate = findNextDateByRecurrence(baseDate, recType, nowMillis, baseTime) ?: return null
+        val nextDate = findNextDateByRecurrence(baseDate, recType, nowMillis, baseTime, recIntervalWeeks) ?: return null
         return nextDate.atTime(baseTime).atZone(zone).toInstant().toEpochMilli()
     }
 
@@ -375,7 +375,8 @@ object MultiCallAlarmScheduler {
         baseDate: LocalDate,
         recType: RecurrenceType,
         nowMillis: Long,
-        timeOfDay: LocalTime
+        timeOfDay: LocalTime,
+        intervalWeeks: Int = 1
     ): LocalDate? {
         val zone = ZoneId.systemDefault()
         if (recType == RecurrenceType.NONE) {
@@ -395,6 +396,10 @@ object MultiCallAlarmScheduler {
                 RecurrenceType.WEEKDAYS -> d.dayOfWeek.value in 1..5
                 RecurrenceType.WEEKLY -> java.time.temporal.ChronoUnit.DAYS.between(baseDate, d) % 7L == 0L
                 RecurrenceType.BIWEEKLY -> java.time.temporal.ChronoUnit.DAYS.between(baseDate, d) % 14L == 0L
+                RecurrenceType.CUSTOM_WEEKS -> {
+                    val periodDays = intervalWeeks.coerceIn(2, 52) * 7L
+                    java.time.temporal.ChronoUnit.DAYS.between(baseDate, d) % periodDays == 0L
+                }
                 RecurrenceType.MONTHLY -> d.dayOfMonth == baseDate.dayOfMonth
                 RecurrenceType.YEARLY -> d.monthValue == baseDate.monthValue && d.dayOfMonth == baseDate.dayOfMonth
                 RecurrenceType.LUNAR_YEARLY -> {

@@ -50,7 +50,18 @@ class LunarAndCalendarTest {
 
     @Test
     fun verifyRecurrenceTypesExist() {
-        assertEquals(8, RecurrenceType.entries.size)
+        assertEquals(9, RecurrenceType.entries.size)
+    }
+
+    @Test
+    fun verifyCustomWeeksRecurrenceCodec() {
+        val encoded = com.dx.calendar.data.model.RecurrenceCodec.encode(RecurrenceType.CUSTOM_WEEKS, 3)
+        assertEquals("EVERY_N_WEEKS:3", encoded)
+        val (decodedType, decodedWeeks) = com.dx.calendar.data.model.RecurrenceCodec.decode(encoded)
+        assertEquals(RecurrenceType.CUSTOM_WEEKS, decodedType)
+        assertEquals(3, decodedWeeks)
+        assertEquals("FREQ=WEEKLY;INTERVAL=3", com.dx.calendar.data.model.RecurrenceCodec.toRRule(decodedType, decodedWeeks))
+        assertEquals("隔 3 週重複", com.dx.calendar.data.model.RecurrenceCodec.formatLabel(decodedType, decodedWeeks))
     }
 
     @Test
@@ -251,5 +262,36 @@ class LunarAndCalendarTest {
         )
         assertTrue(nanSpec.leftPaneWeight > 0f)
         assertTrue(nanSpec.widthDp.value >= 240f && nanSpec.heightDp.value >= 240f)
+    }
+
+    @Test
+    fun alternateCalendarResolvesRegionDefaultToTaiwanLunar() {
+        assertEquals(
+            com.dx.calendar.data.local.AlternateCalendarMode.TAIWAN_LUNAR,
+            com.dx.calendar.data.local.AlternateCalendarMode.resolveRegionDefault(
+                locale = java.util.Locale.TAIWAN,
+                zoneId = "Asia/Taipei"
+            )
+        )
+        assertEquals(
+            com.dx.calendar.data.local.AlternateCalendarMode.HONG_KONG_LUNAR,
+            com.dx.calendar.data.local.AlternateCalendarMode.resolveRegionDefault(
+                locale = java.util.Locale("zh", "HK"),
+                zoneId = "Asia/Hong_Kong"
+            )
+        )
+        val twNationalDay = LocalDate.of(2026, 10, 10)
+        val lunar = LunarCalendarEngine.getLunarInfo(twNationalDay)
+        val (twText, twHighlight) = LunarCalendarEngine.formatCellSubtitle(
+            date = twNationalDay,
+            info = lunar,
+            altMode = com.dx.calendar.data.local.AlternateCalendarMode.TAIWAN_LUNAR,
+            displayMode = com.dx.calendar.data.local.DateInfoDisplayMode.LUNAR_AND_HOLIDAY,
+            showPublicHolidays = true,
+            showTraditionalFestivals = true,
+            showSolarTerms = true
+        )
+        assertEquals("國慶日", twText)
+        assertTrue(twHighlight)
     }
 }

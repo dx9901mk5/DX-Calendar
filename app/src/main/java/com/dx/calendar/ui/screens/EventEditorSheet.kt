@@ -108,8 +108,21 @@ val REMINDER_PRESET_OPTIONS = listOf(
     360 to "6 小時前",
     1440 to "1 天前",
     2880 to "2 天前",
+    4320 to "3 天前",
     10080 to "1 週前"
 )
+
+private val QUICK_EARLY_REMINDER_CHIPS = listOf(
+    0 to "準時",
+    15 to "15 分前",
+    60 to "1 小時前",
+    1440 to "1 天前",
+    2880 to "2 天前",
+    4320 to "3 天前",
+    10080 to "1 週前"
+)
+
+private val CUSTOM_WEEK_INTERVAL_OPTIONS = listOf(2, 3, 4, 6, 8, 12)
 
 data class EditorSavePayload(
     val isTaskMode: Boolean,
@@ -126,6 +139,7 @@ data class EditorSavePayload(
     val endTime: LocalTime,
     val extraDates: List<LocalDate>,
     val recurrenceType: RecurrenceType,
+    val recurrenceIntervalWeeks: Int = 1,
     val reminderMinutes: List<Int>,
     val enableMultiCall: Boolean,
     val multiCallCount: Int,
@@ -156,6 +170,8 @@ fun EventEditorScreen(
     presetPrivacy: Boolean,
     presetTaskMode: Boolean,
     routineDefaultHideFromMonth: Boolean,
+    defaultEventReminders: List<Int> = listOf(0, 5),
+    defaultTaskReminders: List<Int> = listOf(0),
     categories: List<CalendarCategoryEntity>,
     writableSystemCalendars: List<SystemCalendarAccountInfo>,
     defaultGoogleEmail: String = "",
@@ -246,13 +262,13 @@ fun EventEditorScreen(
         }
     }
 
-    var recurrence by remember {
-        mutableStateOf(
-            runCatching {
-                RecurrenceType.valueOf(editingEvent?.recurrenceType ?: editingTask?.recurrenceType ?: if (presetRoutine) "DAILY" else "NONE")
-            }.getOrDefault(RecurrenceType.NONE)
+    val initialRecPair = remember(editingEvent?.id, editingTask?.id, presetRoutine) {
+        com.dx.calendar.data.model.RecurrenceCodec.decode(
+            editingEvent?.recurrenceType ?: editingTask?.recurrenceType ?: if (presetRoutine) "DAILY" else "NONE"
         )
     }
+    var recurrence by remember { mutableStateOf(initialRecPair.first) }
+    var recurrenceIntervalWeeks by remember { mutableIntStateOf(initialRecPair.second.coerceAtLeast(2)) }
 
     val selectedReminders = remember {
         mutableStateListOf<Int>().apply {
@@ -260,7 +276,8 @@ fun EventEditorScreen(
                 editingEvent != null -> parseIntList(editingEvent.reminderMinutesJson)
                 editingTask != null -> parseIntList(editingTask.reminderMinutesJson)
                 editingSystemEvent != null -> editingSystemEvent.reminderMinutes
-                else -> listOf(0, 5) // 截圖2預設：活動時間, 5 分鐘前
+                presetTaskMode -> defaultTaskReminders
+                else -> defaultEventReminders
             }
             addAll(raw)
         }
@@ -379,6 +396,7 @@ fun EventEditorScreen(
                                     endTime = endTime,
                                     extraDates = extraDates.toList(),
                                     recurrenceType = recurrence,
+                                    recurrenceIntervalWeeks = if (recurrence == RecurrenceType.CUSTOM_WEEKS) recurrenceIntervalWeeks else 1,
                                     reminderMinutes = selectedReminders.toList(),
                                     enableMultiCall = enableMultiCall,
                                     multiCallCount = multiCallCount,
@@ -717,7 +735,36 @@ fun EventEditorScreen(
                                 .padding(vertical = 12.dp)
                         ) {
                             Text("重複", color = tokens.primaryTextColor, fontSize = 15.sp)
-                            Text(recurrence.label, color = tokens.secondaryTextColor, fontSize = 14.sp)
+                            Text(
+                                text = com.dx.calendar.data.model.RecurrenceCodec.formatLabel(recurrence, recurrenceIntervalWeeks),
+                                color = if (recurrence == RecurrenceType.NONE) tokens.secondaryTextColor else tokens.accentColor,
+                                fontSize = 14.sp
+                            )
+                        }
+
+                        // 隔幾週提醒一次（FREQ=WEEKLY;INTERVAL=N）快捷晶片列
+                        Text("隔幾週提醒一次：", color = tokens.secondaryTextColor, fontSize = 11.sp)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp)
+                        ) {
+                            CUSTOM_WEEK_INTERVAL_OPTIONS.forEach { weeks ->
+                                val isPicked = (recurrence == RecurrenceType.CUSTOM_WEEKS && recurrenceIntervalWeeks == weeks) ||
+                                    (weeks == 2 && recurrence == RecurrenceType.BIWEEKLY)
+                                FilterChip(
+                                    selected = isPicked,
+                                    onClick = {
+                                        if (isPicked) {
+                                            recurrence = RecurrenceType.NONE
+                                        } else {
+                                            recurrence = RecurrenceType.CUSTOM_WEEKS
+                                            recurrenceIntervalWeeks = weeks
+                                        }
+                                    },
+                                    label = { Text("隔 $weeks 週", fontSize = 12.sp) }
+                                )
+                            }
                         }
 
                         HorizontalDivider(color = tokens.gridLineColor)
@@ -745,6 +792,118 @@ fun EventEditorScreen(
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(start = 16.dp)
                             )
+                        }
+
+                        // 提早通知快捷多選晶片
+                        Text("提早通知快捷多選：", color = tokens.secondaryTextColor, fontSize = 11.sp)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
+                        ) {
+                            QUICK_EARLY_REMINDER_CHIPS.forEach { (mins, label) ->
+                                val checked = selectedReminders.contains(mins)
+                                FilterChip(
+                                    selected = checked,
+                                    onClick = {
+                                        if (checked) selectedReminders.remove(mins)
+                                        else selectedReminders.add(mins)
+                                    },
+                                    label = { Text(label, fontSize = 12.sp) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 區塊 5.5：啟用吃藥／例行提醒（新增事件時可點選啟用，立即展開專屬邏輯與自定義重複邏輯！）
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Filled.Repeat, contentDescription = null, tint = tokens.accentColor, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text("啟用吃藥／例行提醒", color = tokens.primaryTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        text = "開啟後套用例行打卡邏輯、自定義重複週期，並預設不塞爆月曆格",
+                                        color = tokens.secondaryTextColor,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = isRoutine,
+                                onCheckedChange = { enabled ->
+                                    isRoutine = enabled
+                                    if (enabled) {
+                                        if (recurrence == RecurrenceType.NONE) recurrence = RecurrenceType.DAILY
+                                        if (routineDefaultHideFromMonth) showInMonthGrid = false
+                                        enableMultiCall = true
+                                    } else {
+                                        showInMonthGrid = true
+                                    }
+                                }
+                            )
+                        }
+
+                        if (isRoutine) {
+                            HorizontalDivider(color = tokens.gridLineColor)
+                            Text("自定義重複週期：", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf(
+                                    RecurrenceType.DAILY to "每天",
+                                    RecurrenceType.WEEKDAYS to "週一至週五",
+                                    RecurrenceType.WEEKLY to "每週",
+                                    RecurrenceType.BIWEEKLY to "每 2 週",
+                                    RecurrenceType.MONTHLY to "每月"
+                                ).forEach { (rec, lbl) ->
+                                    FilterChip(
+                                        selected = recurrence == rec,
+                                        onClick = { recurrence = rec },
+                                        label = { Text(lbl, fontSize = 12.sp) }
+                                    )
+                                }
+                                FilterChip(
+                                    selected = extraDates.isNotEmpty(),
+                                    onClick = { showExtraDatesDialog = true },
+                                    label = { Text("自訂多個日期 (${extraDates.size})", fontSize = 12.sp) }
+                                )
+                            }
+
+                            if (!isAllDay) {
+                                Text("服藥／例行快捷時段：", color = tokens.secondaryTextColor, fontSize = 12.sp)
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    listOf(
+                                        "早 08:00" to LocalTime.of(8, 0),
+                                        "午 12:30" to LocalTime.of(12, 30),
+                                        "晚 19:00" to LocalTime.of(19, 0),
+                                        "睡前 22:00" to LocalTime.of(22, 0)
+                                    ).forEach { (lbl, tm) ->
+                                        FilterChip(
+                                            selected = startTime == tm,
+                                            onClick = {
+                                                startTime = tm
+                                                endTime = tm.plusMinutes(30)
+                                            },
+                                            label = { Text(lbl, fontSize = 12.sp) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("不在月曆格佔空間（僅於例行中心與提醒顯示）", color = tokens.primaryTextColor, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                Switch(checked = !showInMonthGrid, onCheckedChange = { showInMonthGrid = !it })
+                            }
                         }
                     }
                 }

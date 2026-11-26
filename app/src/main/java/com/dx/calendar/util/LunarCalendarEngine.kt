@@ -129,6 +129,77 @@ object LunarCalendarEngine {
         return info
     }
 
+    /**
+     * 依據「其他曆法（台灣農曆／中國農曆／香港農曆／關閉）」、「日期資訊顯示」與「節日管理」設定，
+     * 計算月曆日期格下方的副標文字與是否以節慶高亮色標示。
+     */
+    fun formatCellSubtitle(
+        date: LocalDate,
+        info: LunarDateInfo,
+        altMode: com.dx.calendar.data.local.AlternateCalendarMode,
+        displayMode: com.dx.calendar.data.local.DateInfoDisplayMode,
+        showPublicHolidays: Boolean,
+        showTraditionalFestivals: Boolean,
+        showSolarTerms: Boolean
+    ): Pair<String, Boolean> {
+        if (altMode == com.dx.calendar.data.local.AlternateCalendarMode.NONE ||
+            displayMode == com.dx.calendar.data.local.DateInfoDisplayMode.NONE
+        ) {
+            return "" to false
+        }
+
+        val m = date.monthValue
+        val d = date.dayOfMonth
+        val publicHoliday = if (showPublicHolidays) {
+            when (altMode) {
+                com.dx.calendar.data.local.AlternateCalendarMode.TAIWAN_LUNAR -> when {
+                    m == 1 && d == 1 -> "元旦"
+                    m == 2 && d == 28 -> "和平紀念"
+                    m == 4 && d == 4 -> "兒童節"
+                    m == 5 && d == 1 -> "勞動節"
+                    m == 10 && d == 10 -> "國慶日"
+                    m == 12 && d == 25 -> "行憲紀念"
+                    else -> null
+                }
+                com.dx.calendar.data.local.AlternateCalendarMode.CHINA_LUNAR -> when {
+                    m == 1 && d == 1 -> "元旦"
+                    m == 5 && d == 1 -> "勞動節"
+                    m == 6 && d == 1 -> "兒童節"
+                    m == 10 && d == 1 -> "國慶節"
+                    else -> null
+                }
+                com.dx.calendar.data.local.AlternateCalendarMode.HONG_KONG_LUNAR -> when {
+                    m == 1 && d == 1 -> "元旦"
+                    m == 5 && d == 1 -> "勞動節"
+                    m == 7 && d == 1 -> "回歸紀念"
+                    m == 10 && d == 1 -> "國慶日"
+                    m == 12 && d == 25 -> "聖誕節"
+                    else -> null
+                }
+                else -> null
+            }
+        } else null
+
+        val tradFestival = if (showTraditionalFestivals) {
+            info.festival?.takeIf { it != "元旦" && it != "和平紀念" && it != "兒童節" && it != "勞動節" && it != "國慶日" && it != "行憲紀念" }
+        } else null
+        val solarTerm = if (showSolarTerms) info.solarTerm else null
+        val lunarBase = if (info.lunarDay == 1) info.lunarMonthName else info.lunarDayName
+
+        return when (displayMode) {
+            com.dx.calendar.data.local.DateInfoDisplayMode.LUNAR_ONLY -> lunarBase to false
+            com.dx.calendar.data.local.DateInfoDisplayMode.HOLIDAY_ONLY -> {
+                val h = publicHoliday ?: tradFestival ?: solarTerm
+                if (h != null) h to true else "" to false
+            }
+            com.dx.calendar.data.local.DateInfoDisplayMode.LUNAR_AND_HOLIDAY -> {
+                val h = publicHoliday ?: tradFestival ?: solarTerm
+                if (h != null) h to true else lunarBase to false
+            }
+            com.dx.calendar.data.local.DateInfoDisplayMode.NONE -> "" to false
+        }
+    }
+
     private fun computeLunarInfo(date: LocalDate): LunarDateInfo {
         val baseDate = LocalDate.of(1900, 1, 31)
         var offset = ChronoUnit.DAYS.between(baseDate, date).toInt()

@@ -16,14 +16,75 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 import java.security.MessageDigest
+import java.time.DayOfWeek
+import java.time.ZoneId
+import java.time.temporal.WeekFields
+import java.util.Locale
 
 private val Context.dataStore by preferencesDataStore(name = "dx_calendar_prefs")
+
+enum class AlternateCalendarMode(val label: String) {
+    AUTO_BY_REGION("依所在地自動選擇"),
+    TAIWAN_LUNAR("台灣農曆"),
+    CHINA_LUNAR("中國農曆"),
+    HONG_KONG_LUNAR("香港農曆"),
+    NONE("關閉");
+
+    companion object {
+        fun resolveRegionDefault(
+            locale: Locale = Locale.getDefault(),
+            zoneId: String = ZoneId.systemDefault().id
+        ): AlternateCalendarMode {
+            val country = locale.country.uppercase(Locale.ROOT)
+            return when {
+                country == "TW" || zoneId.equals("Asia/Taipei", ignoreCase = true) -> TAIWAN_LUNAR
+                country == "HK" || country == "MO" ||
+                    zoneId.equals("Asia/Hong_Kong", ignoreCase = true) ||
+                    zoneId.equals("Asia/Macau", ignoreCase = true) -> HONG_KONG_LUNAR
+                country == "CN" || country == "SG" ||
+                    zoneId.equals("Asia/Shanghai", ignoreCase = true) ||
+                    zoneId.equals("Asia/Chongqing", ignoreCase = true) ||
+                    zoneId.equals("Asia/Singapore", ignoreCase = true) -> CHINA_LUNAR
+                locale.language.equals("zh", ignoreCase = true) -> TAIWAN_LUNAR
+                else -> NONE
+            }
+        }
+    }
+}
+
+enum class WeekStartMode(val label: String) {
+    REGION_DEFAULT("區域預設"),
+    SUNDAY("週日"),
+    MONDAY("週一")
+}
+
+enum class DateInfoDisplayMode(val label: String) {
+    LUNAR_AND_HOLIDAY("農曆與節慶"),
+    LUNAR_ONLY("僅顯示農曆"),
+    HOLIDAY_ONLY("僅顯示節慶與節氣"),
+    NONE("不顯示")
+}
+
+enum class MonthViewLayoutMode(val label: String) {
+    FULL_MONTH("滿版月曆檢視"),
+    SCHEDULE_SPLIT("時間表檢視")
+}
 
 data class UserSettings(
     val brandStyle: BrandStyle = BrandStyle.GOLD_WHITE,
     val darkThemeMode: DarkThemeMode = DarkThemeMode.SYSTEM,
     val startWeekOnMonday: Boolean = false,
+    val weekStartMode: WeekStartMode = WeekStartMode.REGION_DEFAULT,
     val showLunar: Boolean = true,
+    val alternateCalendarMode: AlternateCalendarMode = AlternateCalendarMode.AUTO_BY_REGION,
+    val dateInfoDisplayMode: DateInfoDisplayMode = DateInfoDisplayMode.LUNAR_AND_HOLIDAY,
+    val monthViewLayoutMode: MonthViewLayoutMode = MonthViewLayoutMode.FULL_MONTH,
+    val timeZoneOverrideId: String = "",
+    val showPublicHolidays: Boolean = true,
+    val showTraditionalFestivals: Boolean = true,
+    val showSolarTerms: Boolean = true,
+    val defaultEventReminders: List<Int> = listOf(0, 5),
+    val defaultTaskReminders: List<Int> = listOf(0),
     val showWeekNumber: Boolean = false,
     val showCompletedTasks: Boolean = true,
     val peekHiddenInMonth: Boolean = false,
@@ -42,9 +103,23 @@ data class UserSettings(
     val widgetFollowSystemDark: Boolean = true,
     val widgetOpacity: Float = 0.88f,
     val autoCheckUpdate: Boolean = true,
-    val dynamicDayIconEnabled: Boolean = true,
+    val dynamicDayIconEnabled: Boolean = false,
     val liveUpdateIslandEnabled: Boolean = true
-)
+) {
+    val effectiveAlternateCalendar: AlternateCalendarMode
+        get() = if (alternateCalendarMode == AlternateCalendarMode.AUTO_BY_REGION) {
+            AlternateCalendarMode.resolveRegionDefault()
+        } else {
+            alternateCalendarMode
+        }
+
+    val effectiveZoneId: ZoneId
+        get() = if (timeZoneOverrideId.isNotBlank()) {
+            runCatching { ZoneId.of(timeZoneOverrideId) }.getOrDefault(ZoneId.systemDefault())
+        } else {
+            ZoneId.systemDefault()
+        }
+}
 
 class AppPreferences(context: Context) {
 
@@ -54,7 +129,17 @@ class AppPreferences(context: Context) {
         private val KEY_BRAND_STYLE = stringPreferencesKey("brand_style")
         private val KEY_DARK_MODE = stringPreferencesKey("dark_mode")
         private val KEY_START_MONDAY = booleanPreferencesKey("start_monday")
+        private val KEY_WEEK_START_MODE = stringPreferencesKey("week_start_mode")
         private val KEY_SHOW_LUNAR = booleanPreferencesKey("show_lunar")
+        private val KEY_ALT_CALENDAR_MODE = stringPreferencesKey("alt_calendar_mode")
+        private val KEY_DATE_INFO_DISPLAY_MODE = stringPreferencesKey("date_info_display_mode")
+        private val KEY_MONTH_VIEW_LAYOUT_MODE = stringPreferencesKey("month_view_layout_mode")
+        private val KEY_TIMEZONE_OVERRIDE = stringPreferencesKey("timezone_override_id")
+        private val KEY_SHOW_PUBLIC_HOLIDAYS = booleanPreferencesKey("show_public_holidays")
+        private val KEY_SHOW_TRADITIONAL_FESTIVALS = booleanPreferencesKey("show_traditional_festivals")
+        private val KEY_SHOW_SOLAR_TERMS = booleanPreferencesKey("show_solar_terms")
+        private val KEY_DEFAULT_EVENT_REMINDERS = stringPreferencesKey("default_event_reminders")
+        private val KEY_DEFAULT_TASK_REMINDERS = stringPreferencesKey("default_task_reminders")
         private val KEY_SHOW_WEEK_NUM = booleanPreferencesKey("show_week_num")
         private val KEY_SHOW_COMPLETED_TASKS = booleanPreferencesKey("show_completed_tasks")
         private val KEY_PEEK_HIDDEN = booleanPreferencesKey("peek_hidden_in_month")
@@ -96,11 +181,58 @@ class AppPreferences(context: Context) {
                 DarkThemeMode.valueOf(prefs[KEY_DARK_MODE] ?: DarkThemeMode.SYSTEM.name)
             }.getOrDefault(DarkThemeMode.SYSTEM)
 
+            val weekStartMode = runCatching {
+                prefs[KEY_WEEK_START_MODE]?.let { WeekStartMode.valueOf(it) }
+            }.getOrNull() ?: when (prefs[KEY_START_MONDAY]) {
+                true -> WeekStartMode.MONDAY
+                false -> WeekStartMode.SUNDAY
+                null -> WeekStartMode.REGION_DEFAULT
+            }
+            val effectiveStartMonday = when (weekStartMode) {
+                WeekStartMode.MONDAY -> true
+                WeekStartMode.SUNDAY -> false
+                WeekStartMode.REGION_DEFAULT -> WeekFields.of(Locale.getDefault()).firstDayOfWeek == DayOfWeek.MONDAY
+            }
+            val altCalMode = runCatching {
+                prefs[KEY_ALT_CALENDAR_MODE]?.let { AlternateCalendarMode.valueOf(it) }
+            }.getOrNull() ?: if (prefs[KEY_SHOW_LUNAR] == false) AlternateCalendarMode.NONE else AlternateCalendarMode.AUTO_BY_REGION
+
+            val dateInfoMode = runCatching {
+                prefs[KEY_DATE_INFO_DISPLAY_MODE]?.let { DateInfoDisplayMode.valueOf(it) }
+            }.getOrNull() ?: if (prefs[KEY_SHOW_LUNAR] == false) DateInfoDisplayMode.NONE else DateInfoDisplayMode.LUNAR_AND_HOLIDAY
+
+            val monthLayoutMode = runCatching {
+                prefs[KEY_MONTH_VIEW_LAYOUT_MODE]?.let { MonthViewLayoutMode.valueOf(it) }
+            }.getOrNull() ?: MonthViewLayoutMode.FULL_MONTH
+
+            val effectiveShowLunar = altCalMode != AlternateCalendarMode.NONE &&
+                dateInfoMode != DateInfoDisplayMode.NONE
+
+            val defEventRems = prefs[KEY_DEFAULT_EVENT_REMINDERS]?.let { raw ->
+                if (raw.isBlank()) emptyList()
+                else raw.split(",").mapNotNull { it.trim().toIntOrNull() }.distinct().sorted()
+            } ?: listOf(0, 5)
+
+            val defTaskRems = prefs[KEY_DEFAULT_TASK_REMINDERS]?.let { raw ->
+                if (raw.isBlank()) emptyList()
+                else raw.split(",").mapNotNull { it.trim().toIntOrNull() }.distinct().sorted()
+            } ?: listOf(0)
+
             UserSettings(
                 brandStyle = brand,
                 darkThemeMode = dark,
-                startWeekOnMonday = prefs[KEY_START_MONDAY] ?: false,
-                showLunar = prefs[KEY_SHOW_LUNAR] ?: true,
+                startWeekOnMonday = effectiveStartMonday,
+                weekStartMode = weekStartMode,
+                showLunar = effectiveShowLunar,
+                alternateCalendarMode = altCalMode,
+                dateInfoDisplayMode = dateInfoMode,
+                monthViewLayoutMode = monthLayoutMode,
+                timeZoneOverrideId = prefs[KEY_TIMEZONE_OVERRIDE] ?: "",
+                showPublicHolidays = prefs[KEY_SHOW_PUBLIC_HOLIDAYS] ?: true,
+                showTraditionalFestivals = prefs[KEY_SHOW_TRADITIONAL_FESTIVALS] ?: true,
+                showSolarTerms = prefs[KEY_SHOW_SOLAR_TERMS] ?: true,
+                defaultEventReminders = defEventRems,
+                defaultTaskReminders = defTaskRems,
                 showWeekNumber = prefs[KEY_SHOW_WEEK_NUM] ?: false,
                 showCompletedTasks = prefs[KEY_SHOW_COMPLETED_TASKS] ?: true,
                 peekHiddenInMonth = prefs[KEY_PEEK_HIDDEN] ?: false,
@@ -122,7 +254,7 @@ class AppPreferences(context: Context) {
                 widgetFollowSystemDark = prefs[KEY_WIDGET_DARK] == null,
                 widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.88f,
                 autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true,
-                dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: true,
+                dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: false,
                 liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true
             )
         }
@@ -138,11 +270,71 @@ class AppPreferences(context: Context) {
     }
 
     suspend fun setStartWeekOnMonday(monday: Boolean) {
-        appContext.dataStore.edit { it[KEY_START_MONDAY] = monday }
+        appContext.dataStore.edit {
+            it[KEY_START_MONDAY] = monday
+            it[KEY_WEEK_START_MODE] = if (monday) WeekStartMode.MONDAY.name else WeekStartMode.SUNDAY.name
+        }
+    }
+
+    suspend fun setWeekStartMode(mode: WeekStartMode) {
+        appContext.dataStore.edit {
+            it[KEY_WEEK_START_MODE] = mode.name
+            if (mode == WeekStartMode.MONDAY) it[KEY_START_MONDAY] = true
+            else if (mode == WeekStartMode.SUNDAY) it[KEY_START_MONDAY] = false
+        }
     }
 
     suspend fun setShowLunar(show: Boolean) {
-        appContext.dataStore.edit { it[KEY_SHOW_LUNAR] = show }
+        appContext.dataStore.edit {
+            it[KEY_SHOW_LUNAR] = show
+            if (!show) {
+                it[KEY_DATE_INFO_DISPLAY_MODE] = DateInfoDisplayMode.NONE.name
+            } else if (it[KEY_DATE_INFO_DISPLAY_MODE] == DateInfoDisplayMode.NONE.name) {
+                it[KEY_DATE_INFO_DISPLAY_MODE] = DateInfoDisplayMode.LUNAR_AND_HOLIDAY.name
+            }
+        }
+    }
+
+    suspend fun setAlternateCalendarMode(mode: AlternateCalendarMode) {
+        appContext.dataStore.edit {
+            it[KEY_ALT_CALENDAR_MODE] = mode.name
+            it[KEY_SHOW_LUNAR] = mode != AlternateCalendarMode.NONE
+        }
+    }
+
+    suspend fun setDateInfoDisplayMode(mode: DateInfoDisplayMode) {
+        appContext.dataStore.edit {
+            it[KEY_DATE_INFO_DISPLAY_MODE] = mode.name
+            it[KEY_SHOW_LUNAR] = mode != DateInfoDisplayMode.NONE
+        }
+    }
+
+    suspend fun setMonthViewLayoutMode(mode: MonthViewLayoutMode) {
+        appContext.dataStore.edit { it[KEY_MONTH_VIEW_LAYOUT_MODE] = mode.name }
+    }
+
+    suspend fun setTimeZoneOverrideId(zoneId: String) {
+        appContext.dataStore.edit { it[KEY_TIMEZONE_OVERRIDE] = zoneId.trim() }
+    }
+
+    suspend fun setHolidayPreferences(publicHolidays: Boolean, traditional: Boolean, solarTerms: Boolean) {
+        appContext.dataStore.edit {
+            it[KEY_SHOW_PUBLIC_HOLIDAYS] = publicHolidays
+            it[KEY_SHOW_TRADITIONAL_FESTIVALS] = traditional
+            it[KEY_SHOW_SOLAR_TERMS] = solarTerms
+        }
+    }
+
+    suspend fun setDefaultEventReminders(minutes: List<Int>) {
+        appContext.dataStore.edit {
+            it[KEY_DEFAULT_EVENT_REMINDERS] = minutes.distinct().sorted().joinToString(",")
+        }
+    }
+
+    suspend fun setDefaultTaskReminders(minutes: List<Int>) {
+        appContext.dataStore.edit {
+            it[KEY_DEFAULT_TASK_REMINDERS] = minutes.distinct().sorted().joinToString(",")
+        }
     }
 
     suspend fun setShowWeekNumber(show: Boolean) {

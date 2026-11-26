@@ -158,6 +158,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private var activeCheckJob: Job? = null
     private var activeDownloadJob: Job? = null
     private var lastAutoTasksSyncMillis: Long = 0L
+    private var calendarContentObserver: android.database.ContentObserver? = null
+    private var calendarObserverDebounceJob: Job? = null
 
     private val _pendingInstallApkPath = MutableStateFlow<String?>(null)
     val pendingInstallApkPath: StateFlow<String?> = _pendingInstallApkPath.asStateFlow()
@@ -213,6 +215,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.prefs.applyGoldWhiteDefaultMigrationOnce()
             cleanupLegacyMedicationDemoOnce()
+            registerSystemCalendarObserverIfPermitted()
             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
             val initSettings = repo.prefs.settingsFlow.first()
@@ -227,6 +230,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onAppForegroundResumed() {
         refreshSystemCalendars()
+        registerSystemCalendarObserverIfPermitted()
         viewModelScope.launch {
             val email = repo.prefs.getSettingsOnce().googleAccountEmail
             if (email.isNotBlank() && System.currentTimeMillis() - lastAutoTasksSyncMillis >= 120_000L) {
@@ -510,16 +514,16 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 // 若使用者編輯既有 Google / 系統行事曆，或新增至已登記之 Google / 同步行事曆（含提醒與連段鬧鐘完整同步）
-                if ((payload.editingSystemEventId != null || payload.writeToSystemCalendarId != null) && !payload.isPrivacy) {
-                    val rrule = when (payload.recurrenceType) {
-                        com.dx.calendar.data.model.RecurrenceType.DAILY -> "FREQ=DAILY"
-                        com.dx.calendar.data.model.RecurrenceType.WEEKDAYS -> "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"
-                        com.dx.calendar.data.model.RecurrenceType.WEEKLY -> "FREQ=WEEKLY"
-                        com.dx.calendar.data.model.RecurrenceType.BIWEEKLY -> "FREQ=WEEKLY;INTERVAL=2"
-                        com.dx.calendar.data.model.RecurrenceType.MONTHLY -> "FREQ=MONTHLY"
-                        com.dx.calendar.data.model.RecurrenceType.YEARLY -> "FREQ=YEARLY"
-                        else -> null
-                    }
+                val encodedRecurrence = com.dx.calendar.data.model.RecurrenceCodec.encode(
+                    payload.recurrenceType,
+                    payload.recurrenceIntervalWeeks
+                )
+                val targetSysCalId = payload.writeToSystemCalendarId
+                if ((payload.editingSystemEventId != null || targetSysCalId != null) && !payload.isPrivacy) {
+                    val rrule = com.dx.calendar.data.model.RecurrenceCodec.toRRule(
+                        payload.recurrenceType,
+                        payload.recurrenceIntervalWeeks
+                    )
                     val alarmMeta = com.dx.calendar.data.sync.SystemEventAlarmMeta(
                         enableMultiCall = payload.enableMultiCall,
                         multiCallCount = payload.multiCallCount,
@@ -531,7 +535,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         val updated = withContext(Dispatchers.IO) {
                             repo.systemBridge.updateEventInSystemCalendar(
                                 eventId = payload.editingSystemEventId,
-                                systemCalendarId = payload.writeToSystemCalendarId,
+                                systemCalendarId = targetSysCalId,
                                 title = payload.title,
                                 description = payload.notes,
                                 location = payload.location,
@@ -550,8 +554,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         } else {
                             toast("更新失敗，請確認日曆寫入權限")
                         }
-                    } else {
-                        val targetCalId = payload.writeToSystemCalendarId!!
+                    } else if (targetSysCalId != null) {
+                        val targetCalId = targetSysCalId
                         val insertedId = withContext(Dispatchers.IO) {
                             val mainId = repo.systemBridge.insertEventToSystemCalendar(
                                 systemCalendarId = targetCalId,
@@ -610,7 +614,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                                 endEpochMillis = endMs,
                                 isAllDay = payload.isAllDay,
                                 extraDatesJson = repo.toDateStringsJson(payload.extraDates),
-                                recurrenceType = payload.recurrenceType.name,
+                                recurrenceType = encodedRecurrence,
                                 isRoutine = payload.isRoutine,
                                 showInMonthGrid = payload.showInMonthGrid,
                                 showInAgendaAndWidget = payload.showInAgendaAndWidget,
@@ -639,7 +643,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         endEpochMillis = endMs,
                         isAllDay = payload.isAllDay,
                         extraDatesJson = repo.toDateStringsJson(payload.extraDates),
-                        recurrenceType = payload.recurrenceType.name,
+                        recurrenceType = encodedRecurrence,
                         isRoutine = payload.isRoutine,
                         showInMonthGrid = payload.showInMonthGrid,
                         showInAgendaAndWidget = payload.showInAgendaAndWidget,
@@ -653,11 +657,10 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     val newId = repo.dao.upsertEvent(event)
                     val savedEv = event.copy(id = if (event.id == 0L) newId else event.id)
-                    if (!savedEv.isRoutine || settings.value.routineMedicationFeatureEnabled) {
-                        MultiCallAlarmScheduler.scheduleForEvent(app, savedEv)
-                    } else {
-                        MultiCallAlarmScheduler.cancelEventAlarms(app, savedEv)
+                    if (savedEv.isRoutine && !settings.value.routineMedicationFeatureEnabled) {
+                        repo.prefs.setRoutineMedicationFeatureEnabled(true)
                     }
+                    MultiCallAlarmScheduler.scheduleForEvent(app, savedEv)
                 }
             }
 
@@ -884,9 +887,37 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         repo.prefs.setStartWeekOnMonday(v)
         WidgetRefreshHelper.refreshAllWidgets(getApplication())
     }
+    fun setWeekStartMode(mode: com.dx.calendar.data.local.WeekStartMode) = viewModelScope.launch {
+        repo.prefs.setWeekStartMode(mode)
+        WidgetRefreshHelper.refreshAllWidgets(getApplication())
+    }
     fun setShowLunar(v: Boolean) = viewModelScope.launch {
         repo.prefs.setShowLunar(v)
         WidgetRefreshHelper.refreshAllWidgets(getApplication())
+    }
+    fun setAlternateCalendarMode(mode: com.dx.calendar.data.local.AlternateCalendarMode) = viewModelScope.launch {
+        repo.prefs.setAlternateCalendarMode(mode)
+        WidgetRefreshHelper.refreshAllWidgets(getApplication())
+    }
+    fun setDateInfoDisplayMode(mode: com.dx.calendar.data.local.DateInfoDisplayMode) = viewModelScope.launch {
+        repo.prefs.setDateInfoDisplayMode(mode)
+        WidgetRefreshHelper.refreshAllWidgets(getApplication())
+    }
+    fun setMonthViewLayoutMode(mode: com.dx.calendar.data.local.MonthViewLayoutMode) = viewModelScope.launch {
+        repo.prefs.setMonthViewLayoutMode(mode)
+    }
+    fun setTimeZoneOverrideId(zoneId: String) = viewModelScope.launch {
+        repo.prefs.setTimeZoneOverrideId(zoneId)
+    }
+    fun setHolidayPreferences(publicHolidays: Boolean, traditional: Boolean, solarTerms: Boolean) = viewModelScope.launch {
+        repo.prefs.setHolidayPreferences(publicHolidays, traditional, solarTerms)
+        WidgetRefreshHelper.refreshAllWidgets(getApplication())
+    }
+    fun setDefaultEventReminders(minutes: List<Int>) = viewModelScope.launch {
+        repo.prefs.setDefaultEventReminders(minutes)
+    }
+    fun setDefaultTaskReminders(minutes: List<Int>) = viewModelScope.launch {
+        repo.prefs.setDefaultTaskReminders(minutes)
     }
     fun setShowWeekNum(v: Boolean) = viewModelScope.launch { repo.prefs.setShowWeekNumber(v) }
     fun setShowCompletedTasks(v: Boolean) = viewModelScope.launch { repo.prefs.setShowCompletedTasks(v) }
@@ -1160,6 +1191,52 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun dismissUpdateDialog() {
         _updateState.value = _updateState.value.copy(showAutoPromptDialog = false)
+    }
+
+    /**
+     * 監聽 Android 系統日曆 (`CalendarContract.CONTENT_URI`) 變更（包含 Gemini 語音助理 / Google 日曆外部寫入），
+     * 透過 600ms 防抖即時刷新月曆視圖、桌面小工具與多重鬧鐘／動態島排程！
+     */
+    private fun registerSystemCalendarObserverIfPermitted() {
+        if (calendarContentObserver != null) return
+        val app = getApplication<Application>()
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+            app,
+            android.Manifest.permission.READ_CALENDAR
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted) return
+
+        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                calendarObserverDebounceJob?.cancel()
+                calendarObserverDebounceJob = viewModelScope.launch {
+                    kotlinx.coroutines.delay(600L)
+                    _systemCalendars.value = repo.getSystemCalendars()
+                    _refreshTick.value += 1
+                    MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
+                    WidgetRefreshHelper.refreshAllWidgets(app)
+                }
+            }
+        }
+        runCatching {
+            app.contentResolver.registerContentObserver(
+                android.provider.CalendarContract.CONTENT_URI,
+                true,
+                observer
+            )
+            calendarContentObserver = observer
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        calendarObserverDebounceJob?.cancel()
+        calendarContentObserver?.let { obs ->
+            runCatching {
+                getApplication<Application>().contentResolver.unregisterContentObserver(obs)
+            }
+        }
+        calendarContentObserver = null
     }
 
     private fun toast(msg: String) {

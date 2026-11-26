@@ -75,10 +75,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -157,8 +160,17 @@ fun DXCalendarRootApp(
     var showAlmanacDiscoveryDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
     // 仿三星日曆手勢動畫狀態：手機月檢視預設滿版月曆 (false)，上滑平滑壓縮月曆並拉起下方時間表 (true)；再點已選日期彈出 24h 浮動時間軸卡片
-    var showCompactBottomDayPanel by remember { mutableStateOf(false) }
-    var sheetDragFraction by remember { mutableFloatStateOf(0f) }
+    var showCompactBottomDayPanel by remember {
+        mutableStateOf(settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT)
+    }
+    var sheetDragFraction by remember {
+        mutableFloatStateOf(if (settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT) 1f else 0f)
+    }
+    LaunchedEffect(settings.monthViewLayoutMode) {
+        val split = settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
+        showCompactBottomDayPanel = split
+        sheetDragFraction = if (split) 1f else 0f
+    }
     var isDraggingSheet by remember { mutableStateOf(false) }
     var floatingTimelinePopupDate by remember { mutableStateOf<LocalDate?>(null) }
 
@@ -181,6 +193,8 @@ fun DXCalendarRootApp(
                 presetPrivacy = editorState.presetPrivacy,
                 presetTaskMode = editorState.presetTaskMode,
                 routineDefaultHideFromMonth = settings.routineDefaultHideFromMonth,
+                defaultEventReminders = settings.defaultEventReminders,
+                defaultTaskReminders = settings.defaultTaskReminders,
                 categories = categories,
                 writableSystemCalendars = systemCalendars.filter { it.isWritable },
                 defaultGoogleEmail = settings.googleAccountEmail,
@@ -222,7 +236,15 @@ fun DXCalendarRootApp(
                 onSelectBrand = { viewModel.setBrandStyle(it) },
                 onSelectDarkMode = { viewModel.setDarkThemeMode(it) },
                 onToggleStartMonday = { viewModel.setStartMonday(it) },
+                onSelectWeekStartMode = { viewModel.setWeekStartMode(it) },
                 onToggleShowLunar = { viewModel.setShowLunar(it) },
+                onSelectAlternateCalendar = { viewModel.setAlternateCalendarMode(it) },
+                onSelectDateInfoDisplay = { viewModel.setDateInfoDisplayMode(it) },
+                onSelectMonthViewLayout = { viewModel.setMonthViewLayoutMode(it) },
+                onSelectTimeZoneOverride = { viewModel.setTimeZoneOverrideId(it) },
+                onUpdateHolidayPrefs = { pub, trad, solar -> viewModel.setHolidayPreferences(pub, trad, solar) },
+                onUpdateDefaultEventReminders = { viewModel.setDefaultEventReminders(it) },
+                onUpdateDefaultTaskReminders = { viewModel.setDefaultTaskReminders(it) },
                 onToggleShowWeekNum = { viewModel.setShowWeekNum(it) },
                 onToggleGridLines = { viewModel.setShowGridLines(it) },
                 onTogglePeekHiddenInMonth = { viewModel.setPeekHiddenInMonth(it) },
@@ -521,15 +543,29 @@ fun DXCalendarRootApp(
                                     label = "samsungMonthSheetProgress"
                                 )
 
-                                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                                    val rawTotalH = if (maxHeight.value.isFinite()) maxHeight.value else 480f
-                                    val totalH = rawTotalH.coerceAtLeast(1f).dp
-                                    val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 420.dp
-                                    val progress = if (canSplitVertically) animatedSheetProgress.coerceIn(0f, 1f) else 0f
-                                    // 月曆從 100% 滿版平滑壓縮至 44%（同時日期下方的行程標籤淡出轉為彩色細條），下方時間表由 0% 平滑滑升至 56%！
-                                    val calendarHeight = (totalH * (1f - 0.56f * progress)).coerceIn(1.dp, totalH)
-                                    val sheetHeight = (totalH - calendarHeight).coerceAtLeast(0.dp)
+                                val density = LocalDensity.current
+                                var compactViewportHeightPx by remember { mutableIntStateOf(0) }
+                                val fallbackTotalH = (spec.heightDp - 140.dp).coerceAtLeast(240.dp)
+                                val totalH = if (compactViewportHeightPx > 0) {
+                                    with(density) { compactViewportHeightPx.toDp() }.coerceAtLeast(1.dp)
+                                } else {
+                                    fallbackTotalH
+                                }
+                                val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 420.dp
+                                val progress = if (canSplitVertically) animatedSheetProgress.coerceIn(0f, 1f) else 0f
+                                // 月曆從 100% 滿版平滑壓縮至 44%（同時日期下方的行程標籤淡出轉為彩色細條），下方時間表由 0% 平滑滑升至 56%！
+                                val calendarHeight = (totalH * (1f - 0.56f * progress)).coerceIn(1.dp, totalH)
+                                val sheetHeight = (totalH - calendarHeight).coerceAtLeast(0.dp)
 
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .onSizeChanged { sz ->
+                                            if (sz.height > 0 && sz.height != compactViewportHeightPx) {
+                                                compactViewportHeightPx = sz.height
+                                            }
+                                        }
+                                ) {
                                     Column(modifier = Modifier.fillMaxSize()) {
                                         Box(
                                             modifier = Modifier
@@ -905,7 +941,7 @@ fun DXCalendarRootApp(
                                 val totMb = updateState.totalBytes / (1024f * 1024f)
                                 Text(
                                     text = if (updateState.totalBytes > 0) {
-                                        "正在自動下載更新包：$pct% (%.1f / %.1f MB)".format(dlMb, totMb)
+                                        "正在自動下載更新包：$pct% (" + "%.1f / %.1f MB".format(dlMb, totMb) + ")"
                                     } else "正在自動下載更新包：$pct%",
                                     fontSize = 13.sp
                                 )
