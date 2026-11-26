@@ -5,6 +5,14 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v1.8.5] - 2026-11-26 (`versionCode = 16`)
+
+### ⚡ 動畫流暢度升級 / Performance
+- **🎬 月曆桌面小工具展開／收合週次動畫升級 60fps 預渲染管線**：
+  - 過渡動畫由原本 3 幀即時重繪升級為 **8 幀平滑緩動預渲染**（`240,000 px` 輕量 IPC 幀 + `16ms` 精準節拍連續推送，最後定格 2K 銳利高解析幀），大幅提升小工具展開／收合週次的動畫幀率與絲滑度。
+
+---
+
 ## [v1.8.4] - 2026-11-26 (`versionCode = 15`)
 
 ### 🎨 文案調整 / Updated
