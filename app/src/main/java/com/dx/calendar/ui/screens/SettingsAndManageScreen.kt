@@ -78,6 +78,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -1256,26 +1258,77 @@ private fun DxSettingsSectionContent(
                 Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = "動態島圖示 (1–31 日期圖示與通知上島)",
+                            text = "動態島圖示 (桌面動態圖示與通知上島)",
                             color = tokens.primaryTextColor,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        SettingSwitchRow(
-                            label = "桌面 App 圖示自動顯示今日日期 (1–31 日)",
-                            checked = settings.dynamicDayIconEnabled,
-                            onCheckedChange = onToggleDynamicDayIcon
-                        )
-                        SettingSwitchRow(
-                            label = "圖示同時顯示星期幾（例：星期五 27）",
-                            checked = settings.dynamicDayIconEnabled && settings.dynamicDayIconShowWeekday,
-                            onCheckedChange = onToggleDynamicDayIconShowWeekday
-                        )
                         Text(
-                            text = "每日 00:00 跨日與開啟 App 時自動切換為當日數字或「星期幾＋日期」圓環圖示；關閉則恢復預設靜態圖示。",
+                            text = "選擇桌面 App 圖示樣式（每日 00:00 跨日與開啟 App 自動切換）：",
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
                         )
+                        val iconModeIndex = when {
+                            !settings.dynamicDayIconEnabled -> 0
+                            settings.dynamicDayIconShowWeekday -> 2
+                            else -> 1
+                        }
+                        val iconModes = listOf(
+                            Triple(0, "預設靜態 DX 圖示", "固定顯示 DX 日曆經典靜態圖示"),
+                            Triple(1, "樣式一：經典金色日期 (1–31)", "保留原本的金色日曆外框＋今日數字 (1–31)"),
+                            Triple(2, "樣式二：DX 原創「星期幾＋日期」", "奢華黑金雙環日曆：平日流金／週末暖紅金星期眉條＋大數字＋7 點週進度")
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            iconModes.forEach { (idx, title, desc) ->
+                                val selected = iconModeIndex == idx
+                                Surface(
+                                    color = if (selected) tokens.accentColor.copy(alpha = 0.14f) else tokens.elevatedSurfaceColor,
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        width = if (selected) 1.5.dp else 1.dp,
+                                        color = if (selected) tokens.accentColor else tokens.gridLineColor
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            when (idx) {
+                                                0 -> onToggleDynamicDayIcon(false)
+                                                1 -> {
+                                                    onToggleDynamicDayIconShowWeekday(false)
+                                                    onToggleDynamicDayIcon(true)
+                                                }
+                                                2 -> onToggleDynamicDayIconShowWeekday(true)
+                                            }
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        RadioButton(
+                                            selected = selected,
+                                            onClick = null,
+                                            colors = RadioButtonDefaults.colors(selectedColor = tokens.accentColor)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = title,
+                                                color = if (selected) tokens.accentColor else tokens.primaryTextColor,
+                                                fontSize = 13.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = desc,
+                                                color = tokens.secondaryTextColor,
+                                                fontSize = 11.5.sp,
+                                                lineHeight = 15.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         HorizontalDivider(color = tokens.gridLineColor)
 
