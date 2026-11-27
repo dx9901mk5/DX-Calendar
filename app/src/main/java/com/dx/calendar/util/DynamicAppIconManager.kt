@@ -35,6 +35,15 @@ object DynamicAppIconManager {
         return "com.dx.calendar.MainActivityAliasDay%02d".format(clamped)
     }
 
+    /**
+     * 星期幾＋日期動態圖示別名（dayOfWeek: 1=星期一 .. 7=星期日；dayOfMonth: 1..31）
+     */
+    fun weekdayDayAliasName(dayOfWeek: Int, dayOfMonth: Int): String {
+        val w = dayOfWeek.coerceIn(1, 7)
+        val d = dayOfMonth.coerceIn(1, 31)
+        return "com.dx.calendar.MainActivityAliasWd%dDay%02d".format(w, d)
+    }
+
     internal fun isAliasEffectivelyEnabled(alias: String, componentState: Int): Boolean {
         return if (alias == DEFAULT_ALIAS) {
             componentState == PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
@@ -45,27 +54,35 @@ object DynamicAppIconManager {
     }
 
     /**
-     * 同步目前桌面圖示至目標日期（或關閉動態模式時切回預設圖示）。
+     * 同步目前桌面圖示至目標日期（支援純日期 1–31 與「星期幾＋日期」雙模式；關閉時切回預設圖示）。
      * 若目標 alias 已啟用且其他 alias 均未啟用，直接略過（0 次寫入 IPC）。
      */
     @Synchronized
     fun syncIcon(
         context: Context,
         enabled: Boolean,
+        showWeekday: Boolean = false,
         date: LocalDate = LocalDate.now()
     ): Boolean {
         return runCatching {
             val appCtx = context.applicationContext ?: context
             val pm = appCtx.packageManager
             val pkg = appCtx.packageName
-            val targetAlias = if (enabled) dayAliasName(date.dayOfMonth) else DEFAULT_ALIAS
-
-            val allAliases = buildList(32) {
-                add(DEFAULT_ALIAS)
-                for (d in 1..31) add(dayAliasName(d))
+            val targetAlias = when {
+                !enabled -> DEFAULT_ALIAS
+                showWeekday -> weekdayDayAliasName(date.dayOfWeek.value, date.dayOfMonth)
+                else -> dayAliasName(date.dayOfMonth)
             }
 
-            val states = HashMap<String, Int>(32)
+            val allAliases = buildList(249) {
+                add(DEFAULT_ALIAS)
+                for (d in 1..31) add(dayAliasName(d))
+                for (w in 1..7) {
+                    for (d in 1..31) add(weekdayDayAliasName(w, d))
+                }
+            }
+
+            val states = HashMap<String, Int>(256)
             for (alias in allAliases) {
                 states[alias] = pm.getComponentEnabledSetting(ComponentName(pkg, alias))
             }

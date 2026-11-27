@@ -32,7 +32,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val settings = AppPreferences(context).getSettingsOnce()
-                        DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
+                        DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled, settings.dynamicDayIconShowWeekday)
                         DynamicAppIconManager.scheduleMidnightRefresh(context)
                         MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(context)
                         WidgetRefreshHelper.refreshAllWidgets(context)
@@ -50,7 +50,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         val settings = AppPreferences(context).getSettingsOnce()
-                        DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled)
+                        DynamicAppIconManager.syncIcon(context, settings.dynamicDayIconEnabled, settings.dynamicDayIconShowWeekday)
                         DynamicAppIconManager.scheduleMidnightRefresh(context)
                         if (intent.action == Intent.ACTION_TIMEZONE_CHANGED || intent.action == Intent.ACTION_TIME_CHANGED) {
                             MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(context)

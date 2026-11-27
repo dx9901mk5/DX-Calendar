@@ -1612,20 +1612,42 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun syncDynamicAppIconNow() = viewModelScope.launch(Dispatchers.IO) {
-        val enabled = repo.prefs.getSettingsOnce().dynamicDayIconEnabled
-        com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), enabled)
+        val s = repo.prefs.getSettingsOnce()
+        com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), s.dynamicDayIconEnabled, s.dynamicDayIconShowWeekday)
         com.dx.calendar.util.DynamicAppIconManager.scheduleMidnightRefresh(getApplication())
     }
 
     fun setDynamicDayIconEnabled(enabled: Boolean) = viewModelScope.launch {
         repo.prefs.setDynamicDayIconEnabled(enabled)
+        val showWeekday = repo.prefs.getSettingsOnce().dynamicDayIconShowWeekday
         withContext(Dispatchers.IO) {
-            com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), enabled)
+            com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), enabled, showWeekday)
             com.dx.calendar.util.DynamicAppIconManager.scheduleMidnightRefresh(getApplication())
         }
         toast(
-            if (enabled) "已開啟 1–31 動態日期圖示，桌面圖示將自動顯示今日日期"
-            else "已切回預設靜態 App 圖示"
+            if (enabled) {
+                if (showWeekday) "已開啟「星期幾＋日期」動態桌面圖示"
+                else "已開啟 1–31 動態日期圖示，桌面圖示將自動顯示今日日期"
+            } else "已切回預設靜態 App 圖示"
+        )
+    }
+
+    fun setDynamicDayIconShowWeekday(showWeekday: Boolean) = viewModelScope.launch {
+        repo.prefs.setDynamicDayIconShowWeekday(showWeekday)
+        // 若使用者開啟「顯示星期幾」，自動一併啟用動態日期圖示
+        val enabled = if (showWeekday) {
+            repo.prefs.setDynamicDayIconEnabled(true)
+            true
+        } else {
+            repo.prefs.getSettingsOnce().dynamicDayIconEnabled
+        }
+        withContext(Dispatchers.IO) {
+            com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), enabled, showWeekday)
+            com.dx.calendar.util.DynamicAppIconManager.scheduleMidnightRefresh(getApplication())
+        }
+        toast(
+            if (showWeekday) "已切換為「星期幾＋日期」動態桌面圖示（例：星期五 27）"
+            else "已切換為純日期動態圖示 (1–31)"
         )
     }
 

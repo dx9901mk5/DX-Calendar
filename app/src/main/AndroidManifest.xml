@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Pixelbook / Chromebook 與無指紋硬體裝置相容性宣告 -->
@@ -541,6 +541,2829 @@
             </intent-filter>
         </activity-alias>
 
+
+        <!-- 星期幾＋日期動態桌面圖示別名 (星期一～星期日 × 1–31 日) -->
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day01"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_01"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_01"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day02"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_02"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_02"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day03"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_03"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_03"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day04"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_04"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_04"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day05"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_05"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_05"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day06"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_06"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_06"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day07"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_07"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_07"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day08"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_08"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_08"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day09"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_09"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_09"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day10"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_10"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_10"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day11"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_11"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_11"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day12"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_12"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_12"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day13"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_13"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_13"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day14"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_14"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_14"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day15"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_15"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_15"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day16"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_16"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_16"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day17"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_17"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_17"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day18"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_18"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_18"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day19"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_19"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_19"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day20"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_20"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_20"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day21"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_21"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_21"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day22"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_22"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_22"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day23"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_23"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_23"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day24"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_24"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_24"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day25"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_25"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_25"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day26"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_26"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_26"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day27"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_27"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_27"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day28"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_28"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_28"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day29"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_29"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_29"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day30"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_30"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_30"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd1Day31"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd1_day_31"
+            android:roundIcon="@mipmap/ic_launcher_wd1_day_31"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day01"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_01"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_01"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day02"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_02"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_02"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day03"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_03"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_03"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day04"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_04"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_04"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day05"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_05"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_05"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day06"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_06"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_06"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day07"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_07"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_07"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day08"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_08"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_08"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day09"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_09"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_09"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day10"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_10"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_10"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day11"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_11"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_11"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day12"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_12"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_12"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day13"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_13"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_13"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day14"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_14"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_14"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day15"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_15"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_15"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day16"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_16"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_16"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day17"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_17"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_17"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day18"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_18"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_18"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day19"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_19"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_19"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day20"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_20"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_20"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day21"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_21"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_21"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day22"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_22"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_22"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day23"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_23"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_23"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day24"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_24"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_24"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day25"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_25"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_25"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day26"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_26"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_26"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day27"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_27"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_27"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day28"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_28"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_28"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day29"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_29"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_29"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day30"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_30"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_30"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd2Day31"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd2_day_31"
+            android:roundIcon="@mipmap/ic_launcher_wd2_day_31"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day01"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_01"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_01"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day02"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_02"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_02"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day03"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_03"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_03"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day04"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_04"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_04"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day05"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_05"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_05"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day06"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_06"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_06"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day07"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_07"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_07"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day08"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_08"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_08"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day09"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_09"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_09"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day10"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_10"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_10"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day11"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_11"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_11"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day12"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_12"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_12"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day13"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_13"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_13"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day14"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_14"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_14"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day15"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_15"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_15"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day16"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_16"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_16"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day17"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_17"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_17"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day18"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_18"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_18"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day19"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_19"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_19"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day20"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_20"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_20"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day21"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_21"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_21"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day22"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_22"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_22"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day23"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_23"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_23"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day24"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_24"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_24"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day25"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_25"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_25"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day26"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_26"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_26"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day27"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_27"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_27"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day28"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_28"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_28"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day29"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_29"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_29"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day30"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_30"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_30"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd3Day31"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd3_day_31"
+            android:roundIcon="@mipmap/ic_launcher_wd3_day_31"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day01"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_01"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_01"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day02"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_02"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_02"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day03"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_03"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_03"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day04"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_04"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_04"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day05"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_05"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_05"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day06"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_06"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_06"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day07"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_07"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_07"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day08"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_08"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_08"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day09"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_09"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_09"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day10"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_10"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_10"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day11"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_11"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_11"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day12"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_12"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_12"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day13"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_13"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_13"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day14"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_14"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_14"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day15"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_15"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_15"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day16"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_16"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_16"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day17"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_17"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_17"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day18"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_18"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_18"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day19"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_19"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_19"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day20"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_20"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_20"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day21"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_21"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_21"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day22"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_22"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_22"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day23"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_23"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_23"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day24"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_24"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_24"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day25"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_25"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_25"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day26"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_26"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_26"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day27"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_27"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_27"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day28"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_28"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_28"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day29"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_29"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_29"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day30"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_30"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_30"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd4Day31"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd4_day_31"
+            android:roundIcon="@mipmap/ic_launcher_wd4_day_31"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day01"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_01"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_01"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day02"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_02"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_02"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day03"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_03"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_03"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day04"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_04"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_04"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day05"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_05"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_05"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day06"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_06"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_06"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day07"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_07"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_07"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day08"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_08"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_08"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day09"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_09"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_09"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day10"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_10"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_10"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day11"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_11"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_11"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day12"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_12"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_12"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day13"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_13"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_13"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day14"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_14"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_14"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day15"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_15"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_15"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day16"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_16"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_16"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day17"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_17"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_17"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day18"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_18"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_18"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day19"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_19"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_19"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day20"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_20"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_20"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day21"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_21"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_21"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day22"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_22"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_22"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day23"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_23"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_23"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day24"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_24"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_24"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day25"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_25"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_25"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day26"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_26"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_26"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day27"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_27"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_27"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day28"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_28"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_28"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day29"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_29"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_29"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day30"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_30"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_30"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd5Day31"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd5_day_31"
+            android:roundIcon="@mipmap/ic_launcher_wd5_day_31"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day01"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_01"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_01"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day02"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_02"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_02"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day03"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_03"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_03"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day04"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_04"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_04"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day05"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_05"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_05"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day06"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_06"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_06"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day07"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_07"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_07"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day08"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_08"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_08"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day09"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_09"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_09"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day10"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_10"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_10"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day11"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_11"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_11"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day12"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_12"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_12"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day13"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_13"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_13"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day14"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_14"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_14"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day15"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_15"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_15"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day16"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_16"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_16"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day17"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_17"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_17"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day18"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_18"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_18"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day19"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_19"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_19"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day20"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_20"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_20"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day21"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_21"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_21"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day22"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_22"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_22"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day23"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_23"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_23"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day24"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_24"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_24"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day25"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_25"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_25"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day26"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_26"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_26"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day27"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_27"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_27"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day28"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_28"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_28"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day29"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_29"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_29"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day30"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_30"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_30"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd6Day31"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd6_day_31"
+            android:roundIcon="@mipmap/ic_launcher_wd6_day_31"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day01"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_01"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_01"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day02"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_02"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_02"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day03"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_03"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_03"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day04"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_04"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_04"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day05"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_05"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_05"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day06"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_06"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_06"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day07"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_07"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_07"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day08"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_08"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_08"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day09"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_09"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_09"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day10"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_10"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_10"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day11"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_11"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_11"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day12"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_12"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_12"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day13"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_13"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_13"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day14"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_14"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_14"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day15"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_15"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_15"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day16"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_16"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_16"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day17"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_17"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_17"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day18"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_18"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_18"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day19"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_19"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_19"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day20"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_20"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_20"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day21"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_21"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_21"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day22"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_22"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_22"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day23"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_23"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_23"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day24"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_24"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_24"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day25"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_25"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_25"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day26"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_26"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_26"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day27"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_27"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_27"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day28"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_28"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_28"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day29"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_29"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_29"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day30"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_30"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_30"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".MainActivityAliasWd7Day31"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_wd7_day_31"
+            android:roundIcon="@mipmap/ic_launcher_wd7_day_31"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- 全螢幕多重連段鬧鐘響鈴頁面 -->
         <activity

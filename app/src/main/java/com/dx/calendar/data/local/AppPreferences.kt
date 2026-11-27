@@ -107,6 +107,7 @@ data class UserSettings(
     val widgetOpacity: Float = 0.88f,
     val autoCheckUpdate: Boolean = true,
     val dynamicDayIconEnabled: Boolean = false,
+    val dynamicDayIconShowWeekday: Boolean = false,
     val liveUpdateIslandEnabled: Boolean = true,
     val secondaryTimeZoneId: String = "",
     val backupDeviceName: String = android.os.Build.MODEL ?: "DX_Device",
@@ -172,6 +173,7 @@ class AppPreferences(context: Context) {
         private val KEY_WIDGET_OPACITY = floatPreferencesKey("widget_opacity")
         private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
         private val KEY_DYNAMIC_DAY_ICON = booleanPreferencesKey("dynamic_day_icon_enabled")
+        private val KEY_DYNAMIC_DAY_ICON_SHOW_WEEKDAY = booleanPreferencesKey("dynamic_day_icon_show_weekday")
         private val KEY_LIVE_UPDATE_ISLAND = booleanPreferencesKey("live_update_island_enabled")
         private val KEY_FIRST_INSTALL_MILLIS = longPreferencesKey("first_install_epoch_millis")
         private val KEY_REWARDED_UNLOCK_UNTIL = longPreferencesKey("rewarded_unlock_until_millis")
@@ -276,6 +278,7 @@ class AppPreferences(context: Context) {
                 widgetOpacity = prefs[KEY_WIDGET_OPACITY] ?: 0.88f,
                 autoCheckUpdate = prefs[KEY_AUTO_CHECK_UPDATE] ?: true,
                 dynamicDayIconEnabled = prefs[KEY_DYNAMIC_DAY_ICON] ?: false,
+                dynamicDayIconShowWeekday = prefs[KEY_DYNAMIC_DAY_ICON_SHOW_WEEKDAY] ?: false,
                 liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true,
                 secondaryTimeZoneId = prefs[KEY_SECONDARY_TIMEZONE] ?: "",
                 backupDeviceName = prefs[KEY_BACKUP_DEVICE_NAME]?.takeIf { it.isNotBlank() }
@@ -518,6 +521,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setDynamicDayIconEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_DYNAMIC_DAY_ICON] = enabled }
+    }
+
+    suspend fun setDynamicDayIconShowWeekday(showWeekday: Boolean) {
+        appContext.dataStore.edit { it[KEY_DYNAMIC_DAY_ICON_SHOW_WEEKDAY] = showWeekday }
     }
 
     suspend fun setLiveUpdateIslandEnabled(enabled: Boolean) {

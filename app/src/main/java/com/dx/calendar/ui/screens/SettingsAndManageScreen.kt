@@ -218,6 +218,7 @@ fun SettingsAndManageScreen(
     onTestMultiCallAlarmDemo: () -> Unit,
     liveUpdateStatus: LiveUpdateIslandStatus,
     onToggleDynamicDayIcon: (Boolean) -> Unit,
+    onToggleDynamicDayIconShowWeekday: (Boolean) -> Unit = {},
     onToggleLiveUpdateIsland: (Boolean) -> Unit,
     onOpenLiveUpdateSettings: () -> Unit,
     onTestLiveUpdateIsland: () -> Unit,
@@ -519,6 +520,7 @@ fun SettingsAndManageScreen(
                                     onExportIcsShare = onExportIcsShare,
                                     onTestMultiCallAlarmDemo = onTestMultiCallAlarmDemo,
                                     onToggleDynamicDayIcon = onToggleDynamicDayIcon,
+                                    onToggleDynamicDayIconShowWeekday = onToggleDynamicDayIconShowWeekday,
                                     onToggleLiveUpdateIsland = onToggleLiveUpdateIsland,
                                     onOpenLiveUpdateSettings = onOpenLiveUpdateSettings,
                                     onTestLiveUpdateIsland = onTestLiveUpdateIsland,
@@ -645,6 +647,7 @@ fun SettingsAndManageScreen(
                                     onExportIcsShare = onExportIcsShare,
                                     onTestMultiCallAlarmDemo = onTestMultiCallAlarmDemo,
                                     onToggleDynamicDayIcon = onToggleDynamicDayIcon,
+                                    onToggleDynamicDayIconShowWeekday = onToggleDynamicDayIconShowWeekday,
                                     onToggleLiveUpdateIsland = onToggleLiveUpdateIsland,
                                     onOpenLiveUpdateSettings = onOpenLiveUpdateSettings,
                                         onTestLiveUpdateIsland = onTestLiveUpdateIsland,
@@ -816,6 +819,7 @@ private fun DxSettingsSectionContent(
     onExportIcsShare: () -> Unit,
     onTestMultiCallAlarmDemo: () -> Unit,
     onToggleDynamicDayIcon: (Boolean) -> Unit,
+    onToggleDynamicDayIconShowWeekday: (Boolean) -> Unit = {},
     onToggleLiveUpdateIsland: (Boolean) -> Unit,
     onOpenLiveUpdateSettings: () -> Unit,
     onTestLiveUpdateIsland: () -> Unit,
@@ -1262,8 +1266,13 @@ private fun DxSettingsSectionContent(
                             checked = settings.dynamicDayIconEnabled,
                             onCheckedChange = onToggleDynamicDayIcon
                         )
+                        SettingSwitchRow(
+                            label = "圖示同時顯示星期幾（例：星期五 27）",
+                            checked = settings.dynamicDayIconEnabled && settings.dynamicDayIconShowWeekday,
+                            onCheckedChange = onToggleDynamicDayIconShowWeekday
+                        )
                         Text(
-                            text = "每日 00:00 跨日與開啟 App 時自動切換為當日數字圖示；關閉則恢復預設靜態圖示。",
+                            text = "每日 00:00 跨日與開啟 App 時自動切換為當日數字或「星期幾＋日期」圓環圖示；關閉則恢復預設靜態圖示。",
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
                         )

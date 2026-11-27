@@ -1185,6 +1185,7 @@ fun DXCalendarRootApp(
                 onTestMultiCallAlarmDemo = { MultiCallAlarmScheduler.triggerImmediateDemoAlarm(context) },
                 liveUpdateStatus = com.dx.calendar.alarm.LiveUpdateIslandHelper.getStatus(context),
                 onToggleDynamicDayIcon = { viewModel.setDynamicDayIconEnabled(it) },
+                onToggleDynamicDayIconShowWeekday = { viewModel.setDynamicDayIconShowWeekday(it) },
                 onToggleLiveUpdateIsland = { viewModel.setLiveUpdateIslandEnabled(it) },
                 onOpenLiveUpdateSettings = { com.dx.calendar.alarm.LiveUpdateIslandHelper.openPromotionSettings(context) },
                 onTestLiveUpdateIsland = { viewModel.triggerLiveUpdateIslandDemo() },
