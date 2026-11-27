@@ -5,6 +5,14 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v2.1.4] - 2026-11-27 (`versionCode = 38`)
+
+### ✨ 視覺體驗優化 / Improved
+- **🧩 補齊全部 5 款桌面小工具的模擬預覽畫面（`previewLayout` ＋ `previewImage`）**：
+  - 為先前缺少預覽圖的 3 款小工具——**「下一行程與天氣橫條 (4×1)」**、**「倒數日與天氣 (2×2)」**與**「單週 7 天天氣與行程 (4×2)」**補齊 Android 12+ 原生向量 `previewLayout` 與高解析 `previewImage`，於各品牌桌面長按「添加小工具」時全部 5 款小工具皆能即時呈現清晰完整的黑金模擬預覽畫面。
+
+---
+
 ## [v2.1.3] - 2026-11-27 (`versionCode = 37`)
 
 ### ✨ 新增功能 / Added
