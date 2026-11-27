@@ -170,6 +170,7 @@ fun SettingsAndManageScreen(
     onSelectAlternateCalendar: (AlternateCalendarMode) -> Unit = { onToggleShowLunar(it != AlternateCalendarMode.NONE) },
     onSelectDateInfoDisplay: (DateInfoDisplayMode) -> Unit = { onToggleShowLunar(it != DateInfoDisplayMode.NONE) },
     onSelectMonthViewLayout: (MonthViewLayoutMode) -> Unit = {},
+    onTogglePhoneSwipeUpSchedule: (Boolean) -> Unit = {},
     onSelectTimeZoneOverride: (String) -> Unit = {},
     onSelectSecondaryTimeZone: (String) -> Unit = {},
     onChangeBackupDeviceName: (String) -> Unit = {},
@@ -465,6 +466,7 @@ fun SettingsAndManageScreen(
                                     onSelectAlternateCalendar = onSelectAlternateCalendar,
                                     onSelectDateInfoDisplay = onSelectDateInfoDisplay,
                                     onSelectMonthViewLayout = onSelectMonthViewLayout,
+                                    onTogglePhoneSwipeUpSchedule = onTogglePhoneSwipeUpSchedule,
                                     onSelectTimeZoneOverride = onSelectTimeZoneOverride,
                                     onSelectSecondaryTimeZone = onSelectSecondaryTimeZone,
                                     onChangeBackupDeviceName = onChangeBackupDeviceName,
@@ -584,6 +586,7 @@ fun SettingsAndManageScreen(
                                     onSelectAlternateCalendar = onSelectAlternateCalendar,
                                     onSelectDateInfoDisplay = onSelectDateInfoDisplay,
                                     onSelectMonthViewLayout = onSelectMonthViewLayout,
+                                    onTogglePhoneSwipeUpSchedule = onTogglePhoneSwipeUpSchedule,
                                     onSelectTimeZoneOverride = onSelectTimeZoneOverride,
                                     onSelectSecondaryTimeZone = onSelectSecondaryTimeZone,
                                     onChangeBackupDeviceName = onChangeBackupDeviceName,
@@ -743,6 +746,7 @@ private fun DxSettingsSectionContent(
     onSelectAlternateCalendar: (AlternateCalendarMode) -> Unit = { onToggleShowLunar(it != AlternateCalendarMode.NONE) },
     onSelectDateInfoDisplay: (DateInfoDisplayMode) -> Unit = { onToggleShowLunar(it != DateInfoDisplayMode.NONE) },
     onSelectMonthViewLayout: (MonthViewLayoutMode) -> Unit = {},
+    onTogglePhoneSwipeUpSchedule: (Boolean) -> Unit = {},
     onSelectTimeZoneOverride: (String) -> Unit = {},
     onSelectSecondaryTimeZone: (String) -> Unit = {},
     onChangeBackupDeviceName: (String) -> Unit = {},
@@ -1371,6 +1375,33 @@ private fun DxSettingsSectionContent(
                             value = settings.monthViewLayoutMode.label,
                             onClick = { showMonthLayoutDialog = true }
                         )
+                        HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "手機上滑手勢顯示時間表",
+                                    color = tokens.primaryTextColor,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "開啟後於手機月曆向上滑動可壓縮月曆（日期下方疊加事件色條）並顯示下方時間表；關閉則停用上滑手勢",
+                                    color = tokens.secondaryTextColor,
+                                    fontSize = 11.sp,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = settings.phoneSwipeUpScheduleEnabled,
+                                onCheckedChange = onTogglePhoneSwipeUpSchedule
+                            )
+                        }
                         HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
 
                         SettingClickableValueRow(

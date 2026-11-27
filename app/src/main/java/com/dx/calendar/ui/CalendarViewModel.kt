@@ -1440,6 +1440,9 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     fun setMonthViewLayoutMode(mode: com.dx.calendar.data.local.MonthViewLayoutMode) = viewModelScope.launch {
         repo.prefs.setMonthViewLayoutMode(mode)
     }
+    fun setPhoneSwipeUpScheduleEnabled(enabled: Boolean) = viewModelScope.launch {
+        repo.prefs.setPhoneSwipeUpScheduleEnabled(enabled)
+    }
     fun setTimeZoneOverrideId(zoneId: String) = viewModelScope.launch {
         repo.prefs.setTimeZoneOverrideId(zoneId)
     }

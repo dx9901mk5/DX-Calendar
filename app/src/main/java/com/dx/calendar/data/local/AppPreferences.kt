@@ -79,6 +79,7 @@ data class UserSettings(
     val alternateCalendarMode: AlternateCalendarMode = AlternateCalendarMode.AUTO_BY_REGION,
     val dateInfoDisplayMode: DateInfoDisplayMode = DateInfoDisplayMode.LUNAR_AND_HOLIDAY,
     val monthViewLayoutMode: MonthViewLayoutMode = MonthViewLayoutMode.FULL_MONTH,
+    val phoneSwipeUpScheduleEnabled: Boolean = true,
     val timeZoneOverrideId: String = "",
     val showPublicHolidays: Boolean = true,
     val showTraditionalFestivals: Boolean = true,
@@ -137,6 +138,7 @@ class AppPreferences(context: Context) {
         private val KEY_ALT_CALENDAR_MODE = stringPreferencesKey("alt_calendar_mode")
         private val KEY_DATE_INFO_DISPLAY_MODE = stringPreferencesKey("date_info_display_mode")
         private val KEY_MONTH_VIEW_LAYOUT_MODE = stringPreferencesKey("month_view_layout_mode")
+        private val KEY_PHONE_SWIPE_UP_SCHEDULE_ENABLED = booleanPreferencesKey("phone_swipe_up_schedule_enabled")
         private val KEY_TIMEZONE_OVERRIDE = stringPreferencesKey("timezone_override_id")
         private val KEY_SHOW_PUBLIC_HOLIDAYS = booleanPreferencesKey("show_public_holidays")
         private val KEY_SHOW_TRADITIONAL_FESTIVALS = booleanPreferencesKey("show_traditional_festivals")
@@ -233,6 +235,7 @@ class AppPreferences(context: Context) {
                 alternateCalendarMode = altCalMode,
                 dateInfoDisplayMode = dateInfoMode,
                 monthViewLayoutMode = monthLayoutMode,
+                phoneSwipeUpScheduleEnabled = prefs[KEY_PHONE_SWIPE_UP_SCHEDULE_ENABLED] ?: true,
                 timeZoneOverrideId = prefs[KEY_TIMEZONE_OVERRIDE] ?: "",
                 showPublicHolidays = prefs[KEY_SHOW_PUBLIC_HOLIDAYS] ?: true,
                 showTraditionalFestivals = prefs[KEY_SHOW_TRADITIONAL_FESTIVALS] ?: true,
@@ -321,6 +324,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setMonthViewLayoutMode(mode: MonthViewLayoutMode) {
         appContext.dataStore.edit { it[KEY_MONTH_VIEW_LAYOUT_MODE] = mode.name }
+    }
+
+    suspend fun setPhoneSwipeUpScheduleEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_PHONE_SWIPE_UP_SCHEDULE_ENABLED] = enabled }
     }
 
     suspend fun setTimeZoneOverrideId(zoneId: String) {

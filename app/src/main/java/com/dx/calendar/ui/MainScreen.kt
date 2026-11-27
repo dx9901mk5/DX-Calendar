@@ -192,17 +192,28 @@ fun DXCalendarRootApp(
     var showPinDialog by remember { mutableStateOf(false) }
     // 仿三星日曆手勢動畫狀態：手機月檢視預設滿版月曆 (false)，上滑平滑壓縮月曆並拉起下方時間表 (true)；再點已選日期彈出 24h 浮動時間軸卡片
     var showCompactBottomDayPanel by remember {
-        mutableStateOf(settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT)
+        mutableStateOf(
+            settings.phoneSwipeUpScheduleEnabled &&
+                settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
+        )
     }
     var sheetDragFraction by remember {
-        mutableFloatStateOf(if (settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT) 1f else 0f)
-    }
-    LaunchedEffect(settings.monthViewLayoutMode) {
-        val split = settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
-        showCompactBottomDayPanel = split
-        sheetDragFraction = if (split) 1f else 0f
+        mutableFloatStateOf(
+            if (settings.phoneSwipeUpScheduleEnabled &&
+                settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
+            ) 1f else 0f
+        )
     }
     var isDraggingSheet by remember { mutableStateOf(false) }
+    LaunchedEffect(settings.monthViewLayoutMode, settings.phoneSwipeUpScheduleEnabled) {
+        val split = settings.phoneSwipeUpScheduleEnabled &&
+            settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
+        showCompactBottomDayPanel = split
+        sheetDragFraction = if (split) 1f else 0f
+        if (!settings.phoneSwipeUpScheduleEnabled) {
+            isDraggingSheet = false
+        }
+    }
     var floatingTimelinePopupDate by remember { mutableStateOf<LocalDate?>(null) }
 
     DXCalendarTheme(
@@ -657,7 +668,7 @@ fun DXCalendarRootApp(
                             } else {
                                 // 手機直向 / 小視窗模式：完整實作仿三星日曆「上下滑動手勢連動動畫（滿版月曆 ⇄ 壓縮彩條月曆＋下方當日時間表）」！
                                 val sheetActive = viewMode == CalendarViewMode.MONTH &&
-                                    (showCompactBottomDayPanel || focusedItem != null) &&
+                                    ((settings.phoneSwipeUpScheduleEnabled && showCompactBottomDayPanel) || focusedItem != null) &&
                                     spec.heightDp >= 440.dp
                                 val targetProgress = if (isDraggingSheet) {
                                     sheetDragFraction.coerceIn(0f, 1f)
@@ -682,6 +693,7 @@ fun DXCalendarRootApp(
                                     fallbackTotalH
                                 }
                                 val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 360.dp
+                                val canSwipeScheduleSheet = canSplitVertically && settings.phoneSwipeUpScheduleEnabled
                                 val progress = if (canSplitVertically) {
                                     (if (isDraggingSheet) sheetDragFraction else animatedSheetProgress).coerceIn(0f, 1f)
                                 } else 0f
@@ -763,7 +775,7 @@ fun DXCalendarRootApp(
                                                 },
                                                 onSwipePrevMonth = { viewModel.shiftMonth(-1) },
                                                 onSwipeNextMonth = { viewModel.shiftMonth(1) },
-                                                onVerticalDragDelta = if (canSplitVertically) { deltaY ->
+                                                onVerticalDragDelta = if (canSwipeScheduleSheet) { deltaY ->
                                                     if (!isDraggingSheet) {
                                                         isDraggingSheet = true
                                                         sheetDragFraction = if (showCompactBottomDayPanel || focusedItem != null) 1f else 0f
@@ -771,7 +783,7 @@ fun DXCalendarRootApp(
                                                     // 往上滑 (deltaY < 0) 展開時間表；往下滑 (deltaY > 0) 收合回滿版月曆
                                                     sheetDragFraction = (sheetDragFraction - deltaY / 520f).coerceIn(0f, 1f)
                                                 } else null,
-                                                onVerticalDragEnd = if (canSplitVertically) {
+                                                onVerticalDragEnd = if (canSwipeScheduleSheet) {
                                                     {
                                                         val shouldOpen = sheetDragFraction >= 0.36f
                                                         showCompactBottomDayPanel = shouldOpen
@@ -1020,6 +1032,7 @@ fun DXCalendarRootApp(
                 onSelectAlternateCalendar = { viewModel.setAlternateCalendarMode(it) },
                 onSelectDateInfoDisplay = { viewModel.setDateInfoDisplayMode(it) },
                 onSelectMonthViewLayout = { viewModel.setMonthViewLayoutMode(it) },
+                onTogglePhoneSwipeUpSchedule = { viewModel.setPhoneSwipeUpScheduleEnabled(it) },
                 onSelectTimeZoneOverride = { viewModel.setTimeZoneOverrideId(it) },
                 onSelectSecondaryTimeZone = { viewModel.setSecondaryTimeZoneId(it) },
                 onChangeBackupDeviceName = { viewModel.setBackupDeviceName(it) },
