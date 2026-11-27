@@ -89,6 +89,7 @@ data class UserSettings(
     val showCompletedTasks: Boolean = true,
     val peekHiddenInMonth: Boolean = false,
     val routineMedicationFeatureEnabled: Boolean = false,
+    val womensHealthFeatureEnabled: Boolean = false,
     val routineDefaultHideFromMonth: Boolean = true,
     val customWallpaperUri: String = "",
     val wallpaperAlpha: Float = 0.28f,
@@ -146,6 +147,7 @@ class AppPreferences(context: Context) {
         private val KEY_SHOW_COMPLETED_TASKS = booleanPreferencesKey("show_completed_tasks")
         private val KEY_PEEK_HIDDEN = booleanPreferencesKey("peek_hidden_in_month")
         private val KEY_ROUTINE_MED_FEATURE_ENABLED = booleanPreferencesKey("routine_med_feature_enabled")
+        private val KEY_WOMENS_HEALTH_FEATURE_ENABLED = booleanPreferencesKey("womens_health_feature_enabled")
         private val KEY_LEGACY_MED_DEMO_CLEANED = booleanPreferencesKey("legacy_med_demo_cleaned_v1")
         private val KEY_GOLD_SYSTEM_AUTO_APPLIED_V2 = booleanPreferencesKey("gold_system_auto_applied_v2")
         private val KEY_ROUTINE_DEFAULT_HIDE = booleanPreferencesKey("routine_default_hide")
@@ -241,6 +243,7 @@ class AppPreferences(context: Context) {
                 showCompletedTasks = prefs[KEY_SHOW_COMPLETED_TASKS] ?: true,
                 peekHiddenInMonth = prefs[KEY_PEEK_HIDDEN] ?: false,
                 routineMedicationFeatureEnabled = prefs[KEY_ROUTINE_MED_FEATURE_ENABLED] ?: false,
+                womensHealthFeatureEnabled = prefs[KEY_WOMENS_HEALTH_FEATURE_ENABLED] ?: false,
                 routineDefaultHideFromMonth = prefs[KEY_ROUTINE_DEFAULT_HIDE] ?: true,
                 customWallpaperUri = prefs[KEY_WALLPAPER_URI] ?: "",
                 wallpaperAlpha = prefs[KEY_WALLPAPER_ALPHA] ?: 0.28f,
@@ -358,6 +361,10 @@ class AppPreferences(context: Context) {
 
     suspend fun setRoutineMedicationFeatureEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_ROUTINE_MED_FEATURE_ENABLED] = enabled }
+    }
+
+    suspend fun setWomensHealthFeatureEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { it[KEY_WOMENS_HEALTH_FEATURE_ENABLED] = enabled }
     }
 
     suspend fun setPrivacyFeatureEnabled(enabled: Boolean) {

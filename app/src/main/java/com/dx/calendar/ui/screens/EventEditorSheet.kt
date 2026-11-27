@@ -182,6 +182,7 @@ fun EventEditorScreen(
     presetPrivacy: Boolean,
     presetTaskMode: Boolean,
     presetWomensHealth: Boolean = false,
+    womensHealthFeatureEnabled: Boolean = false,
     privacyFeatureEnabled: Boolean = false,
     allowPrivacyEditing: Boolean = false,
     routineDefaultHideFromMonth: Boolean,
@@ -210,9 +211,10 @@ fun EventEditorScreen(
     val womensHealthCategoryId = remember(categories) {
         categories.firstOrNull { WomensHealthPresets.isWomensHealthCategory(it) }?.id ?: WomensHealthPresets.CATEGORY_ID
     }
-    val initIsWomensHealth = presetWomensHealth ||
-        editingEvent?.categoryId == womensHealthCategoryId ||
+    val editingExistingWomensHealth = editingEvent?.categoryId == womensHealthCategoryId ||
         editingEvent?.categoryId == WomensHealthPresets.CATEGORY_ID
+    val canUseWomensHealth = womensHealthFeatureEnabled || editingExistingWomensHealth
+    val initIsWomensHealth = (womensHealthFeatureEnabled && presetWomensHealth) || editingExistingWomensHealth
 
     var entryMode by remember {
         mutableIntStateOf(
@@ -501,9 +503,13 @@ fun EventEditorScreen(
             }
 
             val leftEditorSection: @Composable () -> Unit = {
-                // 模式快速切換：一般活動 / 例行事務 / 女性健康（新增待辦由 Google Tasks App 負責）
+                // 模式快速切換：一般活動 / 例行事務（設定開啟「女性健康」後才顯示 🌸 女性健康 選項）
+                val modeOptions = remember(canUseWomensHealth) {
+                    if (canUseWomensHealth) listOf(0 to "一般活動", 2 to "例行事務", 3 to "🌸 女性健康")
+                    else listOf(0 to "一般活動", 2 to "例行事務")
+                }
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(0 to "一般活動", 2 to "例行事務", 3 to "🌸 女性健康").forEachIndexed { idx, (modeValue, label) ->
+                    modeOptions.forEachIndexed { idx, (modeValue, label) ->
                         SegmentedButton(
                             selected = entryMode == modeValue,
                             onClick = {
@@ -528,15 +534,16 @@ fun EventEditorScreen(
                                     }
                                 }
                             },
-                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = 3)
+                            shape = SegmentedButtonDefaults.itemShape(index = idx, count = modeOptions.size)
                         ) {
                             Text(label, fontSize = 12.sp, maxLines = 1)
                         }
                     }
                 }
 
-                // 女性健康專屬追蹤類型面板（選擇生理期／排卵期／懷孕／產檢／預產期／產後／事前藥／婦科回診自動套用追蹤提醒）
-                val isWomensHealthActive = entryMode == 3 || (selectedSystemCalId == null && categoryId == womensHealthCategoryId)
+                // 女性健康專屬追蹤類型面板（僅在設定開啟「女性健康」或編輯既有女性健康行程時顯示）
+                val isWomensHealthActive = canUseWomensHealth &&
+                    (entryMode == 3 || (selectedSystemCalId == null && categoryId == womensHealthCategoryId))
                 if (isWomensHealthActive) {
                     val activePreset = WomensHealthPresets.SUBTYPES.firstOrNull { it.id == selectedWomensHealthPresetId }
                     Surface(
@@ -1760,7 +1767,11 @@ fun EventEditorScreen(
                     }
 
                     Text("本機行事曆分類", fontSize = 12.sp, color = tokens.secondaryTextColor)
-                    categories.filter { !it.isTaskCategory && (allowPrivacyEditing || !it.isPrivacyCategory) }.forEach { cat ->
+                    categories.filter {
+                        !it.isTaskCategory &&
+                            (allowPrivacyEditing || !it.isPrivacyCategory) &&
+                            (canUseWomensHealth || !WomensHealthPresets.isWomensHealthCategory(it))
+                    }.forEach { cat ->
                         val isSelectedCat = selectedSystemCalId == null && categoryId == cat.id
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

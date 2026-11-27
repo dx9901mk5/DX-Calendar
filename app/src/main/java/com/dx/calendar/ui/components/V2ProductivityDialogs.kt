@@ -542,6 +542,7 @@ fun FeatureGuideDialog(
     onOpenVoiceQuickAdd: () -> Unit,
     onOpenShiftStamp: () -> Unit,
     onOpenPomodoro: () -> Unit,
+    womensHealthFeatureEnabled: Boolean = false,
     onToggleWomensHealthFilter: () -> Unit = {},
     onImportContactBirthdays: () -> Unit,
     onOpenWeekTimeline: () -> Unit,
@@ -569,7 +570,16 @@ fun FeatureGuideDialog(
                 GuideActionRow("🎙️ 離線語音／一句話快記", "主畫面底部 + 旁麥克風、或編輯頁標題欄右側麥克風", "立即說", tokens.accentColor) {
                     onDismiss(); onOpenVoiceQuickAdd()
                 }
-                GuideActionRow("🌸 女性健康追蹤與臨時檢視", "支援生理期/排卵期/懷孕/產檢/預產期/產後預設追蹤，頂欄「🌸健康」一鍵臨時只看健康", "僅看健康", Color(0xFFEC407A)) {
+                GuideActionRow(
+                    title = "🌸 女性健康追蹤與臨時檢視",
+                    desc = if (womensHealthFeatureEnabled) {
+                        "支援生理期/排卵期/懷孕/產檢/預產期/產後預設追蹤，頂欄「🌸健康」一鍵臨時只看健康"
+                    } else {
+                        "請先至設定頁「日曆檢視與提醒偏好」開啟女性健康開關，開啟後新增事件即自動出現"
+                    },
+                    actionLabel = if (womensHealthFeatureEnabled) "僅看健康" else "前往開啟",
+                    accent = Color(0xFFEC407A)
+                ) {
                     onDismiss(); onToggleWomensHealthFilter()
                 }
                 GuideActionRow("🏷️ 輪班範本連點排班", "主畫面「排班」鈕，點選早/小夜/大夜班後連點日期蓋章", "開啟排班", tokens.accentColor) {

@@ -386,5 +386,11 @@ class LunarAndCalendarTest {
         val edd = subtypes.first { it.id == "DUE_DATE" }
         assertTrue(edd.defaultIsCountdown)
         assertTrue(edd.defaultReminderMinutes.contains(20160))
+
+        // 3. 女性健康設定開關預設關閉 + 桌面小工具霧面卡片調色 + 天氣有霧圖示驗證
+        assertFalse(UserSettings().womensHealthFeatureEnabled)
+        val darkCardTint = com.dx.calendar.widget.computeFrostedWidgetCardTint(0xFFFFB300.toInt(), darkStyle = true)
+        assertEquals(0xBA, (darkCardTint ushr 24) and 0xFF)
+        assertEquals("☁️", com.dx.calendar.data.weather.WeatherForecastManager.mapWmoWeatherCode(45).first)
     }
 }

@@ -1441,6 +1441,19 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
+    fun setWomensHealthFeatureEnabled(enabled: Boolean) = viewModelScope.launch {
+        repo.prefs.setWomensHealthFeatureEnabled(enabled)
+        if (enabled) {
+            ensureWomensHealthCategoryOnce()
+        } else {
+            _onlyWomensHealthFilter.value = false
+        }
+        toast(
+            if (enabled) "已啟用「女性健康」功能，新增行程與主畫面即可使用"
+            else "已關閉「女性健康」功能（已隱藏建立類型與臨時篩選入口）"
+        )
+    }
+
     fun syncDynamicAppIconNow() = viewModelScope.launch(Dispatchers.IO) {
         val enabled = repo.prefs.getSettingsOnce().dynamicDayIconEnabled
         com.dx.calendar.util.DynamicAppIconManager.syncIcon(getApplication(), enabled)

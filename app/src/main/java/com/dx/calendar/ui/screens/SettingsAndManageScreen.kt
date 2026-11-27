@@ -135,7 +135,7 @@ private enum class DxSettingsSection(
     APPEARANCE("外觀主題與底圖", "金白明亮預設、金色灰黑暗色預設與跟隨系統", Icons.Filled.Palette),
     ACCOUNTS_AND_TASKS("行事曆與 Google Tasks", "行事曆顯示開關、本機類型與 Tasks 自動同步", Icons.Filled.AccountCircle),
     ICON_AND_ISLAND("動態通知與日期圖示", "Android 16+ 國際版 Live Updates 即時動態通知與 1–31 金色日期圖示", Icons.Filled.NotificationsActive),
-    CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、格線、透視例行與連段測試", Icons.Filled.Tune),
+    CALENDAR_PREFS("日曆檢視與提醒偏好", "週一起始、農曆節氣、女性健康開關、格線與連段測試", Icons.Filled.Tune),
     IMPORT_EXPORT("匯入與匯出備份", "標準 .ics 檔案匯入匯出與 URL 訂閱", Icons.Filled.ImportExport),
     PRIVACY("隱私日曆設定", "預設隱藏入口；於此啟用後才於月曆顯示眼睛按鈕", Icons.Filled.Lock),
     ABOUT_UPDATE("GitHub 與自動更新", "GitHub 專案連結、點擊檢查更新與自動下載安裝", Icons.Filled.SystemUpdate)
@@ -185,6 +185,7 @@ fun SettingsAndManageScreen(
     onToggleGridLines: (Boolean) -> Unit,
     onTogglePeekHiddenInMonth: (Boolean) -> Unit,
     onToggleRoutineMedicationFeature: (Boolean) -> Unit,
+    onToggleWomensHealthFeature: (Boolean) -> Unit = {},
     onTogglePrivacyFeature: (Boolean) -> Unit,
     onToggleRequireDualFingerprint: (Boolean) -> Unit,
     onOpenPrivacyVault: () -> Unit,
@@ -477,6 +478,7 @@ fun SettingsAndManageScreen(
                                     onToggleGridLines = onToggleGridLines,
                                     onTogglePeekHiddenInMonth = onTogglePeekHiddenInMonth,
                                     onToggleRoutineMedicationFeature = onToggleRoutineMedicationFeature,
+                                    onToggleWomensHealthFeature = onToggleWomensHealthFeature,
                                     onTogglePrivacyFeature = onTogglePrivacyFeature,
                                     onToggleRequireDualFingerprint = onToggleRequireDualFingerprint,
                                     onOpenPrivacyVault = onOpenPrivacyVault,
@@ -593,6 +595,7 @@ fun SettingsAndManageScreen(
                                     onToggleGridLines = onToggleGridLines,
                                     onTogglePeekHiddenInMonth = onTogglePeekHiddenInMonth,
                                     onToggleRoutineMedicationFeature = onToggleRoutineMedicationFeature,
+                                    onToggleWomensHealthFeature = onToggleWomensHealthFeature,
                                     onTogglePrivacyFeature = onTogglePrivacyFeature,
                                     onToggleRequireDualFingerprint = onToggleRequireDualFingerprint,
                                     onOpenPrivacyVault = onOpenPrivacyVault,
@@ -749,6 +752,7 @@ private fun DxSettingsSectionContent(
     onToggleGridLines: (Boolean) -> Unit,
     onTogglePeekHiddenInMonth: (Boolean) -> Unit,
     onToggleRoutineMedicationFeature: (Boolean) -> Unit,
+    onToggleWomensHealthFeature: (Boolean) -> Unit = {},
     onTogglePrivacyFeature: (Boolean) -> Unit,
     onToggleRequireDualFingerprint: (Boolean) -> Unit,
     onOpenPrivacyVault: () -> Unit,
@@ -1018,7 +1022,11 @@ private fun DxSettingsSectionContent(
                             }
                         }
 
-                        categories.filter { !it.isPrivacyCategory && !it.isTaskCategory }.forEach { cat ->
+                        categories.filter {
+                            !it.isPrivacyCategory &&
+                                !it.isTaskCategory &&
+                                (settings.womensHealthFeatureEnabled || !com.dx.calendar.data.model.WomensHealthPresets.isWomensHealthCategory(it))
+                        }.forEach { cat ->
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
@@ -1327,6 +1335,29 @@ private fun DxSettingsSectionContent(
 
                         SettingSwitchRow("顯示月曆格線", settings.showMonthGridLines, onToggleGridLines)
                         SettingSwitchRow("在月曆暫時透視隱藏例行事務", settings.peekHiddenInMonth, onTogglePeekHiddenInMonth)
+                    }
+                }
+
+                // 卡片 1.5：🌸 女性健康追蹤開關（開啟後添加事件與主畫面才出現女性健康類型與臨時專屬檢視）
+                Surface(color = tokens.surfaceCardColor, shape = RoundedCornerShape(tokens.cardCorner)) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "🌸 女性健康追蹤（可選功能）",
+                            color = Color(com.dx.calendar.data.model.WomensHealthPresets.CATEGORY_COLOR_ARGB),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "預設關閉保持介面清爽；開啟後，新增／編輯事件將出現「🌸 女性健康」類型與 8 組追蹤範本（生理期／排卵期／懷孕週數／產檢／預產期／產後護理／事前藥／婦科回診），主畫面亦會出現「🌸健康」一鍵臨時只檢視按鈕。",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp
+                        )
+                        SettingSwitchRow(
+                            label = "啟用「女性健康」類型與臨時專屬檢視",
+                            checked = settings.womensHealthFeatureEnabled,
+                            onCheckedChange = onToggleWomensHealthFeature
+                        )
                     }
                 }
 

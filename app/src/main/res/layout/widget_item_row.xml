@@ -8,10 +8,15 @@
         android:id="@+id/row_date_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:includeFontPadding="false"
         android:paddingTop="4dp"
         android:paddingBottom="2dp"
+        android:shadowColor="#38000000"
+        android:shadowDy="0.5"
+        android:shadowRadius="0.8"
         android:text="11月25日 週三"
-        android:textColor="#FFA8A8B2"
+        android:textColor="#FFD0D0DC"
         android:textSize="11.5sp"
         android:textStyle="bold" />
 
@@ -54,9 +59,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:ellipsize="end"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
                     android:maxLines="1"
+                    android:shadowColor="#38000000"
+                    android:shadowDy="0.5"
+                    android:shadowRadius="0.8"
                     android:text="活動標題"
-                    android:textColor="#FFF5F5F7"
+                    android:textColor="#FFFFFFFF"
                     android:textSize="13.5sp"
                     android:textStyle="bold" />
 
@@ -64,8 +74,14 @@
                     android:id="@+id/row_item_time"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:includeFontPadding="false"
+                    android:paddingTop="2dp"
+                    android:shadowColor="#30000000"
+                    android:shadowDy="0.5"
+                    android:shadowRadius="0.8"
                     android:text="10:00 - 11:00"
-                    android:textColor="#FFB5B5BE"
+                    android:textColor="#FFD4D4DE"
                     android:textSize="11.5sp" />
             </LinearLayout>
         </LinearLayout>

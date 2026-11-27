@@ -407,7 +407,8 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                         ).filter { it.showInMonthGrid && it.showInAgendaAndWidget }
 
                         val (minW, minH) = readSafeWidgetDp(appCtx, mgr, widgetId, defaultW = 280, defaultH = 280)
-                        val canvasHeightDp = (minH - 42).coerceAtLeast(100)
+                        val canvasWidthDp = (minW - 20).coerceAtLeast(120)
+                        val canvasHeightDp = (minH - 56).coerceAtLeast(100)
                         val accentArgb = settings.brandStyle.primaryHex.toInt()
 
                         if (resolvedFrom != resolvedTo) {
@@ -417,7 +418,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                                     MonthCanvasRenderer.renderMonthBitmap(
                                         context = appCtx,
                                         yearMonth = ym,
-                                        widthDp = minW,
+                                        widthDp = canvasWidthDp,
                                         heightDp = canvasHeightDp,
                                         items = items,
                                         startMonday = settings.startWeekOnMonday,
@@ -435,6 +436,8 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                                 var nextFrameDeadline = android.os.SystemClock.elapsedRealtime()
                                 for (frameBmp in preRenderedFrames) {
                                     val partialViews = RemoteViews(appCtx.packageName, R.layout.widget_month_canvas).apply {
+                                        setViewVisibility(R.id.widget_canvas_img, android.view.View.VISIBLE)
+                                        setViewVisibility(R.id.widget_month_tap_grid, android.view.View.INVISIBLE)
                                         setImageViewBitmap(R.id.widget_canvas_img, frameBmp)
                                     }
                                     safePartiallyUpdateWidget(mgr, widgetId, partialViews)
@@ -445,12 +448,12 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                             }
                         }
 
-                        // 最終定格高解析幀與完整互動點擊層更新
+                        // 最終定格：切換為 100% 原生向量 TextView 渲染（零點陣圖縮放模糊，直追 vivo 原生桌面字體銳利度！）
                         val finalViews = buildVivoMonthFullRemoteViews(
                             context = appCtx,
                             id = widgetId,
                             ym = ym,
-                            minW = minW,
+                            minW = canvasWidthDp,
                             canvasHeightDp = canvasHeightDp,
                             items = items,
                             startMonday = settings.startWeekOnMonday,
@@ -512,8 +515,8 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                                     context = appCtx,
                                     id = id,
                                     ym = ym,
-                                    minW = minW,
-                                    canvasHeightDp = (minH - 42).coerceAtLeast(100),
+                                    minW = (minW - 20).coerceAtLeast(120),
+                                    canvasHeightDp = (minH - 56).coerceAtLeast(100),
                                     items = items,
                                     startMonday = settings.startWeekOnMonday,
                                     showLunar = settings.showLunar,
@@ -548,23 +551,6 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
             numWeeks: Int,
             expandedRow: Int
         ): RemoteViews {
-            val bmp = MonthCanvasRenderer.renderMonthBitmap(
-                context = context,
-                yearMonth = ym,
-                widthDp = minW,
-                heightDp = canvasHeightDp,
-                items = items,
-                startMonday = startMonday,
-                showLunar = showLunar,
-                darkStyle = darkStyle,
-                accentArgb = accentArgb,
-                googleGridStyle = false,
-                numWeeks = numWeeks,
-                expandedWeekRow = expandedRow,
-                prevExpandedRow = expandedRow,
-                transitionProgress = 1f
-            )
-
             val views = RemoteViews(context.packageName, R.layout.widget_month_canvas)
             applyMonthContainerThemeAndOpacity(views, darkStyle, opacity, accentArgb)
 
@@ -572,7 +558,7 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
             val titleSpan = android.text.SpannableString(titleText).apply {
                 val slashIdx = titleText.indexOf('/')
                 if (slashIdx > 0) {
-                    val slashColor = if (darkStyle) 0x88FFFFFF.toInt() else 0x88000000.toInt()
+                    val slashColor = if (darkStyle) 0x80FFFFFF.toInt() else 0x80000000.toInt()
                     setSpan(
                         android.text.style.ForegroundColorSpan(slashColor),
                         slashIdx,
@@ -593,7 +579,27 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
             views.setViewVisibility(R.id.btn_widget_add, android.view.View.GONE)
             views.setViewVisibility(R.id.btn_widget_today, android.view.View.VISIBLE)
             views.setTextViewText(R.id.btn_widget_today, "now")
-            views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
+
+            // 靜止狀態隱藏點陣畫布，全面交由 100% 原生 Android 向量 TextView 渲染，徹底根絕 fitXY 拉伸模糊！
+            views.setViewVisibility(R.id.widget_canvas_img, android.view.View.GONE)
+            views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
+            views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
+
+            bindNativeMonthGrid(
+                context = context,
+                views = views,
+                widgetId = id,
+                yearMonth = ym,
+                startMonday = startMonday,
+                showLunar = showLunar,
+                darkStyle = darkStyle,
+                accentArgb = accentArgb,
+                items = items,
+                numWeeks = numWeeks,
+                expandedWeekRow = expandedRow,
+                canvasHeightDp = canvasHeightDp,
+                isVivoAccordion = true
+            )
 
             views.setOnClickPendingIntent(
                 R.id.btn_widget_prev,
@@ -615,20 +621,6 @@ class VivoMonthWidgetProvider : AppWidgetProvider() {
                 7
             )
             views.setOnClickPendingIntent(R.id.btn_widget_mode, toggleWeekPi)
-
-            views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
-            views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
-            bindVivoAccordionWeekTapRows(
-                context = context,
-                views = views,
-                widgetId = id,
-                yearMonth = ym,
-                startMonday = startMonday,
-                items = items,
-                numWeeks = numWeeks,
-                expandedWeekRow = expandedRow
-            )
-
             views.setOnClickPendingIntent(R.id.btn_widget_config, buildWidgetConfigPi(context, id, 8))
             views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(context, id * 10 + 4, quickAdd = true))
             views.setOnClickPendingIntent(R.id.widget_month_title, buildMainAppPi(context, id * 10 + 6, quickAdd = false))
@@ -715,21 +707,7 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                                 ).filter { it.showInMonthGrid && it.showInAgendaAndWidget }
 
                                 val (minW, minH) = readSafeWidgetDp(appCtx, mgr, id, defaultW = 280, defaultH = 280)
-
                                 val googleAccent = if (darkStyle) 0xFF8AB4F8.toInt() else 0xFF1A73E8.toInt()
-                                val bmp = MonthCanvasRenderer.renderMonthBitmap(
-                                    context = appCtx,
-                                    yearMonth = ym,
-                                    widthDp = minW,
-                                    heightDp = (minH - 42).coerceAtLeast(100),
-                                    items = items,
-                                    startMonday = settings.startWeekOnMonday,
-                                    showLunar = settings.showLunar,
-                                    darkStyle = darkStyle,
-                                    accentArgb = googleAccent,
-                                    googleGridStyle = true
-                                )
-
                                 val views = RemoteViews(appCtx.packageName, R.layout.widget_month_canvas)
                                 applyMonthContainerThemeAndOpacity(views, darkStyle, opacity, googleAccent)
 
@@ -737,7 +715,28 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                                 views.setViewVisibility(R.id.btn_widget_mode, android.view.View.GONE)
                                 views.setViewVisibility(R.id.btn_widget_today, android.view.View.VISIBLE)
                                 views.setTextViewText(R.id.btn_widget_today, "now")
-                                views.setImageViewBitmap(R.id.widget_canvas_img, bmp)
+                                views.setViewVisibility(R.id.widget_canvas_img, android.view.View.GONE)
+                                views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
+                                views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
+
+                                val firstOfMonth = ym.atDay(1)
+                                val shift = if (settings.startWeekOnMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
+                                val gNumWeeks = ((shift + ym.lengthOfMonth() + 6) / 7).coerceIn(5, 6)
+                                bindNativeMonthGrid(
+                                    context = appCtx,
+                                    views = views,
+                                    widgetId = id,
+                                    yearMonth = ym,
+                                    startMonday = settings.startWeekOnMonday,
+                                    showLunar = settings.showLunar,
+                                    darkStyle = darkStyle,
+                                    accentArgb = googleAccent,
+                                    items = items,
+                                    numWeeks = gNumWeeks,
+                                    expandedWeekRow = -1,
+                                    canvasHeightDp = (minH - 56).coerceAtLeast(100),
+                                    isVivoAccordion = false
+                                )
 
                                 views.setOnClickPendingIntent(
                                     R.id.btn_widget_prev,
@@ -754,9 +753,6 @@ class GoogleMonthWidgetProvider : AppWidgetProvider() {
                                 views.setOnClickPendingIntent(R.id.btn_widget_config, buildWidgetConfigPi(appCtx, id, 18))
                                 views.setOnClickPendingIntent(R.id.btn_widget_add, buildMainAppPi(appCtx, id * 10 + 14, quickAdd = true))
                                 views.setOnClickPendingIntent(R.id.widget_month_title, buildMainAppPi(appCtx, id * 10 + 16, quickAdd = false))
-                                views.setViewVisibility(R.id.widget_month_tap_grid, android.view.View.VISIBLE)
-                                views.setViewVisibility(R.id.widget_week_tap_row, android.view.View.GONE)
-                                bindMonthTapCells(appCtx, views, id, ym, settings.startWeekOnMonday)
 
                                 safeUpdateWidget(mgr, id, views)
                             }
@@ -1466,11 +1462,6 @@ internal object MonthCanvasRenderer {
         val startDate = firstOfMonth.minusDays(shift.toLong())
         val today = LocalDate.now()
         val byDate = items.groupBy { it.date }
-        val weatherMap = com.dx.calendar.data.weather.WeatherForecastManager.loadCachedForecast(context)
-        val weatherPaint = Paint(textFlags).apply {
-            textSize = 9.0f * density
-            textAlign = Paint.Align.RIGHT
-        }
 
         var curTop = gridTop
         for (r in 0 until safeWeeks) {
@@ -1516,17 +1507,8 @@ internal object MonthCanvasRenderer {
 
                 val cx = cellLeft + colW / 2f
                 val dayBaseline = cellTop + (if (anyWeekAccordionMode && rowExpandFrac < 0.3f) 14.8f else 15.8f) * density
+                // 過渡動畫期間不重疊繪製天氣於日期數字上，保持數字邊緣乾淨
                 val lunar = if (showLunar) LunarCalendarEngine.getLunarInfo(d) else null
-
-                // 月曆小工具同步繪製今日起 7 天天氣圖示（右上角）
-                weatherMap[d]?.let { wInfo ->
-                    canvas.drawText(
-                        wInfo.icon,
-                        cellLeft + colW - 2.0f * density,
-                        dayBaseline - 1.5f * density,
-                        weatherPaint
-                    )
-                }
 
                 if (isToday) {
                     if (!googleGridStyle) {
@@ -1732,6 +1714,11 @@ private fun buildBroadcastPi(
     )
 }
 
+private val DOW_VIEW_IDS = intArrayOf(
+    R.id.widget_dow_0, R.id.widget_dow_1, R.id.widget_dow_2, R.id.widget_dow_3,
+    R.id.widget_dow_4, R.id.widget_dow_5, R.id.widget_dow_6
+)
+
 private val MONTH_CELL_VIEW_IDS = intArrayOf(
     R.id.widget_cell_00, R.id.widget_cell_01, R.id.widget_cell_02, R.id.widget_cell_03, R.id.widget_cell_04, R.id.widget_cell_05, R.id.widget_cell_06,
     R.id.widget_cell_07, R.id.widget_cell_08, R.id.widget_cell_09, R.id.widget_cell_10, R.id.widget_cell_11, R.id.widget_cell_12, R.id.widget_cell_13,
@@ -1751,47 +1738,246 @@ private val MONTH_ROW_EXPAND_VIEW_IDS = intArrayOf(
     R.id.widget_row_expand_3, R.id.widget_row_expand_4, R.id.widget_row_expand_5
 )
 
-private fun bindVivoAccordionWeekTapRows(
+internal fun computeFrostedWidgetCardTint(colorArgb: Int, darkStyle: Boolean): Int {
+    val r = (colorArgb shr 16) and 0xFF
+    val g = (colorArgb shr 8) and 0xFF
+    val b = colorArgb and 0xFF
+    val lum = 0.299f * r + 0.587f * g + 0.114f * b
+    val scale = if (darkStyle) {
+        if (lum > 155f) 0.76f else 0.88f
+    } else {
+        if (lum > 175f) 0.80f else 0.94f
+    }
+    val sr = (r * scale).roundToInt().coerceIn(0, 255)
+    val sg = (g * scale).roundToInt().coerceIn(0, 255)
+    val sb = (b * scale).roundToInt().coerceIn(0, 255)
+    val alpha = if (darkStyle) 0xBA else 0xD6
+    return (alpha shl 24) or (sr shl 16) or (sg shl 8) or sb
+}
+
+/**
+ * 100% 原生 Android 向量 TextView 月曆小工具渲染器：
+ * 所有星期標題、日期數字、農曆節氣、今日膠囊、收合色條與展開週事件卡片皆由桌面 GPU 原生字體引擎 1:1 渲染，
+ * 徹底消除點陣圖 `fitXY` 縮放模糊與天氣圖示壓字問題，清晰度直接追平 vivo 原生系統小工具！
+ */
+private fun bindNativeMonthGrid(
     context: Context,
     views: RemoteViews,
     widgetId: Int,
     yearMonth: YearMonth,
     startMonday: Boolean,
+    showLunar: Boolean,
+    darkStyle: Boolean,
+    accentArgb: Int,
     items: List<UnifiedCalendarItem>,
     numWeeks: Int,
-    expandedWeekRow: Int
+    expandedWeekRow: Int,
+    canvasHeightDp: Int,
+    isVivoAccordion: Boolean
 ) {
+    val weekLabels = if (startMonday) {
+        arrayOf("一", "二", "三", "四", "五", "六", "日")
+    } else {
+        arrayOf("日", "一", "二", "三", "四", "五", "六")
+    }
+    val dowColor = if (darkStyle) 0xFFEAEAF2.toInt() else 0xFF282832.toInt()
+    for (c in 0..6) {
+        views.setTextViewText(DOW_VIEW_IDS[c], weekLabels[c])
+        views.setTextColor(DOW_VIEW_IDS[c], dowColor)
+    }
+
+    val safeWeeks = numWeeks.coerceIn(5, 6)
+    val isAccordionMode = isVivoAccordion && expandedWeekRow in 0 until safeWeeks
     val firstOfMonth = yearMonth.atDay(1)
     val shift = if (startMonday) firstOfMonth.dayOfWeek.value - 1 else firstOfMonth.dayOfWeek.value % 7
     val startDate = firstOfMonth.minusDays(shift.toLong())
+    val today = LocalDate.now()
     val itemsByDate = items.groupBy { it.date }
+    val weatherMap = com.dx.calendar.data.weather.WeatherForecastManager.loadCachedForecast(context)
+
+    val safeAccent = accentArgb or 0xFF000000.toInt()
+    val primaryDayColor = if (darkStyle) 0xFFFFFFFF.toInt() else 0xFF101014.toInt()
+    val outMonthDayColor = if (darkStyle) 0x9EFFFFFF.toInt() else 0x80101014.toInt()
+    val lunarNormalColor = if (darkStyle) 0xD9FFFFFF.toInt() else 0xCC282832.toInt()
+    val lunarOutColor = if (darkStyle) 0x80FFFFFF.toInt() else 0x6E282832.toInt()
+
+    val equalRowDp = ((canvasHeightDp - 22).coerceAtLeast(80) / safeWeeks).coerceAtLeast(24)
+    val maxFullMonthPreviews = when {
+        equalRowDp >= 68 -> 3
+        equalRowDp >= 52 -> 2
+        equalRowDp >= 38 -> 1
+        else -> 0
+    }
+    val expandAreaDp = ((canvasHeightDp - 22).coerceAtLeast(80) * 3.3f) / (safeWeeks + 3.3f)
+
+    fun appendStyled(
+        ssb: android.text.SpannableStringBuilder,
+        text: String,
+        sizeDp: Int,
+        color: Int,
+        bold: Boolean = false
+    ) {
+        val s = ssb.length
+        ssb.append(text)
+        val e = ssb.length
+        ssb.setSpan(android.text.style.AbsoluteSizeSpan(sizeDp, true), s, e, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        ssb.setSpan(android.text.style.ForegroundColorSpan(color), s, e, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (bold) {
+            ssb.setSpan(android.text.style.StyleSpan(Typeface.BOLD), s, e, android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
 
     for (r in 0 until 6) {
-        val rowVisible = r < numWeeks
+        val rowVisible = r < safeWeeks
         views.setViewVisibility(MONTH_ROW_VIEW_IDS[r], if (rowVisible) android.view.View.VISIBLE else android.view.View.GONE)
-        val expandVisible = rowVisible && r == expandedWeekRow
+        val expandVisible = rowVisible && isAccordionMode && r == expandedWeekRow
         views.setViewVisibility(MONTH_ROW_EXPAND_VIEW_IDS[r], if (expandVisible) android.view.View.VISIBLE else android.view.View.GONE)
+        if (!rowVisible) continue
 
-        if (rowVisible) {
-            val rowTogglePi = buildWeekRowTogglePi(context, widgetId, r)
-            for (c in 0 until 7) {
-                views.setOnClickPendingIntent(MONTH_CELL_VIEW_IDS[r * 7 + c], rowTogglePi)
+        val rowTogglePi = buildWeekRowTogglePi(context, widgetId, r)
+
+        for (c in 0 until 7) {
+            val cellIdx = r * 7 + c
+            val cellId = MONTH_CELL_VIEW_IDS[cellIdx]
+            val d = startDate.plusDays(cellIdx.toLong())
+            val inMonth = d.month == yearMonth.month
+            val isToday = d == today
+            val lunar = if (showLunar) LunarCalendarEngine.getLunarInfo(d) else null
+            val dayEvents = itemsByDate[d] ?: emptyList()
+
+            views.setInt(
+                cellId,
+                "setBackgroundResource",
+                if (isToday) {
+                    if (darkStyle) R.drawable.bg_widget_today_cell_dark else R.drawable.bg_widget_today_cell_light
+                } else {
+                    0
+                }
+            )
+
+            val ssb = android.text.SpannableStringBuilder()
+            val dayColor = when {
+                isToday && darkStyle -> 0xFFFFFFFF.toInt()
+                isToday -> safeAccent
+                inMonth -> primaryDayColor
+                else -> outMonthDayColor
             }
-            if (expandVisible) {
-                // 展開週次的 7 天 × 3 個事件槽：點擊事件直接開啟 App 並跳至該當下事件詳情！
-                for (c in 0 until 7) {
-                    val cellDate = startDate.plusDays((r * 7 + c).toLong())
-                    val dayEvents = itemsByDate[cellDate] ?: emptyList()
-                    for (s in 0 until 3) {
-                        val slotId = context.resources.getIdentifier(
-                            "widget_exp_r${r}_c${c}_s${s}",
-                            "id",
-                            context.packageName
+            appendStyled(ssb, d.dayOfMonth.toString(), sizeDp = if (isToday) 16 else 15, color = dayColor, bold = isToday)
+
+            if (showLunar && lunar != null) {
+                val rawLunar = lunar.shortDisplay.take(4)
+                val wIcon = weatherMap[d]?.icon
+                // 天氣圖示僅乾淨附於 2 字農曆右側，絕不再與上方日期數字重疊！
+                val lunarLine = if (wIcon != null && rawLunar.length <= 2) "$rawLunar$wIcon" else rawLunar
+                val isSpecial = lunar.isTaiwanHoliday || lunar.solarTerm != null
+                val lunarColor = when {
+                    isToday && darkStyle -> 0xF2FFFFFF.toInt()
+                    isSpecial && inMonth -> safeAccent
+                    isSpecial -> (safeAccent and 0x00FFFFFF) or 0xA6000000.toInt()
+                    inMonth -> lunarNormalColor
+                    else -> lunarOutColor
+                }
+                ssb.append("\n")
+                appendStyled(ssb, lunarLine, sizeDp = 10, color = lunarColor, bold = isToday)
+            }
+
+            if (isToday && isAccordionMode) {
+                // 對齊 vivo 今日膠囊底部強調指示條
+                ssb.append("\n")
+                appendStyled(ssb, "━━", sizeDp = 7, color = safeAccent, bold = true)
+            } else if (isAccordionMode && r != expandedWeekRow && dayEvents.isNotEmpty()) {
+                // 收合週列：農曆下方顯示俐落彩色橫條（對齊 vivo 樣式）
+                ssb.append("\n")
+                val bars = dayEvents.take(3)
+                val barToken = if (bars.size == 1) "━━" else "━"
+                bars.forEachIndexed { bIdx, ev ->
+                    if (bIdx > 0) appendStyled(ssb, " ", sizeDp = 6, color = 0x00000000)
+                    val barColor = if (inMonth) {
+                        ev.colorArgb or 0xFF000000.toInt()
+                    } else {
+                        (ev.colorArgb and 0x00FFFFFF) or 0x99000000.toInt()
+                    }
+                    appendStyled(ssb, barToken, sizeDp = 7, color = barColor, bold = true)
+                }
+            } else if (!isAccordionMode && dayEvents.isNotEmpty()) {
+                if (maxFullMonthPreviews == 0) {
+                    ssb.append("\n")
+                    dayEvents.take(3).forEachIndexed { bIdx, ev ->
+                        if (bIdx > 0) appendStyled(ssb, " ", sizeDp = 6, color = 0x00000000)
+                        appendStyled(ssb, "━", sizeDp = 7, color = ev.colorArgb or 0xFF000000.toInt(), bold = true)
+                    }
+                } else {
+                    dayEvents.take(maxFullMonthPreviews).forEach { ev ->
+                        ssb.append("\n")
+                        appendStyled(ssb, "•", sizeDp = 9, color = ev.colorArgb or 0xFF000000.toInt(), bold = true)
+                        appendStyled(
+                            ssb,
+                            ev.title.take(4),
+                            sizeDp = 9,
+                            color = if (inMonth) primaryDayColor else outMonthDayColor
                         )
-                        if (slotId == 0) continue
+                    }
+                }
+            }
+
+            views.setTextViewText(cellId, ssb)
+            views.setOnClickPendingIntent(
+                cellId,
+                if (isVivoAccordion) rowTogglePi else buildOpenDatePi(context, widgetId * 1000 + cellIdx + 100, d.toEpochDay())
+            )
+        }
+
+        if (expandVisible) {
+            for (c in 0 until 7) {
+                val cellDate = startDate.plusDays((r * 7 + c).toLong())
+                val dayEvents = itemsByDate[cellDate] ?: emptyList()
+
+                val colId = context.resources.getIdentifier("widget_exp_col_r${r}_c${c}", "id", context.packageName)
+                if (colId != 0) {
+                    val colPi = if (dayEvents.isEmpty()) {
+                        rowTogglePi
+                    } else {
+                        buildOpenDatePi(context, widgetId * 1000 + 500 + r * 7 + c, cellDate.toEpochDay())
+                    }
+                    views.setOnClickPendingIntent(colId, colPi)
+                }
+
+                val cardMaxLines = when (dayEvents.size) {
+                    1 -> if (expandAreaDp >= 105f) 4 else 3
+                    2 -> if (expandAreaDp >= 115f) 3 else 2
+                    else -> if (expandAreaDp >= 145f) 3 else 2
+                }
+
+                for (s in 0 until 3) {
+                    val slotId = context.resources.getIdentifier("widget_exp_r${r}_c${c}_s${s}", "id", context.packageName)
+                    if (slotId == 0) continue
+                    val ev = dayEvents.getOrNull(s)
+                    if (ev == null) {
+                        views.setViewVisibility(slotId, android.view.View.GONE)
+                    } else {
+                        views.setViewVisibility(slotId, android.view.View.VISIBLE)
+                        val label = (if (ev.isTask) (if (ev.isCompleted) "☑ " else "✓ ") else "") + ev.title
+                        views.setTextViewText(slotId, label)
+                        views.setInt(slotId, "setMaxLines", cardMaxLines)
+                        views.setTextColor(slotId, 0xFFFFFFFF.toInt())
+                        val cardTint = computeFrostedWidgetCardTint(ev.colorArgb, darkStyle)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            views.setInt(slotId, "setBackgroundResource", R.drawable.bg_widget_event_card)
+                            views.setColorStateList(
+                                slotId,
+                                "setBackgroundTintList",
+                                android.content.res.ColorStateList.valueOf(cardTint)
+                            )
+                        } else {
+                            views.setInt(
+                                slotId,
+                                "setBackgroundResource",
+                                if (darkStyle) R.drawable.bg_widget_event_card_dark_fallback else R.drawable.bg_widget_event_card_light_fallback
+                            )
+                        }
                         val reqCode = widgetId * 1000 + 300 + r * 21 + c * 3 + s
-                        val ev = dayEvents.getOrNull(s)
-                        val pi = if (ev != null) {
+                        views.setOnClickPendingIntent(
+                            slotId,
                             buildOpenEventPi(
                                 context = context,
                                 reqCode = reqCode,
@@ -1799,14 +1985,22 @@ private fun bindVivoAccordionWeekTapRows(
                                 rawId = ev.rawId,
                                 isTask = ev.isTask
                             )
-                        } else if (dayEvents.isNotEmpty() && s == 2) {
-                            buildOpenDatePi(context, reqCode, cellDate.toEpochDay())
-                        } else if (dayEvents.isEmpty()) {
-                            rowTogglePi
-                        } else {
-                            buildOpenDatePi(context, reqCode, cellDate.toEpochDay())
-                        }
-                        views.setOnClickPendingIntent(slotId, pi)
+                        )
+                    }
+                }
+
+                val moreId = context.resources.getIdentifier("widget_exp_r${r}_c${c}_more", "id", context.packageName)
+                if (moreId != 0) {
+                    if (dayEvents.size > 3) {
+                        views.setViewVisibility(moreId, android.view.View.VISIBLE)
+                        views.setTextViewText(moreId, "+${dayEvents.size - 3}")
+                        views.setTextColor(moreId, if (darkStyle) 0xD9FFFFFF.toInt() else 0xCC262630.toInt())
+                        views.setOnClickPendingIntent(
+                            moreId,
+                            buildOpenDatePi(context, widgetId * 1000 + 600 + r * 7 + c, cellDate.toEpochDay())
+                        )
+                    } else {
+                        views.setViewVisibility(moreId, android.view.View.GONE)
                     }
                 }
             }
