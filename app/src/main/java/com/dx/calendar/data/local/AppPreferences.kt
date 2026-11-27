@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -108,7 +109,12 @@ data class UserSettings(
     val dynamicDayIconEnabled: Boolean = false,
     val liveUpdateIslandEnabled: Boolean = true,
     val secondaryTimeZoneId: String = "",
-    val backupDeviceName: String = android.os.Build.MODEL ?: "DX_Device"
+    val backupDeviceName: String = android.os.Build.MODEL ?: "DX_Device",
+    val firstInstallEpochMillis: Long = 0L,
+    val rewardedUnlockUntilMillis: Long = 0L,
+    val isProPurchased: Boolean = false,
+    val isRemoveAdsPurchased: Boolean = false,
+    val redeemedLicenseCode: String = ""
 ) {
     val effectiveAlternateCalendar: AlternateCalendarMode
         get() = if (alternateCalendarMode == AlternateCalendarMode.AUTO_BY_REGION) {
@@ -167,6 +173,11 @@ class AppPreferences(context: Context) {
         private val KEY_AUTO_CHECK_UPDATE = booleanPreferencesKey("auto_check_update")
         private val KEY_DYNAMIC_DAY_ICON = booleanPreferencesKey("dynamic_day_icon_enabled")
         private val KEY_LIVE_UPDATE_ISLAND = booleanPreferencesKey("live_update_island_enabled")
+        private val KEY_FIRST_INSTALL_MILLIS = longPreferencesKey("first_install_epoch_millis")
+        private val KEY_REWARDED_UNLOCK_UNTIL = longPreferencesKey("rewarded_unlock_until_millis")
+        private val KEY_IS_PRO_PURCHASED = booleanPreferencesKey("is_pro_purchased")
+        private val KEY_IS_REMOVE_ADS_PURCHASED = booleanPreferencesKey("is_remove_ads_purchased")
+        private val KEY_REDEEMED_LICENSE_CODE = stringPreferencesKey("redeemed_license_code")
         private val KEY_SECONDARY_TIMEZONE = stringPreferencesKey("secondary_timezone_id")
         private val KEY_BACKUP_DEVICE_NAME = stringPreferencesKey("backup_device_name")
 
@@ -268,7 +279,12 @@ class AppPreferences(context: Context) {
                 liveUpdateIslandEnabled = prefs[KEY_LIVE_UPDATE_ISLAND] ?: true,
                 secondaryTimeZoneId = prefs[KEY_SECONDARY_TIMEZONE] ?: "",
                 backupDeviceName = prefs[KEY_BACKUP_DEVICE_NAME]?.takeIf { it.isNotBlank() }
-                    ?: (android.os.Build.MODEL ?: "DX_Device")
+                    ?: (android.os.Build.MODEL ?: "DX_Device"),
+                firstInstallEpochMillis = prefs[KEY_FIRST_INSTALL_MILLIS] ?: 0L,
+                rewardedUnlockUntilMillis = prefs[KEY_REWARDED_UNLOCK_UNTIL] ?: 0L,
+                isProPurchased = prefs[KEY_IS_PRO_PURCHASED] ?: false,
+                isRemoveAdsPurchased = prefs[KEY_IS_REMOVE_ADS_PURCHASED] ?: false,
+                redeemedLicenseCode = prefs[KEY_REDEEMED_LICENSE_CODE] ?: ""
             )
         }
 
@@ -328,6 +344,34 @@ class AppPreferences(context: Context) {
 
     suspend fun setPhoneSwipeUpScheduleEnabled(enabled: Boolean) {
         appContext.dataStore.edit { it[KEY_PHONE_SWIPE_UP_SCHEDULE_ENABLED] = enabled }
+    }
+
+    suspend fun ensureFirstInstallRecorded(nowMillis: Long = System.currentTimeMillis()) {
+        appContext.dataStore.edit { prefs ->
+            if ((prefs[KEY_FIRST_INSTALL_MILLIS] ?: 0L) <= 0L) {
+                prefs[KEY_FIRST_INSTALL_MILLIS] = nowMillis
+            }
+        }
+    }
+
+    suspend fun setPurchaseEntitlement(isPro: Boolean, isRemoveAds: Boolean) {
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_IS_PRO_PURCHASED] = isPro
+            prefs[KEY_IS_REMOVE_ADS_PURCHASED] = isRemoveAds
+        }
+    }
+
+    suspend fun grantRewarded24hUnlock(nowMillis: Long = System.currentTimeMillis()) {
+        val until = nowMillis + 24L * 3_600_000L
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_REWARDED_UNLOCK_UNTIL] = until
+        }
+    }
+
+    suspend fun saveRedeemedLicenseCode(code: String) {
+        appContext.dataStore.edit { prefs ->
+            prefs[KEY_REDEEMED_LICENSE_CODE] = code
+        }
     }
 
     suspend fun setTimeZoneOverrideId(zoneId: String) {

@@ -150,6 +150,12 @@ private enum class DxSettingsSection(
 @Composable
 fun SettingsAndManageScreen(
     settings: UserSettings,
+    entitlementState: com.dx.calendar.monetization.DxEntitlementState = com.dx.calendar.monetization.DxEntitlementState(),
+    billingUiState: com.dx.calendar.monetization.DxBillingUiState = com.dx.calendar.monetization.DxBillingUiState(),
+    onPurchaseProduct: (String) -> Unit = {},
+    onWatchRewardedAd24h: () -> Unit = {},
+    onRestorePurchases: () -> Unit = {},
+    onRedeemLicenseCode: (String) -> Boolean = { false },
     updateState: AppUpdateUiState,
     categories: List<CalendarCategoryEntity>,
     systemCalendars: List<SystemCalendarAccountInfo>,
@@ -445,6 +451,12 @@ fun SettingsAndManageScreen(
                                     DxSettingsSectionContent(
                                         section = activeSection,
                                     settings = settings,
+                                    entitlementState = entitlementState,
+                                    billingUiState = billingUiState,
+                                    onPurchaseProduct = onPurchaseProduct,
+                                    onWatchRewardedAd24h = onWatchRewardedAd24h,
+                                    onRestorePurchases = onRestorePurchases,
+                                    onRedeemLicenseCode = onRedeemLicenseCode,
                                     updateState = updateState,
                                     categories = categories,
                                     taskCategory = taskCategory,
@@ -565,6 +577,12 @@ fun SettingsAndManageScreen(
                                     DxSettingsSectionContent(
                                         section = sec,
                                     settings = settings,
+                                    entitlementState = entitlementState,
+                                    billingUiState = billingUiState,
+                                    onPurchaseProduct = onPurchaseProduct,
+                                    onWatchRewardedAd24h = onWatchRewardedAd24h,
+                                    onRestorePurchases = onRestorePurchases,
+                                    onRedeemLicenseCode = onRedeemLicenseCode,
                                     updateState = updateState,
                                     categories = categories,
                                     taskCategory = taskCategory,
@@ -639,6 +657,11 @@ fun SettingsAndManageScreen(
                     }
                 }
                 }
+                // 低干擾橫幅廣告（僅於 7 天免費體驗結束、未訂閱 Pro／去廣告、且未在 24h 激勵解鎖期間才顯示於設定頁最底）
+                com.dx.calendar.monetization.DxAdaptiveBannerAd(
+                    visible = entitlementState.shouldShowBannerAd,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
         }
     }
@@ -725,6 +748,12 @@ fun SettingsAndManageScreen(
 private fun DxSettingsSectionContent(
     section: DxSettingsSection,
     settings: UserSettings,
+    entitlementState: com.dx.calendar.monetization.DxEntitlementState = com.dx.calendar.monetization.DxEntitlementState(),
+    billingUiState: com.dx.calendar.monetization.DxBillingUiState = com.dx.calendar.monetization.DxBillingUiState(),
+    onPurchaseProduct: (String) -> Unit = {},
+    onWatchRewardedAd24h: () -> Unit = {},
+    onRestorePurchases: () -> Unit = {},
+    onRedeemLicenseCode: (String) -> Boolean = { false },
     updateState: AppUpdateUiState,
     categories: List<CalendarCategoryEntity>,
     taskCategory: CalendarCategoryEntity?,
@@ -1965,6 +1994,15 @@ private fun DxSettingsSectionContent(
             }
 
             DxSettingsSection.ABOUT_UPDATE -> {
+                ProMembershipAndAboutSection(
+                    entitlement = entitlementState,
+                    billingUi = billingUiState,
+                    currentVersion = updateState.currentVersion,
+                    onPurchaseProduct = onPurchaseProduct,
+                    onWatchRewardedAd24h = onWatchRewardedAd24h,
+                    onRestorePurchases = onRestorePurchases,
+                    onRedeemLicenseCode = onRedeemLicenseCode
+                )
                 OutlinedButton(onClick = onOpenFeatureGuide, modifier = Modifier.fillMaxWidth()) {
                     Text("📖 查看全功能操作指南與快捷按鈕", color = tokens.accentColor, fontWeight = FontWeight.Bold)
                 }

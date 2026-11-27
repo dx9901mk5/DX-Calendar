@@ -228,11 +228,26 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val monetizationManager = com.dx.calendar.monetization.DxMonetizationManager(
+        context = app,
+        onPurchaseEntitlementChanged = { isPro, isRemoveAds ->
+            viewModelScope.launch { repo.prefs.setPurchaseEntitlement(isPro, isRemoveAds) }
+        },
+        onRewarded24hGranted = {
+            viewModelScope.launch { repo.prefs.grantRewarded24hUnlock() }
+        },
+        onToast = { msg -> toast(msg) }
+    )
+
+    val billingUiState = monetizationManager.billingUiState
+
     init {
         com.dx.calendar.data.local.EventTemplateStore.ensureLoaded(app)
         com.dx.calendar.data.local.EventRichMetaStore.ensureLoaded(app)
+        monetizationManager.initialize()
         refreshSystemCalendars()
         viewModelScope.launch {
+            repo.prefs.ensureFirstInstallRecorded()
             repo.prefs.applyGoldWhiteDefaultMigrationOnce()
             cleanupLegacyMedicationDemoOnce()
             migrateTaskAndPersonalColorsOnce()
@@ -1443,6 +1458,18 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     fun setPhoneSwipeUpScheduleEnabled(enabled: Boolean) = viewModelScope.launch {
         repo.prefs.setPhoneSwipeUpScheduleEnabled(enabled)
     }
+
+    fun redeemProLicenseCode(rawCode: String): Boolean {
+        val norm = com.dx.calendar.monetization.DxLicenseCodeValidator.normalize(rawCode)
+        return if (com.dx.calendar.monetization.DxLicenseCodeValidator.isValid(norm)) {
+            viewModelScope.launch { repo.prefs.saveRedeemedLicenseCode(norm) }
+            toast("🎉 序號驗證成功！已為您永久解鎖 DX Pro 全功能與無廣告權限")
+            true
+        } else {
+            toast("序號格式或校驗碼不正確，請確認後再試（格式：DXPRO-XXXX-XXXX-XXXX）")
+            false
+        }
+    }
     fun setTimeZoneOverrideId(zoneId: String) = viewModelScope.launch {
         repo.prefs.setTimeZoneOverrideId(zoneId)
     }
@@ -1797,6 +1824,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         calendarContentObserver = null
+        monetizationManager.destroy()
     }
 
     private fun toast(msg: String) {

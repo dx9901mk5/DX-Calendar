@@ -174,6 +174,23 @@ fun DXCalendarRootApp(
     val templates by viewModel.templates.collectAsState()
     val richMetaMap by viewModel.richMetaMap.collectAsState()
 
+    val billingUiState by viewModel.billingUiState.collectAsState()
+    val entitlementState = remember(
+        settings.firstInstallEpochMillis,
+        settings.rewardedUnlockUntilMillis,
+        settings.isProPurchased,
+        settings.isRemoveAdsPurchased,
+        settings.redeemedLicenseCode
+    ) {
+        com.dx.calendar.monetization.EntitlementEvaluator.evaluate(
+            firstInstallMillis = settings.firstInstallEpochMillis,
+            rewardedUnlockUntilMillis = settings.rewardedUnlockUntilMillis,
+            isProPurchased = settings.isProPurchased,
+            isRemoveAdsPurchased = settings.isRemoveAdsPurchased,
+            redeemedLicenseCode = settings.redeemedLicenseCode
+        )
+    }
+
     val context = LocalContext.current
     val today = remember { LocalDate.now() }
 
@@ -1008,6 +1025,20 @@ fun DXCalendarRootApp(
             }
             SettingsAndManageScreen(
                 settings = settings,
+                entitlementState = entitlementState,
+                billingUiState = billingUiState,
+                onPurchaseProduct = { productId ->
+                    (context as? android.app.Activity)?.let { act ->
+                        viewModel.monetizationManager.launchPurchase(act, productId)
+                    }
+                },
+                onWatchRewardedAd24h = {
+                    (context as? android.app.Activity)?.let { act ->
+                        viewModel.monetizationManager.showRewardedAdFor24hUnlock(act)
+                    }
+                },
+                onRestorePurchases = { viewModel.monetizationManager.restorePurchases() },
+                onRedeemLicenseCode = { code -> viewModel.redeemProLicenseCode(code) },
                 updateState = updateState,
                 categories = categories,
                 systemCalendars = systemCalendars,

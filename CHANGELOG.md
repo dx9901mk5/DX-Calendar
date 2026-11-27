@@ -5,6 +5,21 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v2.1.0] - 2026-11-27 (`versionCode = 34`)
+
+### 💎 Google Play 正式商業化、四語系支援與全功能免費體驗 / Added
+- **🎁 前 7 天免費全功能體驗（無廣告）＆ 低干擾廣告承諾**：
+  - 首次安裝享有 **7 天全功能 DX Pro 免費體驗**，App 內明確提示**免費體驗期間 100% 不會出現任何廣告**。
+  - 免費版僅採低干擾 **AdMob 橫幅廣告**（僅於設定頁底部顯示，**絕無開屏廣告、插頁廣告或桌面小工具廣告**），並支援 **看 1 支短廣告免費解鎖 24 小時無廣告＋全功能 Pro**。
+- **💳 Google Play Billing v7 官方內購方案（新台幣基準）**：
+  - 完整串接 `dx_pro_monthly`（NT\$ 49/月）、`dx_pro_yearly`（NT\$ 290/年，主力推薦）、`dx_pro_lifetime`（NT\$ 590 終身買斷）與 `dx_remove_ads`（NT\$ 150 單純去廣告包），支援一鍵恢復購買。
+  - **多裝置體驗一律免費**（手機、摺疊機雙欄、平板三欄、Pixelbook 與電腦端 Chrome 插件全面免費，不分付費差異）。
+  - App 設定頁頂部內建完整 **「DX Pro 方案與免費／付費對照說明」** 與 **四語系「關於我」**。
+- **🌐 完整四語系 AAB 支援（繁體中文、簡體中文、英文、日文）**：
+  - 補齊 `values`、`values-zh-rCN`、`values-en`、`values-ja` 多語系資源並於 AAB 關閉語系拆分（`enableSplit = false`），切換語系零缺失。
+
+---
+
 ## [v2.0.7] - 2026-11-27 (`versionCode = 33`)
 
 ### ✨ 新增設定 / Added

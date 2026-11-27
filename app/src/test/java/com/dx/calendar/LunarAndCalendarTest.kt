@@ -581,4 +581,70 @@ class LunarAndCalendarTest {
             )
         )
     }
+
+    @Test
+    fun entitlementEvaluatorHonors7DayFreeTrial24hRewardedAndProRules() {
+        val dayMs = 24L * 3_600_000L
+        val t0 = 1_700_000_000_000L
+
+        val day1 = com.dx.calendar.monetization.EntitlementEvaluator.evaluate(
+            firstInstallMillis = t0,
+            rewardedUnlockUntilMillis = 0L,
+            isProPurchased = false,
+            isRemoveAdsPurchased = false,
+            nowMillis = t0 + 1_000L
+        )
+        assertTrue(day1.isInFreeTrial)
+        assertTrue(day1.hasProFeatures)
+        assertFalse(day1.shouldShowBannerAd)
+        assertEquals(7, day1.trialDaysRemaining)
+
+        val day9Free = com.dx.calendar.monetization.EntitlementEvaluator.evaluate(
+            firstInstallMillis = t0,
+            rewardedUnlockUntilMillis = 0L,
+            isProPurchased = false,
+            isRemoveAdsPurchased = false,
+            nowMillis = t0 + 9 * dayMs
+        )
+        assertFalse(day9Free.isInFreeTrial)
+        assertFalse(day9Free.hasProFeatures)
+        assertTrue(day9Free.shouldShowBannerAd)
+
+        val day9Rewarded = com.dx.calendar.monetization.EntitlementEvaluator.evaluate(
+            firstInstallMillis = t0,
+            rewardedUnlockUntilMillis = t0 + 9 * dayMs + 12L * 3_600_000L,
+            isProPurchased = false,
+            isRemoveAdsPurchased = false,
+            nowMillis = t0 + 9 * dayMs
+        )
+        assertTrue(day9Rewarded.isRewardedUnlockActive)
+        assertTrue(day9Rewarded.hasProFeatures)
+        assertFalse(day9Rewarded.shouldShowBannerAd)
+
+        val proUser = com.dx.calendar.monetization.EntitlementEvaluator.evaluate(
+            firstInstallMillis = t0,
+            rewardedUnlockUntilMillis = 0L,
+            isProPurchased = true,
+            isRemoveAdsPurchased = false,
+            nowMillis = t0 + 30 * dayMs
+        )
+        assertTrue(proUser.hasProFeatures)
+        assertFalse(proUser.shouldShowBannerAd)
+
+        // 離線序號驗證與永久解鎖 Pro 權限
+        val validCode = com.dx.calendar.monetization.DxLicenseCodeValidator.generateCode("VIP1", "2026")
+        assertTrue(com.dx.calendar.monetization.DxLicenseCodeValidator.isValid(validCode))
+        assertFalse(com.dx.calendar.monetization.DxLicenseCodeValidator.isValid("DXPRO-VIP1-2026-0000"))
+        val licensed = com.dx.calendar.monetization.EntitlementEvaluator.evaluate(
+            firstInstallMillis = t0,
+            rewardedUnlockUntilMillis = 0L,
+            isProPurchased = false,
+            isRemoveAdsPurchased = false,
+            redeemedLicenseCode = validCode,
+            nowMillis = t0 + 30 * dayMs
+        )
+        assertTrue(licensed.isLicenseCodeRedeemed)
+        assertTrue(licensed.hasProFeatures)
+        assertFalse(licensed.shouldShowBannerAd)
+    }
 }

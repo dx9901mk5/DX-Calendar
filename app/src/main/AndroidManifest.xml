@@ -30,6 +30,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
     <!-- Android 11+ (API 30+) 套件可見性宣告：確保可直接偵測並啟動已安裝之 Google Tasks、LINE、Google 雲端硬碟與 Google 日曆 -->
     <queries>
@@ -47,6 +48,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.DXCalendar">
+
+        <!-- Google AdMob App ID（測試期使用 Google 官方測試 ID，正式上架 AdMob 後台核准後替換為正式 App ID） -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
 
         <!-- 支援手機、8吋/10吋平板、摺疊機內外螢幕無縫切換、Pixelbook 桌面視窗與自由小視窗任意縮放 -->
         <activity

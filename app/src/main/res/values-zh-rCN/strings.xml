@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DX日历</string>
+    <string name="widget_vivo_month_label">DX 月历 (单周展开动画 / 自由缩放)</string>
+    <string name="widget_vivo_month_desc" formatted="false">高清农历节气月历，支持点击单周展开动画、翻月、now 回当日与 0%–100% 自由透明度</string>
+    <string name="widget_google_schedule_label">DX 时间表 (近期日程与待办 / 可滚动)</string>
+    <string name="widget_google_schedule_desc" formatted="false">可上下滚动浏览近期日程与待办事项，点击事件直达详情，支持 0%–100% 自由透明度与缩放</string>
+    <string name="widget_google_month_label">DX 月视图</string>
+    <string name="widget_google_month_desc">月视图</string>
+    <string name="widget_vivo_tasks_label">DX 待办</string>
+    <string name="widget_vivo_tasks_desc">待办事项</string>
+    <string name="widget_next_event_weather_label">DX 下一日程与天气 (4×1)</string>
+    <string name="widget_countdown_weather_label">DX 倒数日与天气 (2×2)</string>
+    <string name="widget_week_weather_label">DX 单周 7 天天气与日程 (4×2)</string>
+</resources>

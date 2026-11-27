@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DX Calendar</string>
+    <string name="widget_vivo_month_label">DX Month (Accordion Expand / Resizable)</string>
+    <string name="widget_vivo_month_desc" formatted="false">Crisp vector lunar &amp; solar-term month widget with tap-to-expand week animation, now shortcut, and 0%–100% opacity</string>
+    <string name="widget_google_schedule_label">DX Agenda (Events &amp; Tasks / Scrollable)</string>
+    <string name="widget_google_schedule_desc" formatted="false">Scrollable upcoming events &amp; Google Tasks widget with one-tap jump to details and 0%–100% opacity</string>
+    <string name="widget_google_month_label">DX Month Grid</string>
+    <string name="widget_google_month_desc">Month Grid</string>
+    <string name="widget_vivo_tasks_label">DX Tasks</string>
+    <string name="widget_vivo_tasks_desc">Tasks</string>
+    <string name="widget_next_event_weather_label">DX Next Event &amp; Weather (4×1)</string>
+    <string name="widget_countdown_weather_label">DX Countdown &amp; Weather (2×2)</string>
+    <string name="widget_week_weather_label">DX 7-Day Weather &amp; Schedule (4×2)</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DXカレンダー</string>
+    <string name="widget_vivo_month_label">DX 月間カレンダー (週展開アニメーション / 伸縮対応)</string>
+    <string name="widget_vivo_month_desc" formatted="false">高精細ベクター月間カレンダー。週タップ展開アニメーション、今日へ戻るボタン、0%〜100% 透明度調整に対応</string>
+    <string name="widget_google_schedule_label">DX スケジュール (予定＆タスク / スクロール)</string>
+    <string name="widget_google_schedule_desc" formatted="false">今後の予定と Google Tasks をスクロール表示。タップで詳細へ直行、0%〜100% 透明度調整に対応</string>
+    <string name="widget_google_month_label">DX 月間ビュー</string>
+    <string name="widget_google_month_desc">月間ビュー</string>
+    <string name="widget_vivo_tasks_label">DX タスク</string>
+    <string name="widget_vivo_tasks_desc">タスク</string>
+    <string name="widget_next_event_weather_label">DX 次の予定と天気 (4×1)</string>
+    <string name="widget_countdown_weather_label">DX カウントダウンと天気 (2×2)</string>
+    <string name="widget_week_weather_label">DX 週間7日間天気と予定 (4×2)</string>
+</resources>
