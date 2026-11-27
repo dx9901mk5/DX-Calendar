@@ -652,7 +652,8 @@ private fun MonthDayCell(
                             )
                             .combinedClickable(
                                 onClick = {
-                                    if (item.isTask) onToggleTaskQuick(item) else onClick()
+                                    // 月檢視格子內不直接勾選 Tasks 完成，避免瀏覽日期時誤觸；點開時間表／詳情面板後才可勾選完成
+                                    onClick()
                                 },
                                 onLongClick = {
                                     onLongPressItem?.invoke(item)

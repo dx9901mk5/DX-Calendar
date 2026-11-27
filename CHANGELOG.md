@@ -5,6 +5,14 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v2.1.7] - 2026-11-27 (`versionCode = 41`)
+
+### 🛠️ 互動防誤觸優化 / Improved
+- **✅ 月檢視格子內停止點擊 Tasks 直接勾選完成（防誤觸）**：
+  - 在滿版月曆檢視中點擊日期格內的 Google Tasks／待辦晶片時，不再直接將待辦勾選為已完成（避免點選日期瀏覽時誤觸劃掉任務），改為選取該日／開啟當日時間表後，於時間表或待辦詳情面板內才進行勾選完成。
+
+---
+
 ## [v2.1.6] - 2026-11-27 (`versionCode = 40`)
 
 ### ✨ 新增功能 / Added
