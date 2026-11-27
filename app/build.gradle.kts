@@ -23,8 +23,8 @@ android {
         applicationId = "com.dx.calendar"
         minSdk = 26
         targetSdk = 36
-        versionCode = 35
-        versionName = "2.1.1"
+        versionCode = 36
+        versionName = "2.1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -146,8 +146,8 @@ dependencies {
     // Image loading for custom calendar wallpaper (Jorte/vivo style background)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // Google Play Billing v7 (訂閱／終身買斷／去廣告內購) & AdMob (低干擾橫幅＋激勵24h解鎖，絕無插頁)
-    implementation("com.android.billingclient:billing-ktx:7.1.1")
+    // Google Play Billing v8 (Java 核心套件，相容 Kotlin 1.9 且符合 Play 8.0.0+ 要求) & AdMob (低干擾橫幅＋激勵24h解鎖，絕無插頁)
+    implementation("com.android.billingclient:billing:8.0.0")
     implementation("com.google.android.gms:play-services-ads:23.6.0")
 
     testImplementation("junit:junit:4.13.2")

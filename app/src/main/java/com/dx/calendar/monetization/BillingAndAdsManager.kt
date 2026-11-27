@@ -184,7 +184,11 @@ class DxMonetizationManager(
 
     private val billingClient: BillingClient = BillingClient.newBuilder(appContext)
         .setListener(this)
-        .enablePendingPurchases()
+        .enablePendingPurchases(
+            com.android.billingclient.api.PendingPurchasesParams.newBuilder()
+                .enableOneTimeProducts()
+                .build()
+        )
         .build()
 
     fun initialize() {
@@ -279,18 +283,18 @@ class DxMonetizationManager(
 
         billingClient.queryProductDetailsAsync(
             QueryProductDetailsParams.newBuilder().setProductList(subList).build()
-        ) { res, detailsList ->
+        ) { res, detailsResult ->
             if (res.responseCode == BillingClient.BillingResponseCode.OK) {
-                detailsList.forEach { d -> productDetailsMap[d.productId] = d }
+                detailsResult.productDetailsList.forEach { d -> productDetailsMap[d.productId] = d }
                 refreshFormattedPrices()
             }
         }
 
         billingClient.queryProductDetailsAsync(
             QueryProductDetailsParams.newBuilder().setProductList(inAppList).build()
-        ) { res, detailsList ->
+        ) { res, detailsResult ->
             if (res.responseCode == BillingClient.BillingResponseCode.OK) {
-                detailsList.forEach { d -> productDetailsMap[d.productId] = d }
+                detailsResult.productDetailsList.forEach { d -> productDetailsMap[d.productId] = d }
                 refreshFormattedPrices()
             }
         }
