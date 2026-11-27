@@ -286,6 +286,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         _isSyncingTasks.value = false
         res.onSuccess {
             _refreshTick.value += 1
+            MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
         }
     }
@@ -508,9 +509,11 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         val sysEv = state.editingSystemEvent
         viewModelScope.launch {
             if (ev != null) {
+                MultiCallAlarmScheduler.cancelEventAlarms(getApplication(), ev)
                 repo.dao.deleteEvent(ev)
                 toast("已刪除活動")
             } else if (tk != null) {
+                MultiCallAlarmScheduler.cancelTaskAlarms(getApplication(), tk)
                 repo.dao.deleteTaskById(tk.id)
                 toast("已刪除待辦事項")
             } else if (sysEv != null) {
@@ -518,6 +521,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                     repo.systemBridge.deleteEventInSystemCalendar(sysEv.rawId)
                 }
                 if (ok) {
+                    MultiCallAlarmScheduler.cancelSystemEventAlarms(getApplication(), sysEv.rawId, sysEv.reminderMinutes)
                     com.dx.calendar.data.sync.SystemEventAlarmPrefs.remove(getApplication(), sysEv.rawId)
                     _refreshTick.value += 1
                     toast("已刪除 Google 行事曆活動")
@@ -579,8 +583,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 val savedId = repo.dao.upsertTask(task)
                 val savedTask = task.copy(id = if (task.id == 0L) savedId else task.id)
                 persistRichMetaForKey(app, com.dx.calendar.data.local.EventRichMetaStore.makeKey(UnifiedSourceType.TASK.name, savedTask.id), payload)
+                if (existing != null) {
+                    MultiCallAlarmScheduler.cancelTaskAlarms(app, existing)
+                }
                 if (!savedTask.isRoutine || settings.value.routineMedicationFeatureEnabled) {
-                    MultiCallAlarmScheduler.scheduleForTask(app, savedTask)
+                    MultiCallAlarmScheduler.scheduleForTask(
+                        context = app,
+                        task = savedTask,
+                        defaultTaskReminders = settings.value.defaultTaskReminders
+                    )
                 } else {
                     MultiCallAlarmScheduler.cancelTaskAlarms(app, savedTask)
                 }
@@ -741,11 +752,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                         useAlarmStream = payload.useAlarmStream,
                         syncSystemAlarm = payload.syncSystemAlarm
                     )
+                    val previousEv = payload.editingEventId?.let { repo.dao.getEventById(it) }
                     val newId = repo.dao.upsertEvent(event)
                     val savedEv = event.copy(id = if (event.id == 0L) newId else event.id)
                     persistRichMetaForKey(app, com.dx.calendar.data.local.EventRichMetaStore.makeKey(UnifiedSourceType.LOCAL_EVENT.name, savedEv.id), payload)
                     if (savedEv.isRoutine && !settings.value.routineMedicationFeatureEnabled) {
                         repo.prefs.setRoutineMedicationFeatureEnabled(true)
+                    }
+                    if (previousEv != null) {
+                        MultiCallAlarmScheduler.cancelEventAlarms(app, previousEv)
                     }
                     MultiCallAlarmScheduler.scheduleForEvent(app, savedEv)
                 }
@@ -829,14 +844,22 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun quickAddTask(title: String, dueToday: Boolean, showInMonth: Boolean) {
         viewModelScope.launch {
+            val app = getApplication<Application>()
+            val defTaskRems = settings.value.defaultTaskReminders
             val task = TaskItemEntity(
                 title = title,
                 dueEpochDay = if (dueToday) _selectedDate.value.toEpochDay() else null,
                 showInMonthGrid = showInMonth,
-                isRoutine = !showInMonth
+                isRoutine = !showInMonth,
+                reminderMinutesJson = repo.toIntListJson(defTaskRems)
             )
-            repo.dao.upsertTask(task)
-            WidgetRefreshHelper.refreshAllWidgets(getApplication())
+            val id = repo.dao.upsertTask(task)
+            MultiCallAlarmScheduler.scheduleForTask(
+                context = app,
+                task = task.copy(id = id),
+                defaultTaskReminders = defTaskRems
+            )
+            WidgetRefreshHelper.refreshAllWidgets(app)
         }
     }
 
@@ -885,7 +908,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 extraDates = emptyList(),
                 recurrenceType = parsed.recurrenceType,
                 recurrenceIntervalWeeks = parsed.recurrenceIntervalWeeks,
-                reminderMinutes = parsed.reminderMinutes,
+                reminderMinutes = if (parsed.hasExplicitReminder) parsed.reminderMinutes else settings.value.defaultEventReminders,
                 enableMultiCall = false,
                 multiCallCount = 3,
                 multiCallIntervalMinutes = 3,
@@ -1150,6 +1173,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                             completedAt = if (!tk.isCompleted) System.currentTimeMillis() else null
                         )
                         repo.dao.upsertTask(updated)
+                        if (updated.isCompleted) {
+                            MultiCallAlarmScheduler.cancelTaskAlarms(getApplication(), updated)
+                        } else {
+                            MultiCallAlarmScheduler.scheduleForTask(
+                                context = getApplication(),
+                                task = updated,
+                                defaultTaskReminders = settings.value.defaultTaskReminders
+                            )
+                        }
                         googleTasksSync.pushTaskCompletionToCloud(settings.value.googleAccountEmail, updated)
                     }
                 }
@@ -1169,6 +1201,15 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 completedAt = if (!task.isCompleted) System.currentTimeMillis() else null
             )
             repo.dao.upsertTask(updated)
+            if (updated.isCompleted) {
+                MultiCallAlarmScheduler.cancelTaskAlarms(getApplication(), updated)
+            } else {
+                MultiCallAlarmScheduler.scheduleForTask(
+                    context = getApplication(),
+                    task = updated,
+                    defaultTaskReminders = settings.value.defaultTaskReminders
+                )
+            }
             googleTasksSync.pushTaskCompletionToCloud(settings.value.googleAccountEmail, updated)
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
         }
@@ -1238,15 +1279,23 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteUnifiedItem(item: UnifiedCalendarItem) {
         viewModelScope.launch {
+            val app = getApplication<Application>()
             when (item.sourceType) {
-                UnifiedSourceType.LOCAL_EVENT -> repo.dao.deleteEventById(item.rawId)
-                UnifiedSourceType.TASK -> repo.dao.deleteTaskById(item.rawId)
+                UnifiedSourceType.LOCAL_EVENT -> {
+                    repo.dao.getEventById(item.rawId)?.let { MultiCallAlarmScheduler.cancelEventAlarms(app, it) }
+                    repo.dao.deleteEventById(item.rawId)
+                }
+                UnifiedSourceType.TASK -> {
+                    repo.dao.getTaskById(item.rawId)?.let { MultiCallAlarmScheduler.cancelTaskAlarms(app, it) }
+                    repo.dao.deleteTaskById(item.rawId)
+                }
                 UnifiedSourceType.SYSTEM_EVENT -> {
                     val ok = withContext(Dispatchers.IO) {
                         repo.systemBridge.deleteEventInSystemCalendar(item.rawId)
                     }
                     if (ok) {
-                        com.dx.calendar.data.sync.SystemEventAlarmPrefs.remove(getApplication(), item.rawId)
+                        MultiCallAlarmScheduler.cancelSystemEventAlarms(app, item.rawId, item.reminderMinutes)
+                        com.dx.calendar.data.sync.SystemEventAlarmPrefs.remove(app, item.rawId)
                         _refreshTick.value += 1
                         toast("已刪除 Google 行事曆活動")
                     } else {
@@ -1255,12 +1304,13 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             _focusedItem.value = null
-            WidgetRefreshHelper.refreshAllWidgets(getApplication())
+            WidgetRefreshHelper.refreshAllWidgets(app)
         }
     }
 
     fun deleteEventEntity(ev: CalendarEventEntity) {
         viewModelScope.launch {
+            MultiCallAlarmScheduler.cancelEventAlarms(getApplication(), ev)
             repo.dao.deleteEvent(ev)
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
         }
@@ -1268,6 +1318,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteTaskEntity(tk: TaskItemEntity) {
         viewModelScope.launch {
+            MultiCallAlarmScheduler.cancelTaskAlarms(getApplication(), tk)
             repo.dao.deleteTaskById(tk.id)
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
         }
@@ -1288,7 +1339,12 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
                 updatedAt = System.currentTimeMillis()
             )
             repo.dao.upsertTask(updated)
-            MultiCallAlarmScheduler.scheduleForTask(app, updated)
+            MultiCallAlarmScheduler.cancelTaskAlarms(app, existing)
+            MultiCallAlarmScheduler.scheduleForTask(
+                context = app,
+                task = updated,
+                defaultTaskReminders = settings.value.defaultTaskReminders
+            )
             _focusedItem.value?.let { cur ->
                 if (cur.isTask && cur.rawId == taskId) {
                     val zone = settings.value.effectiveZoneId
@@ -1332,6 +1388,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             _isSyncingTasks.value = false
             res.onSuccess { cnt ->
                 _refreshTick.value += 1
+                MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
                 toast("Google Tasks 已自動同步完成（共 $cnt 項任務，無日期項目將預設顯示於今日）")
                 WidgetRefreshHelper.refreshAllWidgets(getApplication())
             }.onFailure { err ->
@@ -1392,9 +1449,19 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun setDefaultEventReminders(minutes: List<Int>) = viewModelScope.launch {
         repo.prefs.setDefaultEventReminders(minutes)
+        MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
+        toast(
+            if (minutes.isEmpty()) "預設日程提醒已設為「不提示」"
+            else "已更新預設日程提醒並重新套用排程"
+        )
     }
     fun setDefaultTaskReminders(minutes: List<Int>) = viewModelScope.launch {
         repo.prefs.setDefaultTaskReminders(minutes)
+        MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
+        toast(
+            if (minutes.isEmpty()) "預設待辦事項提醒已設為「不提示」"
+            else "已更新預設待辦提醒並重新套用排程"
+        )
     }
     fun setShowWeekNum(v: Boolean) = viewModelScope.launch { repo.prefs.setShowWeekNumber(v) }
     fun setShowCompletedTasks(v: Boolean) = viewModelScope.launch { repo.prefs.setShowCompletedTasks(v) }

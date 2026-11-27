@@ -1313,7 +1313,7 @@ private fun DxSettingsSectionContent(
                 }.ifEmpty { listOf("已關閉") }.joinToString("、")
 
                 fun formatRemList(list: List<Int>): String {
-                    if (list.isEmpty()) return "無提醒"
+                    if (list.isEmpty()) return "不提示（無提醒）"
                     return list.distinct().sorted().joinToString("、") { m ->
                         com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(m)
                     }
@@ -1415,6 +1415,7 @@ private fun DxSettingsSectionContent(
 
                         SettingClickableValueRow(
                             title = "預設日程提醒時間",
+                            subtitle = "通知跳出將帶出事件名稱與時間；設為「不提示」則無個別提醒之日程不跳通知",
                             value = formatRemList(settings.defaultEventReminders),
                             onClick = { showDefaultEventRemDialog = true }
                         )
@@ -1422,6 +1423,7 @@ private fun DxSettingsSectionContent(
 
                         SettingClickableValueRow(
                             title = "預設待辦事項提醒時間",
+                            subtitle = "Google Tasks／待辦通知跳出將明確帶出任務名稱與時間；設為「不提示」則不主動跳出",
                             value = formatRemList(settings.defaultTaskReminders),
                             onClick = { showDefaultTaskRemDialog = true }
                         )
@@ -1708,6 +1710,32 @@ private fun DxSettingsSectionContent(
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                                 modifier = Modifier.verticalScroll(rememberScrollState())
                             ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(
+                                            if (picked.isEmpty()) tokens.accentColor.copy(alpha = 0.14f)
+                                            else tokens.elevatedSurfaceColor.copy(alpha = 0.45f)
+                                        )
+                                        .clickable { picked = emptySet() }
+                                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = picked.isEmpty(),
+                                        onCheckedChange = { c ->
+                                            picked = if (c) emptySet() else setOf(0)
+                                        }
+                                    )
+                                    Text(
+                                        text = "🔕 預設不提示（無提醒）",
+                                        color = if (picked.isEmpty()) tokens.accentColor else tokens.primaryTextColor,
+                                        fontWeight = if (picked.isEmpty()) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
                                 quickOptions.forEach { m ->
                                     val lbl = com.dx.calendar.util.ReminderTimeFormatter.formatBeforeLabel(m)
                                     val checked = picked.contains(m)

@@ -86,25 +86,38 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 val itemId = intent.getLongExtra(MultiCallAlarmScheduler.EXTRA_ITEM_ID, 0L)
                 val title = intent.getStringExtra(MultiCallAlarmScheduler.EXTRA_TITLE) ?: "提醒"
                 val isPrivacy = intent.getBooleanExtra(MultiCallAlarmScheduler.EXTRA_IS_PRIVACY, false)
+                val eventEpochDay = intent.getLongExtra(MultiCallAlarmScheduler.EXTRA_EVENT_EPOCH_DAY, Long.MIN_VALUE)
+                val shortCritical = intent.getStringExtra(MultiCallAlarmScheduler.EXTRA_SHORT_CRITICAL).orEmpty()
+                val timeSummary = intent.getStringExtra(MultiCallAlarmScheduler.EXTRA_TIME_SUMMARY).orEmpty()
                 val notifId = intent.getIntExtra("notif_id", 0)
 
                 val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 nm.cancel(notifId)
+                nm.cancel(notifId + 50000)
                 AlarmRingingActivity.stopActiveRinging()
 
-                // 延後 5 分鐘再次呼叫
+                val snoozeSub = if (timeSummary.isNotBlank()) {
+                    "$timeSummary · 貪睡延後 5 分鐘提醒"
+                } else {
+                    "貪睡延後 5 分鐘提醒"
+                }
+
+                // 延後 5 分鐘再次呼叫（保留原事件名稱、時間與直達目標日期）
                 MultiCallAlarmScheduler.scheduleNextBurstCall(
                     context = context,
                     sourceType = sourceType,
                     itemId = itemId,
                     title = title,
-                    subtitle = "貪睡延後提醒",
+                    subtitle = snoozeSub,
                     isPrivacy = isPrivacy,
                     useAlarmStream = true,
                     nextBurstIndex = 1,
                     burstTotal = 1,
                     burstIntervalMin = 5,
-                    offsetMinutes = 0
+                    offsetMinutes = 0,
+                    eventEpochDay = eventEpochDay,
+                    shortCriticalText = shortCritical,
+                    timeSummary = timeSummary
                 )
             }
 
@@ -127,9 +140,21 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val burstTotal = intent.getIntExtra(MultiCallAlarmScheduler.EXTRA_BURST_TOTAL, 1)
         val burstIntervalMin = intent.getIntExtra(MultiCallAlarmScheduler.EXTRA_BURST_INTERVAL_MIN, 3)
         val offsetMin = intent.getIntExtra(MultiCallAlarmScheduler.EXTRA_OFFSET_MINUTES, 0)
+        val eventEpochDay = intent.getLongExtra(MultiCallAlarmScheduler.EXTRA_EVENT_EPOCH_DAY, Long.MIN_VALUE)
+        val eventStartMillis = intent.getLongExtra(
+            MultiCallAlarmScheduler.EXTRA_EVENT_START_MILLIS,
+            System.currentTimeMillis() + offsetMin.coerceAtLeast(0) * 60_000L
+        )
+        val rawShortCritical = intent.getStringExtra(MultiCallAlarmScheduler.EXTRA_SHORT_CRITICAL).orEmpty()
+        val timeSummary = intent.getStringExtra(MultiCallAlarmScheduler.EXTRA_TIME_SUMMARY).orEmpty()
+        val isTaskSource = sourceType == "TASK"
 
         // 隱私日曆脫敏保護：未解鎖前通知列絕不外洩隱私內容！
-        val displayTitle = if (isPrivacy) "🔒 隱私日曆提醒" else rawTitle
+        val displayTitle = if (isPrivacy) {
+            if (isTaskSource) "🔒 隱私待辦提醒" else "🔒 隱私日曆提醒"
+        } else {
+            rawTitle
+        }
         val displayBody = buildString {
             if (isPrivacy) append("請開啟 DX日曆 驗證雙指紋鎖檢視內容")
             else append(subtitle)
@@ -153,7 +178,11 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 nextBurstIndex = burstIndex + 1,
                 burstTotal = burstTotal,
                 burstIntervalMin = burstIntervalMin,
-                offsetMinutes = offsetMin
+                offsetMinutes = offsetMin,
+                eventEpochDay = eventEpochDay,
+                eventStartMillis = eventStartMillis,
+                shortCriticalText = rawShortCritical,
+                timeSummary = timeSummary
             )
         }
 
@@ -185,6 +214,9 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             putExtra(MultiCallAlarmScheduler.EXTRA_ITEM_ID, itemId)
             putExtra(MultiCallAlarmScheduler.EXTRA_TITLE, rawTitle)
             putExtra(MultiCallAlarmScheduler.EXTRA_IS_PRIVACY, isPrivacy)
+            putExtra(MultiCallAlarmScheduler.EXTRA_EVENT_EPOCH_DAY, eventEpochDay)
+            putExtra(MultiCallAlarmScheduler.EXTRA_SHORT_CRITICAL, rawShortCritical)
+            putExtra(MultiCallAlarmScheduler.EXTRA_TIME_SUMMARY, timeSummary)
             putExtra("notif_id", notifId)
         }
         val snoozePi = PendingIntent.getBroadcast(
@@ -212,10 +244,20 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val openMainIntent = Intent(context, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            if (eventEpochDay != Long.MIN_VALUE) {
+                putExtra(WidgetRefreshHelper.EXTRA_OPEN_EPOCH_DAY, eventEpochDay)
+                if (itemId > 0L && sourceType != "DEMO") {
+                    putExtra(WidgetRefreshHelper.EXTRA_OPEN_ITEM_RAW_ID, itemId)
+                    putExtra(WidgetRefreshHelper.EXTRA_CLICK_IS_TASK, isTaskSource)
+                }
+            }
+        }
         val openMainPi = PendingIntent.getActivity(
             context,
             notifId + 4,
-            Intent(context, MainActivity::class.java),
+            openMainIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -224,9 +266,10 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         }.getOrDefault(true)
 
         val shortText = when {
+            isPrivacy -> if (isTaskSource) "隱私待辦" else "隱私提醒"
             enableMultiCall && burstTotal > 1 -> "連段$burstIndex/$burstTotal"
-            offsetMin > 0 -> "${offsetMin}分後"
-            else -> "進行中"
+            rawShortCritical.isNotBlank() -> LiveUpdateIslandHelper.formatShortCriticalText(rawShortCritical)
+            else -> MultiCallAlarmScheduler.buildIslandShortText(rawTitle, isPrivacy = false, isTask = isTaskSource)
         }
         val progressPct = if (enableMultiCall && burstTotal > 1) {
             ((burstIndex.toFloat() / burstTotal.toFloat()) * 100f).toInt().coerceIn(10, 100)
@@ -235,10 +278,9 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         } else {
             100
         }
-        val eventWhenMillis = System.currentTimeMillis() + offsetMin.coerceAtLeast(0) * 60_000L
 
         if (liveIslandEnabled && !useAlarmStream && !enableMultiCall) {
-            // 一般日曆提醒直接以「原生原子島 Live Updates 通知」單一整合發送：彈出提醒音效後直接收攏駐留於原子島！
+            // 一般日曆／待辦提醒直接以「原生原子島 Live Updates 通知」單一整合發送：完整帶出事件名稱與時間，點擊直達該筆行程！
             LiveUpdateIslandHelper.postLiveUpdateNotification(
                 context = context,
                 notifId = notifId,
@@ -246,24 +288,29 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 body = displayBody,
                 shortCriticalText = shortText,
                 progressPercent = progressPct,
-                targetWhenMillis = eventWhenMillis,
+                targetWhenMillis = eventStartMillis,
                 alertWithSound = true,
                 dismissPendingIntent = dismissPi,
-                snoozePendingIntent = snoozePi
+                snoozePendingIntent = snoozePi,
+                contentPendingIntent = openMainPi
             )
             return
         }
 
         val channelId = if (useAlarmStream || enableMultiCall) CHANNEL_ALARM_BURST else CHANNEL_STANDARD_REMINDER
+        val dismissBtnText = if (enableMultiCall && burstTotal > 1) "確認收到 (停止連段)" else "確認收到"
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(com.dx.calendar.R.drawable.ic_stat_calendar_island)
             .setContentTitle(displayTitle)
             .setContentText(displayBody)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(displayBody))
+            .setWhen(eventStartMillis)
+            .setShowWhen(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(if (useAlarmStream) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_EVENT)
             .setAutoCancel(true)
             .setContentIntent(openMainPi)
-            .addAction(0, "確認收到 (停止連段)", dismissPi)
+            .addAction(0, dismissBtnText, dismissPi)
             .addAction(0, "延後 5 分鐘", snoozePi)
 
         if (useAlarmStream || enableMultiCall) {
@@ -274,7 +321,7 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(notifId, builder.build())
 
-        // 連段強鬧鐘模式下，亦同步推送安靜上島膠囊顯示連段進度
+        // 連段強鬧鐘模式下，亦同步推送安靜上島膠囊顯示事件名稱與連段進度
         if (liveIslandEnabled) {
             LiveUpdateIslandHelper.postLiveUpdateNotification(
                 context = context,
@@ -283,10 +330,11 @@ class ReminderBroadcastReceiver : BroadcastReceiver() {
                 body = displayBody,
                 shortCriticalText = shortText,
                 progressPercent = progressPct,
-                targetWhenMillis = eventWhenMillis,
+                targetWhenMillis = eventStartMillis,
                 alertWithSound = false,
                 dismissPendingIntent = dismissPi,
-                snoozePendingIntent = snoozePi
+                snoozePendingIntent = snoozePi,
+                contentPendingIntent = openMainPi
             )
         }
     }

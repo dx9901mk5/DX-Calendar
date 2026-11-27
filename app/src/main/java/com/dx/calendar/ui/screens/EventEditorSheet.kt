@@ -321,7 +321,7 @@ fun EventEditorScreen(
                 editingEvent != null -> parseIntList(editingEvent.reminderMinutesJson)
                 editingTask != null -> parseIntList(editingTask.reminderMinutesJson)
                 editingSystemEvent != null -> editingSystemEvent.reminderMinutes
-                prefillFromShare != null && prefillFromShare.reminderMinutes.isNotEmpty() -> prefillFromShare.reminderMinutes
+                prefillFromShare != null && prefillFromShare.hasExplicitReminder -> prefillFromShare.reminderMinutes
                 presetTaskMode -> defaultTaskReminders
                 else -> defaultEventReminders
             }

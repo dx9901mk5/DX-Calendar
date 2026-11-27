@@ -150,14 +150,15 @@ object LiveUpdateIslandHelper {
         targetWhenMillis: Long = System.currentTimeMillis(),
         alertWithSound: Boolean = true,
         dismissPendingIntent: PendingIntent? = null,
-        snoozePendingIntent: PendingIntent? = null
+        snoozePendingIntent: PendingIntent? = null,
+        contentPendingIntent: PendingIntent? = null
     ): LiveUpdatePostResult {
         ensureLiveUpdateChannels(context)
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val safeShort = formatShortCriticalText(shortCriticalText)
         val channelId = if (alertWithSound) CHANNEL_LIVE_UPDATE_ISLAND else CHANNEL_LIVE_UPDATE_SILENT
 
-        val openMainPi = PendingIntent.getActivity(
+        val openMainPi = contentPendingIntent ?: PendingIntent.getActivity(
             context,
             notifId + 10,
             Intent(context, MainActivity::class.java).apply {
@@ -238,7 +239,8 @@ object LiveUpdateIslandHelper {
             val compatBuilder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_stat_calendar_island)
                 .setContentTitle(title)
-                .setContentText("$safeShort · $body")
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                 .setContentIntent(openMainPi)
                 .setCategory(NotificationCompat.CATEGORY_EVENT)
                 .setWhen(targetWhenMillis)
@@ -270,14 +272,19 @@ object LiveUpdateIslandHelper {
      * 一鍵發送原子島 Live Updates 測試通知（附 ProgressStyle 進度條與資格回報）
      */
     fun postDemoIslandNotification(context: Context): LiveUpdatePostResult {
+        val targetMillis = System.currentTimeMillis() + 180_000L
+        val targetTime = java.time.Instant.ofEpochMilli(targetMillis)
+            .atZone(java.time.ZoneId.systemDefault())
+            .toLocalTime()
+        val timeText = "%02d:%02d".format(targetTime.hour, targetTime.minute)
         return postLiveUpdateNotification(
             context = context,
             notifId = DEMO_ISLAND_NOTIF_ID,
-            title = "DX日曆 · 重要會議即將開始",
-            body = "距離開始還有 3 分鐘 · 點擊開啟日曆或按確認收到關閉原子島",
-            shortCriticalText = "3分後",
+            title = "📅 重要會議 · $timeText",
+            body = "今日 $timeText · 3 分鐘後開始 · 點擊開啟日曆或按確認收到關閉原子島",
+            shortCriticalText = "重要會議",
             progressPercent = 70,
-            targetWhenMillis = System.currentTimeMillis() + 180_000L,
+            targetWhenMillis = targetMillis,
             alertWithSound = true
         )
     }

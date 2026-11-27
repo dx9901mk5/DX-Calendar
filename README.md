@@ -20,7 +20,7 @@
 
 ---
 
-### ✨ Android `v2.0.5` 核心功能特色（已全部實裝）
+### ✨ Android `v2.0.6` 核心功能特色（已全部實裝）
 
 #### 1. 🎙️ 100% 本機離線自然語言＋語音快速建行程（0 費用、免 API）
 - 純本機時間詞法引擎，免外接 LLM API、免額外 OAuth、零延遲。
@@ -54,7 +54,7 @@
 
 #### 7. 🔄 例行事務不佔月曆格 ＋ 自訂幾天幾時幾分多提示 ＋ 女性健康專屬追蹤檢視
 - **例行中心**：每日吃藥、繳費、運動可個別設為「不在月曆佔空間」（連外部同步的 Google 重複行程也可單獨隱藏收納），集中打卡、暫停與清理。
-- **自訂幾天幾時幾分前多提示 ＋ 多重連段追擊強提醒**：除內建多組預設提前通知外，支援自訂任意 **`天／小時／分鐘前`** 多組疊加提示（最多 365 天前）、每隔數分鐘連響追擊直到確認、鎖屏全螢幕鬧鐘聲道強響、連動系統時鐘鬧鐘，並遵循國際版 **Android 16+ Live Updates** 即時動態通知規範。
+- **自訂幾天幾時幾分前多提示 ＋ 多重連段追擊強提醒 ＋ 精準事件與 Tasks 通知**：除內建多組預設提前通知外，支援自訂任意 **`天／小時／分鐘前`** 多組疊加提示（最多 365 天前）、每隔數分鐘連響追擊直到確認、鎖屏全螢幕鬧鐘聲道強響與連動系統時鐘鬧鐘；所有日曆事件與 **Google Tasks** 通知跳出皆明確帶出**事件／任務名稱與時間**（含點擊直達該筆項目），嚴格遵守設定頁「**預設不提示**」規則，並遵循國際版 **Android 16+ Live Updates** 即時動態通知規範。
 - **🌸 女性健康追蹤與臨時獨立檢視（設定可選開關）**：可於設定頁依需求開啟（預設關閉保持介面清爽）；開啟後提供 **`女性健康`** 專屬類別與 8 組追蹤範本（生理期、排卵期、懷孕週數、產檢預約、預產期 EDD、產後護理、事前藥／葉酸、婦科回診）自動安排週期與提醒，主畫面頂欄 **`🌸健康`** 一鍵臨時只檢視並隨時恢復全部。
 
 #### 8. ✅ Google 行事曆／Tasks 雙向同步 ＋ 自訂裝置名稱雲端硬碟備份 ＋ 雙指紋隱私日曆
@@ -91,7 +91,7 @@
 - **Android App**: Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) (includes built-in **GitHub Update Checker** with confirmation dialog and live progress bar).
 - **Cross-Platform Desktop Companion (Chrome / Edge / Brave Extension)**: Replaces the former Windows-only desktop app plan so **Windows, macOS, Linux, and Chromebook** users all get the full companion experience in [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) (`chrome://extensions/` → Developer Mode → Load unpacked).
 
-### ✨ Shipped Highlights (`Android v2.0.5` + `Chrome Extension v2.1.0`)
+### ✨ Shipped Highlights (`Android v2.0.6` + `Chrome Extension v2.1.0`)
 - **🎙️ 100% Offline Natural-Language & Voice Quick Add** (zero LLM API cost / zero extra OAuth): Type or speak phrases like *"Tomorrow 3:30pm dentist remind 15m early"* or *"Lunar 1st & 15th offering"* for instant zero-latency parsing.
 - **🎬 Spring Animations, Drag & Drop Rescheduling & Adaptive Multi-Pane UI**: Unified bouncy transitions, 1:1 vertical month-to-agenda swipe gesture, drag-to-reschedule on Month cells & 15-min snap dragging on 24h timelines, plus dual-pane / 3-pane layouts for foldables, tablets, and Chromebooks.
 - **🎨 Luxury Gold Auto Theme & Dynamic 1–31 Day Icons**: Automatic Gold-on-White (Light) / Gold-on-Graphite-Black (Dark) themes and 31 dynamic day-of-month adaptive vector icons.

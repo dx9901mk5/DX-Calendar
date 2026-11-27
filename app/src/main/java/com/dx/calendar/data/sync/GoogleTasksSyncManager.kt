@@ -127,6 +127,11 @@ class GoogleTasksSyncManager(
                 throw e
             }
 
+            val defaultTaskReminders = com.dx.calendar.data.local.AppPreferences(context)
+                .getSettingsOnce()
+                .defaultTaskReminders
+            val defaultRemJson = com.google.gson.Gson().toJson(defaultTaskReminders)
+
             var syncedCount = 0
 
             // 1. 取得所有 Google Tasks 清單
@@ -202,6 +207,7 @@ class GoogleTasksSyncManager(
                                 dueEpochDay = dueEpochDay,
                                 dueMinuteOfDay = parsedDueMinute,
                                 isCompleted = isCompleted,
+                                reminderMinutesJson = defaultRemJson,
                                 googleTaskId = gTaskId,
                                 googleTaskListId = listId,
                                 googleTaskListTitle = listTitle,

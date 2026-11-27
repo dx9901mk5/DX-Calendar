@@ -470,4 +470,115 @@ class LunarAndCalendarTest {
             )
         )
     }
+
+    @Test
+    fun notificationContentAndDefaultNoReminderPolicy_workAccurately() {
+        val date = LocalDate.of(2026, 11, 27)
+
+        // 1. 日曆事件通知必須明確帶出事件名稱、起訖時間、倒數與地點；原子島膠囊同步顯示事件名稱
+        val eventNotif = com.dx.calendar.alarm.MultiCallAlarmScheduler.buildEventNotificationContent(
+            rawTitle = "部門季度檢討會",
+            startDate = date,
+            startTime = java.time.LocalTime.of(14, 30),
+            endTime = java.time.LocalTime.of(15, 30),
+            isAllDay = false,
+            offsetMinutes = 10,
+            location = "3F 會議室",
+            isPrivacy = false,
+            noun = "行程"
+        )
+        assertTrue(eventNotif.title.contains("部門季度檢討會"))
+        assertTrue(eventNotif.title.contains("14:30"))
+        assertTrue(eventNotif.subtitle.contains("11/27 14:30–15:30"))
+        assertTrue(eventNotif.subtitle.contains("10 分鐘後開始"))
+        assertTrue(eventNotif.subtitle.contains("3F 會議室"))
+        assertEquals("部門季度檢討會", eventNotif.shortCriticalText)
+
+        // 2. Google Tasks / 待辦通知必須明確跳出事件名稱與時間
+        val taskNotif = com.dx.calendar.alarm.MultiCallAlarmScheduler.buildTaskNotificationContent(
+            rawTitle = "去慈惠醫院",
+            dueDate = date,
+            dueMinuteOfDay = 14 * 60 + 30,
+            offsetMinutes = 15,
+            isPrivacy = false
+        )
+        assertTrue(taskNotif.title.contains("去慈惠醫院"))
+        assertTrue(taskNotif.title.contains("14:30"))
+        assertTrue(taskNotif.subtitle.contains("11/27 14:30"))
+        assertTrue(taskNotif.subtitle.contains("15 分鐘後到期"))
+        assertEquals("去慈惠醫院", taskNotif.shortCriticalText)
+
+        // 若 Tasks 未指定時刻（預設 09:00），亦須清楚帶出名稱與 09:00 標示
+        val taskDefaultTimeNotif = com.dx.calendar.alarm.MultiCallAlarmScheduler.buildTaskNotificationContent(
+            rawTitle = "買雨衣",
+            dueDate = date,
+            dueMinuteOfDay = null,
+            offsetMinutes = 0,
+            isPrivacy = false
+        )
+        assertTrue(taskDefaultTimeNotif.title.contains("買雨衣"))
+        assertTrue(taskDefaultTimeNotif.title.contains("09:00"))
+        assertTrue(taskDefaultTimeNotif.subtitle.contains("11/27 09:00"))
+
+        // 3. 嚴格遵守「日曆預設不提示」規則
+        // 3a. 預設日程提醒設為空（不提示），且 Google 活動無個別提醒 → 必須為空（絕不強制推播！）
+        assertEquals(
+            emptyList<Int>(),
+            com.dx.calendar.alarm.MultiCallAlarmScheduler.resolveSystemEventOffsets(
+                eventReminders = emptyList(),
+                defaultEventReminders = emptyList(),
+                isAllDay = false,
+                hasExplicitAlarmMeta = false
+            )
+        )
+        // 3b. 即使預設日程提醒為空，但該活動本身有明確單獨設定提醒（如 15 分鐘前）→ 仍會依約提示
+        assertEquals(
+            listOf(15),
+            com.dx.calendar.alarm.MultiCallAlarmScheduler.resolveSystemEventOffsets(
+                eventReminders = listOf(15),
+                defaultEventReminders = emptyList(),
+                isAllDay = false,
+                hasExplicitAlarmMeta = false
+            )
+        )
+        // 3c. 若預設日程提醒為 [0, 5]，無個別提醒的一般時段活動依預設排程 [0, 5]；全天假日則不主動打擾
+        assertEquals(
+            listOf(0, 5),
+            com.dx.calendar.alarm.MultiCallAlarmScheduler.resolveSystemEventOffsets(
+                eventReminders = emptyList(),
+                defaultEventReminders = listOf(0, 5),
+                isAllDay = false,
+                hasExplicitAlarmMeta = false
+            )
+        )
+        assertEquals(
+            emptyList<Int>(),
+            com.dx.calendar.alarm.MultiCallAlarmScheduler.resolveSystemEventOffsets(
+                eventReminders = emptyList(),
+                defaultEventReminders = listOf(0, 5),
+                isAllDay = true,
+                hasExplicitAlarmMeta = false
+            )
+        )
+
+        // 4. 雲端 Google Tasks 亦尊重「預設待辦提醒 = 不提示」規則
+        assertEquals(
+            emptyList<Int>(),
+            com.dx.calendar.alarm.MultiCallAlarmScheduler.resolveTaskOffsets(
+                taskReminders = listOf(0),
+                defaultTaskReminders = emptyList(),
+                isCloudGoogleTask = true,
+                hasExplicitAlarmMeta = false
+            )
+        )
+        assertEquals(
+            listOf(15),
+            com.dx.calendar.alarm.MultiCallAlarmScheduler.resolveTaskOffsets(
+                taskReminders = listOf(15),
+                defaultTaskReminders = emptyList(),
+                isCloudGoogleTask = true,
+                hasExplicitAlarmMeta = false
+            )
+        )
+    }
 }
