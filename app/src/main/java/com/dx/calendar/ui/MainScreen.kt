@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -82,14 +83,19 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -207,29 +213,23 @@ fun DXCalendarRootApp(
     var pomodoroCompleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showFeatureGuideDialog by remember { mutableStateOf(false) }
     var showPinDialog by remember { mutableStateOf(false) }
-    // 仿三星日曆手勢動畫狀態：手機月檢視預設滿版月曆 (false)，上滑平滑壓縮月曆並拉起下方時間表 (true)；再點已選日期彈出 24h 浮動時間軸卡片
-    var showCompactBottomDayPanel by remember {
-        mutableStateOf(
-            settings.phoneSwipeUpScheduleEnabled &&
-                settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
-        )
-    }
-    var sheetDragFraction by remember {
-        mutableFloatStateOf(
-            if (settings.phoneSwipeUpScheduleEnabled &&
-                settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
-            ) 1f else 0f
-        )
-    }
+    // 仿三星日曆手勢動畫狀態：單一 Animatable + GPU translationY + Layout 階段延遲讀取，確保 120Hz 零掉幀
+    val coroutineScope = rememberCoroutineScope()
+    val initialSplitSheet = settings.phoneSwipeUpScheduleEnabled &&
+        settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
+    var showCompactBottomDayPanel by remember { mutableStateOf(initialSplitSheet) }
+    val sheetProgressAnim = remember { Animatable(if (initialSplitSheet) 1f else 0f) }
     var isDraggingSheet by remember { mutableStateOf(false) }
+    var lastSheetDragDeltaY by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(settings.monthViewLayoutMode, settings.phoneSwipeUpScheduleEnabled) {
         val split = settings.phoneSwipeUpScheduleEnabled &&
             settings.monthViewLayoutMode == com.dx.calendar.data.local.MonthViewLayoutMode.SCHEDULE_SPLIT
         showCompactBottomDayPanel = split
-        sheetDragFraction = if (split) 1f else 0f
         if (!settings.phoneSwipeUpScheduleEnabled) {
             isDraggingSheet = false
+            lastSheetDragDeltaY = 0f
         }
+        sheetProgressAnim.snapTo(if (split) 1f else 0f)
     }
     var floatingTimelinePopupDate by remember { mutableStateOf<LocalDate?>(null) }
 
@@ -257,7 +257,6 @@ fun DXCalendarRootApp(
                 focusedItem != null -> viewModel.setFocusedItem(null)
                 showCompactBottomDayPanel -> {
                     showCompactBottomDayPanel = false
-                    sheetDragFraction = 0f
                 }
                 activeWomensHealthFilter -> viewModel.setOnlyWomensHealthFilter(false)
                 mainSection != MainSection.CALENDAR -> viewModel.setMainSection(MainSection.CALENDAR)
@@ -314,8 +313,9 @@ fun DXCalendarRootApp(
             // 摺疊機展開/收合、分割視窗跨斷點或離開月檢視時，自動重置拖曳旗標，防止手勢狀態卡死
             LaunchedEffect(spec.showDualPane, viewMode) {
                 isDraggingSheet = false
+                lastSheetDragDeltaY = 0f
                 if (spec.showDualPane || viewMode != CalendarViewMode.MONTH) {
-                    sheetDragFraction = 0f
+                    sheetProgressAnim.snapTo(0f)
                 }
             }
 
@@ -683,23 +683,14 @@ fun DXCalendarRootApp(
                                     }
                                 }
                             } else {
-                                // 手機直向 / 小視窗模式：完整實作仿三星日曆「上下滑動手勢連動動畫（滿版月曆 ⇄ 壓縮彩條月曆＋下方當日時間表）」！
+                                // 手機直向 / 小視窗模式：120Hz 零掉幀「上下滑動手勢連動動畫（滿版月曆 ⇄ 壓縮彩條月曆＋下方當日時間表）」
+                                // 關鍵優化：
+                                // 1) 上方月曆於 Layout 階段延遲讀取 Animatable.value 計算高度（外層 0 Recomposition）
+                                // 2) 下方時間表固定最終展開高度，全程以 GPU graphicsLayer translationY 位移（0 重測、0 重組）
+                                // 3) 42 格月曆僅在經過 0.42 門檻時切換 1 次 isCompactSheet，不再每幀重組 42 個日期格
                                 val sheetActive = viewMode == CalendarViewMode.MONTH &&
                                     ((settings.phoneSwipeUpScheduleEnabled && showCompactBottomDayPanel) || focusedItem != null) &&
                                     spec.heightDp >= 440.dp
-                                val targetProgress = if (isDraggingSheet) {
-                                    sheetDragFraction.coerceIn(0f, 1f)
-                                } else {
-                                    if (sheetActive) 1f else 0f
-                                }
-                                val animatedSheetProgress by animateFloatAsState(
-                                    targetValue = targetProgress,
-                                    animationSpec = spring(
-                                        dampingRatio = 0.74f,
-                                        stiffness = 400f
-                                    ),
-                                    label = "samsungMonthSheetProgress"
-                                )
 
                                 val density = LocalDensity.current
                                 var compactViewportHeightPx by remember { mutableIntStateOf(0) }
@@ -711,12 +702,29 @@ fun DXCalendarRootApp(
                                 }
                                 val canSplitVertically = viewMode == CalendarViewMode.MONTH && totalH >= 360.dp
                                 val canSwipeScheduleSheet = canSplitVertically && settings.phoneSwipeUpScheduleEnabled
-                                val progress = if (canSplitVertically) {
-                                    (if (isDraggingSheet) sheetDragFraction else animatedSheetProgress).coerceIn(0f, 1f)
-                                } else 0f
-                                // 月曆從 100% 滿版平滑壓縮至 44%（同時日期下方的行程標籤淡出轉為彩色細條），下方時間表由 0% 平滑滑升至 56%！
-                                val calendarHeight = (totalH * (1f - 0.56f * progress)).coerceIn(1.dp, totalH)
-                                val sheetHeight = (totalH - calendarHeight).coerceAtLeast(0.dp)
+                                val sheetMaxHeightDp = (totalH * 0.56f).coerceAtLeast(180.dp)
+                                val sheetMaxHeightPx = with(density) { sheetMaxHeightDp.toPx() }.coerceAtLeast(320f)
+                                val sheetProgressProvider = remember(canSplitVertically) {
+                                    { if (canSplitVertically) sheetProgressAnim.value.coerceIn(0f, 1f) else 0f }
+                                }
+                                val isSheetMounted by remember(canSplitVertically, sheetActive) {
+                                    derivedStateOf { canSplitVertically && (sheetProgressAnim.value > 0.004f || sheetActive) }
+                                }
+
+                                LaunchedEffect(sheetActive, canSplitVertically) {
+                                    if (!isDraggingSheet) {
+                                        val target = if (canSplitVertically && sheetActive) 1f else 0f
+                                        if (kotlin.math.abs(sheetProgressAnim.value - target) > 0.002f) {
+                                            sheetProgressAnim.animateTo(
+                                                targetValue = target,
+                                                animationSpec = spring(
+                                                    dampingRatio = 0.88f,
+                                                    stiffness = 560f
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
 
                                 Box(
                                     modifier = Modifier
@@ -727,194 +735,238 @@ fun DXCalendarRootApp(
                                             }
                                         }
                                 ) {
-                                    Column(modifier = Modifier.fillMaxSize()) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(if (canSplitVertically) calendarHeight else totalH)
-                                        ) {
-                                            CalendarPrimaryViewport(
-                                                viewMode = viewMode,
-                                                currentYm = currentYm,
-                                                selectedDate = selectedDate,
-                                                today = today,
-                                                itemsByDate = itemsByDate,
-                                                weatherByDate = weatherByDate,
-                                                allRangeItems = displayRangeItems,
-                                                focusedItem = focusedItem,
-                                                settings = settings,
-                                                maxEventsInCell = spec.maxEventsInMonthCell,
-                                                yearColumns = spec.yearGridColumns,
-                                                compactSheetProgress = progress,
-                                                hideLunarForCompactHeight = spec.hideLunarInMonthCell,
-                                                onSelectMonthFromYear = { ym ->
-                                                    viewModel.selectDate(ym.atDay(1))
-                                                    viewModel.setViewMode(CalendarViewMode.MONTH)
-                                                },
-                                                onSelectDate = { tappedDate ->
-                                                    val moveTarget = movingItem
-                                                    val stampTpl = activeStampTemplate
-                                                    when {
-                                                        moveTarget != null -> {
-                                                            viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
-                                                            movingItem = null
-                                                        }
-                                                        stampTpl != null -> {
-                                                            viewModel.stampTemplateOnDate(stampTpl, tappedDate)
-                                                            viewModel.selectDate(tappedDate)
-                                                        }
-                                                        else -> viewModel.selectDate(tappedDate)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .align(Alignment.TopCenter)
+                                            .layout { measurable, constraints ->
+                                                val maxH = constraints.maxHeight.coerceAtLeast(1)
+                                                val p = if (canSplitVertically) sheetProgressAnim.value.coerceIn(0f, 1f) else 0f
+                                                val targetH = (maxH * (1f - 0.56f * p)).roundToInt().coerceIn(1, maxH)
+                                                val placeable = measurable.measure(
+                                                    constraints.copy(minHeight = targetH, maxHeight = targetH)
+                                                )
+                                                layout(placeable.width, targetH) {
+                                                    placeable.placeRelative(0, 0)
+                                                }
+                                            }
+                                    ) {
+                                        CalendarPrimaryViewport(
+                                            viewMode = viewMode,
+                                            currentYm = currentYm,
+                                            selectedDate = selectedDate,
+                                            today = today,
+                                            itemsByDate = itemsByDate,
+                                            weatherByDate = weatherByDate,
+                                            allRangeItems = displayRangeItems,
+                                            focusedItem = focusedItem,
+                                            settings = settings,
+                                            maxEventsInCell = spec.maxEventsInMonthCell,
+                                            yearColumns = spec.yearGridColumns,
+                                            compactSheetProgressProvider = sheetProgressProvider,
+                                            hideLunarForCompactHeight = spec.hideLunarInMonthCell,
+                                            onSelectMonthFromYear = { ym ->
+                                                viewModel.selectDate(ym.atDay(1))
+                                                viewModel.setViewMode(CalendarViewMode.MONTH)
+                                            },
+                                            onSelectDate = { tappedDate ->
+                                                val moveTarget = movingItem
+                                                val stampTpl = activeStampTemplate
+                                                when {
+                                                    moveTarget != null -> {
+                                                        viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
+                                                        movingItem = null
                                                     }
-                                                },
-                                                onTapAlreadySelectedDate = { tappedDate ->
-                                                    val moveTarget = movingItem
-                                                    val stampTpl = activeStampTemplate
-                                                    when {
-                                                        moveTarget != null -> {
-                                                            viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
-                                                            movingItem = null
-                                                        }
-                                                        stampTpl != null -> viewModel.stampTemplateOnDate(stampTpl, tappedDate)
-                                                        else -> floatingTimelinePopupDate = tappedDate
+                                                    stampTpl != null -> {
+                                                        viewModel.stampTemplateOnDate(stampTpl, tappedDate)
+                                                        viewModel.selectDate(tappedDate)
                                                     }
-                                                },
-                                                onSelectItem = {
-                                                    viewModel.setFocusedItem(it)
-                                                    showCompactBottomDayPanel = true
-                                                    sheetDragFraction = 1f
-                                                },
-                                                onLongPressItem = { movingItem = it },
-                                                onShiftEventTimeMinutes = { ev, deltaMin ->
-                                                    viewModel.shiftUnifiedItemTimeMinutes(ev, deltaMin)
-                                                },
-                                                onSelectSecondaryTimeZone = { tzId ->
-                                                    viewModel.setSecondaryTimeZoneId(tzId)
-                                                },
-                                                onSwipePrevMonth = { viewModel.shiftMonth(-1) },
-                                                onSwipeNextMonth = { viewModel.shiftMonth(1) },
-                                                onVerticalDragDelta = if (canSwipeScheduleSheet) { deltaY ->
-                                                    if (!isDraggingSheet) {
-                                                        isDraggingSheet = true
-                                                        sheetDragFraction = if (showCompactBottomDayPanel || focusedItem != null) 1f else 0f
+                                                    else -> viewModel.selectDate(tappedDate)
+                                                }
+                                            },
+                                            onTapAlreadySelectedDate = { tappedDate ->
+                                                val moveTarget = movingItem
+                                                val stampTpl = activeStampTemplate
+                                                when {
+                                                    moveTarget != null -> {
+                                                        viewModel.moveUnifiedItemToDate(moveTarget, tappedDate)
+                                                        movingItem = null
                                                     }
-                                                    // 往上滑 (deltaY < 0) 展開時間表；往下滑 (deltaY > 0) 收合回滿版月曆
-                                                    sheetDragFraction = (sheetDragFraction - deltaY / 520f).coerceIn(0f, 1f)
-                                                } else null,
-                                                onVerticalDragEnd = if (canSwipeScheduleSheet) {
-                                                    {
-                                                        val shouldOpen = sheetDragFraction >= 0.36f
-                                                        showCompactBottomDayPanel = shouldOpen
-                                                        if (!shouldOpen) viewModel.setFocusedItem(null)
-                                                        sheetDragFraction = if (shouldOpen) 1f else 0f
-                                                        isDraggingSheet = false
+                                                    stampTpl != null -> viewModel.stampTemplateOnDate(stampTpl, tappedDate)
+                                                    else -> floatingTimelinePopupDate = tappedDate
+                                                }
+                                            },
+                                            onSelectItem = {
+                                                viewModel.setFocusedItem(it)
+                                                showCompactBottomDayPanel = true
+                                            },
+                                            onLongPressItem = { movingItem = it },
+                                            onShiftEventTimeMinutes = { ev, deltaMin ->
+                                                viewModel.shiftUnifiedItemTimeMinutes(ev, deltaMin)
+                                            },
+                                            onSelectSecondaryTimeZone = { tzId ->
+                                                viewModel.setSecondaryTimeZoneId(tzId)
+                                            },
+                                            onSwipePrevMonth = { viewModel.shiftMonth(-1) },
+                                            onSwipeNextMonth = { viewModel.shiftMonth(1) },
+                                            onVerticalDragDelta = if (canSwipeScheduleSheet) { deltaY ->
+                                                if (!isDraggingSheet) {
+                                                    isDraggingSheet = true
+                                                }
+                                                lastSheetDragDeltaY = deltaY
+                                                val next = (sheetProgressAnim.value - deltaY / sheetMaxHeightPx).coerceIn(0f, 1f)
+                                                coroutineScope.launch { sheetProgressAnim.snapTo(next) }
+                                            } else null,
+                                            onVerticalDragEnd = if (canSwipeScheduleSheet) {
+                                                {
+                                                    val p = sheetProgressAnim.value
+                                                    val shouldOpen = when {
+                                                        lastSheetDragDeltaY < -6f -> true
+                                                        lastSheetDragDeltaY > 6f -> false
+                                                        else -> p >= 0.38f
                                                     }
-                                                } else null,
-                                                onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) }
-                                            )
-                                        }
+                                                    lastSheetDragDeltaY = 0f
+                                                    isDraggingSheet = false
+                                                    showCompactBottomDayPanel = shouldOpen
+                                                    if (!shouldOpen) viewModel.setFocusedItem(null)
+                                                    coroutineScope.launch {
+                                                        sheetProgressAnim.animateTo(
+                                                            targetValue = if (shouldOpen) 1f else 0f,
+                                                            animationSpec = spring(dampingRatio = 0.88f, stiffness = 560f)
+                                                        )
+                                                    }
+                                                }
+                                            } else null,
+                                            onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) }
+                                        )
+                                    }
 
-                                        if (canSplitVertically && sheetHeight > 2.dp) {
-                                            Column(
+                                    if (isSheetMounted) {
+                                        Column(
+                                            modifier = Modifier
+                                                .align(Alignment.BottomCenter)
+                                                .fillMaxWidth()
+                                                .height(sheetMaxHeightDp)
+                                                .graphicsLayer {
+                                                    val p = sheetProgressAnim.value.coerceIn(0f, 1f)
+                                                    translationY = (1f - p) * sheetMaxHeightPx
+                                                    alpha = (p * 4f).coerceIn(0f, 1f)
+                                                }
+                                                .background(tokens.surfaceCardColor.copy(alpha = 0.98f))
+                                        ) {
+                                            // 可直接上下拖曳收合／展開的握把列
+                                            Box(
+                                                contentAlignment = Alignment.Center,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height(sheetHeight)
-                                                    .background(tokens.surfaceCardColor.copy(alpha = 0.98f))
-                                            ) {
-                                                // 可直接上下拖曳收合／展開的握把列
-                                                Box(
-                                                    contentAlignment = Alignment.Center,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .pointerInput(Unit) {
-                                                            detectVerticalDragGestures(
-                                                                onDragStart = {
-                                                                    isDraggingSheet = true
-                                                                    sheetDragFraction = if (showCompactBottomDayPanel || focusedItem != null) 1f else 0f
-                                                                },
-                                                                onDragEnd = {
-                                                                    val shouldOpen = sheetDragFraction >= 0.45f
-                                                                    showCompactBottomDayPanel = shouldOpen
-                                                                    if (!shouldOpen) viewModel.setFocusedItem(null)
-                                                                    sheetDragFraction = if (shouldOpen) 1f else 0f
-                                                                    isDraggingSheet = false
-                                                                },
-                                                                onDragCancel = {
-                                                                    isDraggingSheet = false
-                                                                },
-                                                                onVerticalDrag = { _, dragY ->
-                                                                    sheetDragFraction = (sheetDragFraction - dragY / 520f).coerceIn(0f, 1f)
+                                                    .pointerInput(sheetMaxHeightPx) {
+                                                        detectVerticalDragGestures(
+                                                            onDragStart = {
+                                                                isDraggingSheet = true
+                                                                lastSheetDragDeltaY = 0f
+                                                            },
+                                                            onDragEnd = {
+                                                                val p = sheetProgressAnim.value
+                                                                val shouldOpen = when {
+                                                                    lastSheetDragDeltaY < -6f -> true
+                                                                    lastSheetDragDeltaY > 6f -> false
+                                                                    else -> p >= 0.42f
                                                                 }
-                                                            )
-                                                        }
-                                                        .padding(top = 6.dp, bottom = 4.dp)
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(38.dp)
-                                                            .height(4.dp)
-                                                            .clip(RoundedCornerShape(2.dp))
-                                                            .background(tokens.accentColor.copy(alpha = 0.55f))
-                                                    )
-                                                }
-                                                RightDetailPanel(
-                                                    selectedDate = selectedDate,
-                                                    today = today,
-                                                    dayItems = selectedDayItems,
-                                                    focusedItem = focusedItem,
-                                                    onClearFocusedItem = { viewModel.setFocusedItem(null) },
-                                                    onSelectItem = { viewModel.setFocusedItem(it) },
-                                                    onAddEventForDate = { viewModel.openNewEditor(date = it, presetWomensHealth = activeWomensHealthFilter) },
-                                                    onEditItem = { viewModel.openEditForUnifiedItem(it) },
-                                                    onDeleteItem = { viewModel.deleteUnifiedItem(it) },
-                                                    onShareItem = { item ->
-                                                        runCatching {
-                                                            val meta = richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(item.sourceType.name, item.rawId)]
-                                                            val commentsBlock = meta?.sharedComments?.takeIf { it.isNotEmpty() }?.joinToString("\n") {
-                                                                "・${it.author}：${it.content}"
+                                                                lastSheetDragDeltaY = 0f
+                                                                isDraggingSheet = false
+                                                                showCompactBottomDayPanel = shouldOpen
+                                                                if (!shouldOpen) viewModel.setFocusedItem(null)
+                                                                coroutineScope.launch {
+                                                                    sheetProgressAnim.animateTo(
+                                                                        targetValue = if (shouldOpen) 1f else 0f,
+                                                                        animationSpec = spring(dampingRatio = 0.88f, stiffness = 560f)
+                                                                    )
+                                                                }
+                                                            },
+                                                            onDragCancel = {
+                                                                lastSheetDragDeltaY = 0f
+                                                                isDraggingSheet = false
+                                                                val shouldOpen = showCompactBottomDayPanel || focusedItem != null
+                                                                coroutineScope.launch {
+                                                                    sheetProgressAnim.animateTo(
+                                                                        targetValue = if (shouldOpen) 1f else 0f,
+                                                                        animationSpec = spring(dampingRatio = 0.88f, stiffness = 560f)
+                                                                    )
+                                                                }
+                                                            },
+                                                            onVerticalDrag = { _, dragY ->
+                                                                lastSheetDragDeltaY = dragY
+                                                                val next = (sheetProgressAnim.value - dragY / sheetMaxHeightPx).coerceIn(0f, 1f)
+                                                                coroutineScope.launch { sheetProgressAnim.snapTo(next) }
                                                             }
-                                                            val mapUrl = if (item.location.isNotBlank()) "\n導航：https://maps.google.com/?q=${Uri.encode(item.location)}" else ""
-                                                            val textBody = buildString {
-                                                                append("【${item.title}】\n日期：${item.date}")
-                                                                if (item.location.isNotBlank()) append("\n地點：${item.location}$mapUrl")
-                                                                if (item.notes.isNotBlank()) append("\n備註：${item.notes}")
-                                                                if (!commentsBlock.isNullOrBlank()) append("\n\n💬 協作留言：\n$commentsBlock")
-                                                            }
-                                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                                                type = "text/plain"
-                                                                putExtra(Intent.EXTRA_TEXT, textBody)
-                                                            }
-                                                            context.startActivity(Intent.createChooser(shareIntent, "分享行程給家人／另一半"))
-                                                        }
-                                                    },
-                                                    onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
-                                                    onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) },
-                                                    showCloseDayHeaderButton = true,
-                                                    onCloseDayPanel = {
-                                                        viewModel.setFocusedItem(null)
-                                                        showCompactBottomDayPanel = false
-                                                        sheetDragFraction = 0f
-                                                    },
-                                                    dayWeather = weatherByDate[selectedDate],
-                                                    richMetaMap = richMetaMap,
-                                                    onStartPomodoro = { item ->
-                                                        pomodoroTargetTitle = item.title
-                                                        pomodoroCompleteAction = if (item.isTask) { { viewModel.toggleUnifiedItemComplete(item) } } else null
-                                                        showPomodoroDialog = true
-                                                    },
-                                                    onBeginMoveItem = { item ->
-                                                        viewModel.setFocusedItem(null)
-                                                        showCompactBottomDayPanel = false
-                                                        sheetDragFraction = 0f
-                                                        movingItem = item
-                                                    },
-                                                    onAddSharedComment = { item, text ->
-                                                        viewModel.addSharedComment(item, text)
-                                                    },
-                                                    onSetTaskDueTime = { item, h, m ->
-                                                        viewModel.updateTaskDueTime(item.rawId, h, m)
+                                                        )
                                                     }
+                                                    .padding(top = 6.dp, bottom = 4.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(38.dp)
+                                                        .height(4.dp)
+                                                        .clip(RoundedCornerShape(2.dp))
+                                                        .background(tokens.accentColor.copy(alpha = 0.55f))
                                                 )
                                             }
+                                            RightDetailPanel(
+                                                selectedDate = selectedDate,
+                                                today = today,
+                                                dayItems = selectedDayItems,
+                                                focusedItem = focusedItem,
+                                                onClearFocusedItem = { viewModel.setFocusedItem(null) },
+                                                onSelectItem = { viewModel.setFocusedItem(it) },
+                                                onAddEventForDate = { viewModel.openNewEditor(date = it, presetWomensHealth = activeWomensHealthFilter) },
+                                                onEditItem = { viewModel.openEditForUnifiedItem(it) },
+                                                onDeleteItem = { viewModel.deleteUnifiedItem(it) },
+                                                onShareItem = { item ->
+                                                    runCatching {
+                                                        val meta = richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(item.sourceType.name, item.rawId)]
+                                                        val commentsBlock = meta?.sharedComments?.takeIf { it.isNotEmpty() }?.joinToString("\n") {
+                                                            "・${it.author}：${it.content}"
+                                                        }
+                                                        val mapUrl = if (item.location.isNotBlank()) "\n導航：https://maps.google.com/?q=${Uri.encode(item.location)}" else ""
+                                                        val textBody = buildString {
+                                                            append("【${item.title}】\n日期：${item.date}")
+                                                            if (item.location.isNotBlank()) append("\n地點：${item.location}$mapUrl")
+                                                            if (item.notes.isNotBlank()) append("\n備註：${item.notes}")
+                                                            if (!commentsBlock.isNullOrBlank()) append("\n\n💬 協作留言：\n$commentsBlock")
+                                                        }
+                                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                            type = "text/plain"
+                                                            putExtra(Intent.EXTRA_TEXT, textBody)
+                                                        }
+                                                        context.startActivity(Intent.createChooser(shareIntent, "分享行程給家人／另一半"))
+                                                    }
+                                                },
+                                                onToggleComplete = { viewModel.toggleUnifiedItemComplete(it) },
+                                                onHideExternalToRoutine = { viewModel.toggleExternalSeriesOverride(it) },
+                                                showCloseDayHeaderButton = true,
+                                                onCloseDayPanel = {
+                                                    viewModel.setFocusedItem(null)
+                                                    showCompactBottomDayPanel = false
+                                                },
+                                                dayWeather = weatherByDate[selectedDate],
+                                                richMetaMap = richMetaMap,
+                                                onStartPomodoro = { item ->
+                                                    pomodoroTargetTitle = item.title
+                                                    pomodoroCompleteAction = if (item.isTask) { { viewModel.toggleUnifiedItemComplete(item) } } else null
+                                                    showPomodoroDialog = true
+                                                },
+                                                onBeginMoveItem = { item ->
+                                                    viewModel.setFocusedItem(null)
+                                                    showCompactBottomDayPanel = false
+                                                    movingItem = item
+                                                },
+                                                onAddSharedComment = { item, text ->
+                                                    viewModel.addSharedComment(item, text)
+                                                },
+                                                onSetTaskDueTime = { item, h, m ->
+                                                    viewModel.updateTaskDueTime(item.rawId, h, m)
+                                                }
+                                            )
                                         }
                                     }
                                 }
@@ -999,7 +1051,6 @@ fun DXCalendarRootApp(
                             viewModel.setFocusedItem(item)
                             if (!spec.showDualPane) {
                                 showCompactBottomDayPanel = true
-                                sheetDragFraction = 1f
                             }
                         },
                         onAddEventForDate = { d -> viewModel.openNewEditor(date = d, presetWomensHealth = activeWomensHealthFilter) },
@@ -1849,7 +1900,7 @@ private fun CalendarPrimaryViewport(
     settings: com.dx.calendar.data.local.UserSettings,
     maxEventsInCell: Int,
     yearColumns: Int,
-    compactSheetProgress: Float = 0f,
+    compactSheetProgressProvider: () -> Float = { 0f },
     hideLunarForCompactHeight: Boolean = false,
     onSelectMonthFromYear: (java.time.YearMonth) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
@@ -1921,7 +1972,7 @@ private fun CalendarPrimaryViewport(
                     weatherByDate = weatherByDate,
                     settings = settings,
                     maxEventsPerCell = maxEventsInCell,
-                    compactSheetProgress = compactSheetProgress,
+                    compactSheetProgressProvider = compactSheetProgressProvider,
                     hideLunarForCompactHeight = hideLunarForCompactHeight,
                     onSelectDate = onSelectDate,
                     onTapAlreadySelectedDate = onTapAlreadySelectedDate,

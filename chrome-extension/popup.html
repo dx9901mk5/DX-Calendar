@@ -35,6 +35,11 @@
     <button id="btnStopStamp" class="btn-outline" style="padding:2px 8px;font-size:11px;">完成</button>
   </div>
 
+  <div id="womensHealthBanner" class="stamp-banner hidden" style="background:rgba(236,64,122,0.16);border-color:#ec407a;">
+    <span id="womensHealthBannerText">🌸 目前僅顯示女性健康紀錄</span>
+    <button id="btnClearWomensFilter" class="btn-outline" style="padding:2px 8px;font-size:11px;border-color:#ec407a;color:#ec407a;">恢復全部</button>
+  </div>
+
   <main class="main-scroll">
     <!-- Tab 1: 月曆 ＋ 當日詳情 / 24h雙時區時間軸 -->
     <section id="tabCalendar" class="tab-panel active">
@@ -139,11 +144,52 @@
         </div>
         <div id="countdownList"></div>
       </div>
+
+      <div class="section-card">
+        <div class="day-header-row">
+          <div class="day-header-title">🌸 女性健康追蹤（8 大預設範本）</div>
+          <label style="font-size:11px;display:flex;align-items:center;gap:4px;color:var(--subtext);">
+            <input id="chkWomensHealthEnable" type="checkbox" /> 啟用
+          </label>
+        </div>
+        <div id="womensHealthBody" class="hidden" style="margin-top:8px;">
+          <div class="day-header-sub" style="margin-bottom:6px;">點選下方項目立即建立於目前選取日期（含自動週期與提醒）：</div>
+          <div id="womensPresetsRow" class="chip-row" style="margin-bottom:8px;"></div>
+          <button id="btnToggleWomensOnly" class="btn-outline" style="width:100%;border-color:#ec407a;color:#ec407a;">🌸 臨時只檢視女性健康</button>
+        </div>
+      </div>
     </section>
 
-    <!-- Tab 4: 跨系統同步與備份 -->
+    <!-- Tab 4: 跨系統同步、語言與 Android App -->
     <section id="tabSync" class="tab-panel">
-      <div class="section-card" style="margin-top:0;">
+      <div class="section-card" style="margin-top:0;border:1px solid var(--accent);">
+        <div id="androidPromoTitle" class="day-header-title" style="margin-bottom:6px;">📱 同步推出：DX日曆 Android App（手機／摺疊機／平板）</div>
+        <p id="androidPromoDesc" class="day-header-sub" style="line-height:1.55;margin-bottom:8px;">
+          在手機、摺疊機與平板上享受完整原生體驗：5 款高清晰向量桌面小工具、Google 日曆／Tasks 雙向同步、多重連段鬧鐘、離線語音快記與 <strong>前 7 天無廣告全功能試用</strong>（多裝置體驗一律免費）。
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+          <button id="btnAndroidGroup" class="btn-outline" style="flex:1;min-width:110px;padding:6px;font-size:11px;">1️⃣ 加入測試群組</button>
+          <button id="btnAndroidOptIn" class="btn-outline" style="flex:1;min-width:110px;padding:6px;font-size:11px;">2️⃣ 申請測試資格</button>
+          <button id="btnAndroidPlay" class="btn-gold" style="flex:1;min-width:110px;padding:6px;font-size:11px;">3️⃣ 前往 Play 下載</button>
+        </div>
+        <div id="androidPromoHint" class="day-header-sub" style="font-size:10.5px;line-height:1.45;">
+          ⏳ 提示：加入群組後系統將於 10 分鐘～3 小時內批量授予測試資格，建議稍候再點擊步驟 2 與 3。
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="day-header-row">
+          <div id="langCardTitle" class="day-header-title">🌐 介面語言（四語系同步）</div>
+          <select id="uiLangSelect" class="nlp-input" style="max-width:128px;padding:4px 8px;font-size:11px;">
+            <option value="zh-TW">繁體中文</option>
+            <option value="zh-CN">简体中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-card">
         <div class="day-header-title" style="margin-bottom:6px;">☁️ Android ⇄ Chrome 跨系統無損備份同步</div>
         <p class="day-header-sub" style="line-height:1.5;margin-bottom:8px;">
           採用與 Android DX日曆 v2.0 <strong>100% 相同 Schema v2</strong>（<code>.dxbackup.json</code>）。完整保留 Android 分類、例行打卡與加密隱私紀錄，0 伺服器費用、隱私完全自控！
@@ -255,8 +301,18 @@
       </div>
 
       <div>
-        <label class="form-label" for="evReminder">提前提醒分鐘（逗號分隔，如 0,15,60）</label>
-        <input id="evReminder" class="nlp-input" style="width:100%;" type="text" value="0,15" />
+        <label class="form-label" for="evReminder">提前提醒分鐘（留空即不提示；支援自訂幾天幾時幾分前）</label>
+        <input id="evReminder" class="nlp-input" style="width:100%;" type="text" value="0,15" placeholder="例：0,15,60 或留空不提示" />
+        <div class="form-row" style="margin-top:5px;gap:4px;align-items:center;">
+          <input id="remDays" class="nlp-input" style="width:52px;padding:4px;" type="number" min="0" max="365" value="0" title="天" />
+          <span style="font-size:11px;color:var(--subtext);">天</span>
+          <input id="remHours" class="nlp-input" style="width:52px;padding:4px;" type="number" min="0" max="23" value="1" title="時" />
+          <span style="font-size:11px;color:var(--subtext);">時</span>
+          <input id="remMins" class="nlp-input" style="width:52px;padding:4px;" type="number" min="0" max="59" value="0" title="分" />
+          <span style="font-size:11px;color:var(--subtext);">分前</span>
+          <button id="btnAddCustomRem" class="btn-outline" style="padding:4px 8px;font-size:11px;">＋加入</button>
+          <button id="btnClearRem" class="btn-outline" style="padding:4px 7px;font-size:11px;">🔕不提示</button>
+        </div>
       </div>
 
       <div class="form-row" style="flex-wrap:wrap;padding:4px 0;">

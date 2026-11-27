@@ -5,6 +5,19 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v2.1.1] - 2026-11-27 (`versionCode = 35`)
+
+### ⚡ 120Hz 手機上下滑動零掉幀優化 ＋ Chrome 插件 v2.1.1 全面對齊與雙向互推 / Improved & Added
+- **⚡ 徹底解決手機上下滑動時間表動畫掉幀**：
+  - 重構 `MainScreen.kt` 與 `CalendarSubViews.kt`：改採單一 `Animatable` 搭配 1:1 像素跟手與輕撥慣性；上方月曆改於 Layout 階段延遲讀取進度（外層零 Recomposition），底部時間表固定最終高度並改以純 GPU `graphicsLayer translationY` 滑升（全程零重測、零重組），42 格月曆改由 `derivedStateOf` 於 0.42 門檻離散切換 1 次，120Hz 實機滑動如原生般絲滑。
+- **💻 Android App ⇄ Chrome 插件 `v2.1.1` 雙向互推與功能對齊**：
+  - Android App 設定頁「關於我」新增四語系 Chrome / Edge 桌面擴充功能專區。
+  - Chrome 插件同步升級 `v2.1.1`：新增 🌸 女性健康 8 大預設追蹤範本（預設關閉）、自訂幾天幾時幾分前多提示與預設不提示、繁中／簡中／英文／日文四語系切換，以及 Android App 互推卡片與 Google Play 三連結。
+- **🎬 多裝置 DPI 展示與 YouTube 16:9 完整示範影片**：
+  - 補齊摺疊機雙欄、7 吋平板、10 吋平板橫向三欄與桌機寬螢幕截圖，並發布 16:9 多裝置完整示範影片至 YouTube（`https://youtu.be/yrHNFvfUYF0`）。
+
+---
+
 ## [v2.1.0] - 2026-11-27 (`versionCode = 34`)
 
 ### 💎 Google Play 正式商業化、四語系支援與全功能免費體驗 / Added

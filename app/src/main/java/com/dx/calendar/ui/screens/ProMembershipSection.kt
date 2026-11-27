@@ -1,5 +1,7 @@
 package com.dx.calendar.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -382,6 +385,60 @@ fun ProMembershipAndAboutSection(
                     fontSize = 12.sp,
                     lineHeight = 18.sp
                 )
+                HorizontalDivider(color = tokens.gridLineColor.copy(alpha = 0.5f))
+                val ctx = LocalContext.current
+                Surface(
+                    color = tokens.elevatedSurfaceColor,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = when (lang) {
+                                UiLang.ZH_TW -> "💻 同步推出：DX日曆 Chrome / Edge 桌面擴充功能（免費跨裝置）"
+                                UiLang.ZH_CN -> "💻 同步推出：DX日历 Chrome / Edge 桌面扩展插件（免费跨设备）"
+                                UiLang.EN -> "💻 Companion: DX-Calendar Chrome / Edge Extension (Free Multi-Device)"
+                                UiLang.JA -> "💻 連携ツール：DXカレンダー Chrome / Edge 拡張機能（マルチデバイス無料）"
+                            },
+                            color = tokens.primaryTextColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = when (lang) {
+                                UiLang.ZH_TW -> "在 Windows / macOS / Linux / Chromebook 電腦上也享有與 Android App 同步的完整功能（雙欄桌面視窗、側邊欄、農曆、輪班排班、番茄鐘、女性健康、離線自然語言與 .dxbackup.json 無損互通）。"
+                                UiLang.ZH_CN -> "在 Windows / macOS / Linux / Chromebook 电脑上同样享有与 Android App 同步的完整功能（双栏桌面窗口、侧边栏、农历、排班、番茄钟、女性健康、离线自然语言与 .dxbackup.json 无损互通）。"
+                                UiLang.EN -> "Enjoy full DX-Calendar parity on Windows / macOS / Linux / Chromebook (dual-pane window, Side Panel, lunar calendar, shift stamps, Pomodoro, women's health, offline NLP & lossless .dxbackup.json sync with this Android app)."
+                                UiLang.JA -> "Windows / macOS / Linux / Chromebook でも Android アプリと同等の全機能（2画面デスクトップ表示、サイドパネル、旧暦、シフト登録、ポモドーロ、ウィメンズヘルス、.dxbackup.json 完全互換）を無料で利用できます。"
+                            },
+                            color = tokens.secondaryTextColor,
+                            fontSize = 11.5.sp,
+                            lineHeight = 16.sp
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                runCatching {
+                                    ctx.startActivity(
+                                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/dx9901mk5/DX-Calendar/releases/latest"))
+                                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    )
+                                }
+                            },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = when (lang) {
+                                    UiLang.ZH_TW -> "前往取得 Chrome / Edge 擴充功能"
+                                    UiLang.ZH_CN -> "前往获取 Chrome / Edge 扩展插件"
+                                    UiLang.EN -> "Get Chrome / Edge Extension"
+                                    UiLang.JA -> "Chrome / Edge 拡張機能を入手"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
             }
         }
     }

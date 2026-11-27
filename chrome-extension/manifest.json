@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "DX日曆 (DX-Calendar) — 智慧月曆與跨裝置同步",
   "short_name": "DX日曆",
-  "version": "2.1.0",
-  "description": "奢華金雙主題三形態日曆（彈窗／側邊欄／獨立視窗）：農曆節氣、7天天氣、離線語音快記、24h雙時區、拖曳改期、輪班排班與背景番茄鐘，100% 互通 Android DX日曆備份！",
+  "version": "2.1.1",
+  "description": "繁中/簡中/英/日四語系三形態日曆：農曆節氣、7天天氣、離線語音、24h雙時區、輪班排班、女性健康與番茄鐘，100% 互通 Android DX日曆 App！",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",

@@ -27,16 +27,30 @@
 
 ---
 
-## 🎬 模擬器實機展示圖片與操作影片（36 秒全功能演示）
+## 🎬 公開實機示範影片（YouTube 16:9 多裝置完整版）與全裝置展示截圖
 
-> 🎥 **完整 36 秒操作示範影片**：點擊觀看或下載 [docs/media/dx-calendar-demo.mp4](docs/media/dx-calendar-demo.mp4)（展示金白主題月曆、左右滑動換月、手機上滑手勢壓縮月曆與當日時間表、離線語音快記與設定工作台）
+> ▶️ **YouTube 公開完整示範影片（手機＋摺疊雙欄＋10 吋平板三欄＋7 吋平板＋桌機寬螢幕，1 分 06 秒）**：  
+> 👉 **https://youtu.be/yrHNFvfUYF0** （本機高畫質原檔亦同步收錄於 [docs/media/dx-calendar-demo.mp4](docs/media/dx-calendar-demo.mp4)）
 
+### 📱 手機直向介面（120Hz 絲滑上下滑動時間表・離線語音・多風格主題）
 <p align="center">
   <img src="docs/screenshots/01-month-home.png" width="23%" alt="金白高顏值月曆首頁" />
   <img src="docs/screenshots/02-swipe-up-schedule.png" width="23%" alt="手機上滑手勢壓縮月曆與當日時間表" />
   <img src="docs/screenshots/03-voice-quick-add.png" width="23%" alt="離線語音快記行程" />
   <img src="docs/screenshots/04-settings-themes.png" width="23%" alt="DX 設定工作台與多風格主題" />
 </p>
+
+### 📲 摺疊機雙欄・7 吋／10 吋平板三欄・桌機寬螢幕（多裝置一律免費）
+<p align="center">
+  <img src="docs/screenshots/05-foldable-dual-pane.png" width="24%" alt="摺疊機展開雙欄介面" />
+  <img src="docs/screenshots/07-tablet-7inch.png" width="22%" alt="7 吋平板介面" />
+  <img src="docs/screenshots/06-tablet-10inch-landscape.png" width="25%" alt="10 吋平板橫向三欄介面" />
+  <img src="docs/screenshots/08-desktop-chromebook.png" width="25%" alt="桌機 Chromebook 寬螢幕介面" />
+</p>
+
+### 💻 同步推出：DX日曆 Chrome / Edge 桌面擴充功能 (`v2.1.1`)
+- **與 Android App 100% 功能對齊且免費**：支援 Popup 彈窗／Chrome Side Panel 側邊欄／獨立雙欄桌面大視窗、繁中／簡中／英／日四語系切換、農曆節氣、7 天天氣、離線語音快記、24h 雙時區時間軸、輪班連點排班、🌸 女性健康 8 大範本、自訂幾天幾時幾分前提醒、背景番茄鐘與 `.dxbackup.json` 雙向無損互通（並與 Android App 互相串聯）。
+- **下載安裝**：前往 [GitHub Latest Release](https://github.com/dx9901mk5/DX-Calendar/releases/latest) 下載 `DX-Calendar-Chrome-v2.1.1.zip` 解壓縮並於 `chrome://extensions` 載入，或於 Chrome Web Store 搜尋「DX日曆」。
 
 ---
 

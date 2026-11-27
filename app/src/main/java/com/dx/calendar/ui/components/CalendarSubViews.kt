@@ -56,6 +56,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -230,7 +231,7 @@ fun MonthGridView(
     weatherByDate: Map<LocalDate, DailyWeatherInfo> = emptyMap(),
     settings: UserSettings,
     maxEventsPerCell: Int,
-    compactSheetProgress: Float = 0f,
+    compactSheetProgressProvider: () -> Float = { 0f },
     hideLunarForCompactHeight: Boolean = false,
     onSelectDate: (LocalDate) -> Unit,
     onTapAlreadySelectedDate: ((LocalDate) -> Unit)? = null,
@@ -258,6 +259,10 @@ fun MonthGridView(
 
     val datesGrid = remember(yearMonth, settings.startWeekOnMonday) {
         buildSixWeekGrid(yearMonth, settings.startWeekOnMonday)
+    }
+    // 僅在通過 0.42 門檻時切換 1 次，徹底避免上下拖曳每幀重組 42 個日期格造成掉幀
+    val isCompactSheet by remember(compactSheetProgressProvider) {
+        derivedStateOf { compactSheetProgressProvider() >= 0.42f }
     }
 
     val weekHeaders = if (settings.startWeekOnMonday) {
@@ -427,7 +432,7 @@ fun MonthGridView(
                             lunarShort = cellSubText,
                             isHoliday = cellSubHighlight,
                             showGridLine = settings.showMonthGridLines,
-                            compactSheetProgress = compactSheetProgress.coerceIn(0f, 1f),
+                            isCompactSheet = isCompactSheet,
                             weather = weatherByDate[cellDate],
                             items = visibleCellItems,
                             maxVisible = maxEventsPerCell,
@@ -460,7 +465,7 @@ private fun MonthDayCell(
     lunarShort: String,
     isHoliday: Boolean,
     showGridLine: Boolean,
-    compactSheetProgress: Float,
+    isCompactSheet: Boolean,
     weather: DailyWeatherInfo? = null,
     items: List<UnifiedCalendarItem>,
     maxVisible: Int,
@@ -470,11 +475,6 @@ private fun MonthDayCell(
 ) {
     val tokens = LocalBrandTokens.current
     val contentAlpha = if (isInMonth) 1f else 0.36f
-    val selectedScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.0f else 0.985f,
-        animationSpec = spring(dampingRatio = 0.58f, stiffness = 460f),
-        label = "cellSelectBounce"
-    )
     val dow = date.dayOfWeek.value
     val dayNumberColor = when {
         isToday -> tokens.accentColor
@@ -485,10 +485,6 @@ private fun MonthDayCell(
 
     Box(
         modifier = modifier
-            .graphicsLayer {
-                scaleX = selectedScale
-                scaleY = selectedScale
-            }
             .then(
                 if (showGridLine) Modifier.border(0.5.dp, tokens.gridLineColor)
                 else Modifier.padding(1.dp)
@@ -589,7 +585,7 @@ private fun MonthDayCell(
                         fontWeight = if (isToday || isSelected) FontWeight.ExtraBold else FontWeight.Medium,
                         lineHeight = 17.sp
                     )
-                    if (showLunar && compactSheetProgress < 0.72f) {
+                    if (showLunar && !isCompactSheet) {
                         Text(
                             text = lunarShort,
                             color = when {
@@ -601,8 +597,7 @@ private fun MonthDayCell(
                             fontWeight = if (isToday) FontWeight.SemiBold else FontWeight.Normal,
                             lineHeight = 11.sp,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.alpha((1f - compactSheetProgress * 1.4f).coerceIn(0f, 1f))
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     if (isToday) {
@@ -618,18 +613,16 @@ private fun MonthDayCell(
                 }
             }
 
-            Spacer(modifier = Modifier.height(if (compactSheetProgress > 0.5f) 1.dp else 2.dp))
+            Spacer(modifier = Modifier.height(if (isCompactSheet) 1.dp else 2.dp))
 
-            // 仿三星日曆手勢壓縮動畫：月曆上滑壓縮時，行程文字膠囊平滑淡出，轉為日期下方的彩色細條指示列！
-            if (compactSheetProgress >= 0.45f) {
-                val barAlpha = ((compactSheetProgress - 0.38f) / 0.62f).coerceIn(0f, 1f)
+            // 仿三星日曆手勢壓縮動畫：月曆上滑壓縮時，行程文字膠囊轉為日期下方的彩色細條指示列（離散切換，零每幀重組）
+            if (isCompactSheet) {
                 if (items.isNotEmpty()) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 3.dp, vertical = 1.dp)
-                            .alpha(barAlpha)
                     ) {
                         items.take(2).forEach { ev ->
                             Box(
@@ -644,7 +637,6 @@ private fun MonthDayCell(
                 }
             } else {
                 // 一般全高月檢視：顯示活動與 Google Tasks 彩色文字膠囊條
-                val chipAlpha = (1f - compactSheetProgress * 2.1f).coerceIn(0f, 1f)
                 val shown = items.take(maxVisible)
                 shown.forEach { item ->
                     val chipColor = Color(item.colorArgb)
@@ -652,7 +644,6 @@ private fun MonthDayCell(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .alpha(chipAlpha)
                             .padding(vertical = 0.8.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(
@@ -698,7 +689,7 @@ private fun MonthDayCell(
                         text = "+$overflow",
                         color = tokens.secondaryTextColor,
                         fontSize = 9.sp,
-                        modifier = Modifier.padding(start = 3.dp).alpha(chipAlpha)
+                        modifier = Modifier.padding(start = 3.dp)
                     )
                 }
             }

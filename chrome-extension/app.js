@@ -1349,6 +1349,180 @@
       showToast("7 天天氣已更新");
     });
 
+    // 🌸 女性健康追蹤開關（預設關閉）與 8 大預設追蹤範本（與 Android App 100% 對齊）
+    const WOMENS_HEALTH_PRESETS = [
+      { id: "period", name: "🩸 生理期", days: 5, rec: "EVERY_N_WEEKS:4", rem: [0, 1440, 2880] },
+      { id: "ovulation", name: "✨ 排卵期", days: 1, rec: "EVERY_N_WEEKS:4", rem: [0, 1440] },
+      { id: "pregnancy", name: "🤰 懷孕週數", days: 1, rec: "WEEKLY", rem: [0] },
+      { id: "prenatal", name: "🩺 產檢預約", days: 1, rec: "NONE", rem: [0, 60, 1440] },
+      { id: "edd", name: "👶 預產期 (EDD)", days: 1, rec: "NONE", rem: [0, 10080], isCountdown: true },
+      { id: "postpartum", name: "💐 孕產／產後護理", days: 1, rec: "NONE", rem: [0] },
+      { id: "pill", name: "💊 事前藥／葉酸", days: 1, rec: "DAILY", rem: [0, 15] },
+      { id: "gyn", name: "🏥 婦科回診／篩檢", days: 1, rec: "NONE", rem: [0, 1440] }
+    ];
+    let onlyWomensHealthFilter = false;
+    const chkWh = document.getElementById("chkWomensHealthEnable");
+    const whBody = document.getElementById("womensHealthBody");
+    const whRow = document.getElementById("womensPresetsRow");
+    const whBanner = document.getElementById("womensHealthBanner");
+
+    function syncWomensHealthUi() {
+      const enabled = Boolean(state.womensHealthEnabled);
+      if (chkWh) chkWh.checked = enabled;
+      if (whBody) whBody.classList.toggle("hidden", !enabled);
+      if (!enabled) onlyWomensHealthFilter = false;
+      if (whBanner) whBanner.classList.toggle("hidden", !onlyWomensHealthFilter);
+      if (whRow && !whRow.childElementCount) {
+        for (const preset of WOMENS_HEALTH_PRESETS) {
+          const chip = document.createElement("button");
+          chip.className = "chip";
+          chip.style.borderColor = "#ec407a";
+          chip.textContent = preset.name;
+          chip.addEventListener("click", async () => {
+            const baseDate = new Date(`${selectedIso}T09:00:00`);
+            const id = Date.now() + Math.floor(Math.random() * 1000);
+            state.events.push({
+              id,
+              title: preset.name,
+              startEpochMillis: baseDate.getTime(),
+              endEpochMillis: baseDate.getTime() + preset.days * 86400000 - 3600000,
+              isAllDay: preset.id !== "pill",
+              colorArgb: -1294214, // #EC407A 玫瑰粉
+              recurrenceType: preset.rec,
+              reminderMinutes: preset.rem,
+              categoryId: 9,
+              isPrivacy: false,
+              showInMonthGrid: true,
+              notes: "女性健康追蹤項目（與 Android DX日曆同步）"
+            });
+            if (preset.isCountdown) {
+              state.richMeta[`LOCAL_EVENT:${id}`] = { key: `LOCAL_EVENT:${id}`, isCountdown: true };
+            }
+            await saveState();
+            renderAll();
+            showToast(`已於 ${selectedIso} 建立「${preset.name}」`);
+          });
+          whRow.appendChild(chip);
+        }
+      }
+    }
+
+    if (chkWh) {
+      chkWh.addEventListener("change", async () => {
+        state.womensHealthEnabled = chkWh.checked;
+        await saveState();
+        syncWomensHealthUi();
+      });
+    }
+    const btnToggleWh = document.getElementById("btnToggleWomensOnly");
+    if (btnToggleWh) {
+      btnToggleWh.addEventListener("click", () => {
+        onlyWomensHealthFilter = !onlyWomensHealthFilter;
+        syncWomensHealthUi();
+        switchTab("tabCalendar");
+        showToast(onlyWomensHealthFilter ? "🌸 已切換為只檢視女性健康項目" : "已恢復顯示全部行程");
+      });
+    }
+    const btnClearWh = document.getElementById("btnClearWomensFilter");
+    if (btnClearWh) {
+      btnClearWh.addEventListener("click", () => {
+        onlyWomensHealthFilter = false;
+        syncWomensHealthUi();
+      });
+    }
+    syncWomensHealthUi();
+
+    // ⏰ 自訂幾天幾時幾分前多提示 & 預設不提示
+    const btnAddRem = document.getElementById("btnAddCustomRem");
+    const btnClearRem = document.getElementById("btnClearRem");
+    if (btnAddRem) {
+      btnAddRem.addEventListener("click", () => {
+        const d = Math.max(0, parseInt(document.getElementById("remDays").value, 10) || 0);
+        const h = Math.max(0, parseInt(document.getElementById("remHours").value, 10) || 0);
+        const m = Math.max(0, parseInt(document.getElementById("remMins").value, 10) || 0);
+        const totalMin = d * 1440 + h * 60 + m;
+        const input = document.getElementById("evReminder");
+        const existing = input.value.split(",").map((x) => parseInt(x.trim(), 10)).filter((n) => !Number.isNaN(n) && n >= 0);
+        if (!existing.includes(totalMin)) existing.push(totalMin);
+        existing.sort((a, b) => a - b);
+        input.value = existing.join(",");
+        showToast(`已加入提前 ${d ? `${d}天` : ""}${h ? `${h}時` : ""}${m ? `${m}分` : "" || "準時"} 提醒`);
+      });
+    }
+    if (btnClearRem) {
+      btnClearRem.addEventListener("click", () => {
+        document.getElementById("evReminder").value = "";
+        showToast("🔕 已設為不提示（無提醒）");
+      });
+    }
+
+    // 📱 Android App 雙向互推連結（Google Play 測試三連結）
+    const openExternal = (url) => chrome.tabs.create({ url });
+    const btnAndGroup = document.getElementById("btnAndroidGroup");
+    const btnAndOptIn = document.getElementById("btnAndroidOptIn");
+    const btnAndPlay = document.getElementById("btnAndroidPlay");
+    if (btnAndGroup) btnAndGroup.addEventListener("click", () => openExternal("https://groups.google.com/g/dx-file-manager-testers"));
+    if (btnAndOptIn) btnAndOptIn.addEventListener("click", () => openExternal("https://play.google.com/apps/testing/com.dx.calendar"));
+    if (btnAndPlay) btnAndPlay.addEventListener("click", () => openExternal("https://play.google.com/store/apps/details?id=com.dx.calendar"));
+
+    // 🌐 四語系介面切換（繁體中文 / 简体中文 / English / 日本語）
+    const I18N_MAP = {
+      "zh-TW": {
+        promoTitle: "📱 同步推出：DX日曆 Android App（手機／摺疊機／平板）",
+        promoDesc: "在手機、摺疊機與平板上享受完整原生體驗：5 款高清晰向量桌面小工具、Google 日曆／Tasks 雙向同步、多重連段鬧鐘、離線語音快記與前 7 天無廣告全功能試用（多裝置體驗一律免費）。",
+        promoHint: "⏳ 提示：加入群組後系統將於 10 分鐘～3 小時內批量授予測試資格，建議稍候再點擊步驟 2 與 3。",
+        langTitle: "🌐 介面語言（四語系同步）",
+        tabs: ["📅 月曆", "✅ 待辦/番茄", "🏷️ 排班/倒數", "☁️ 同步/App"]
+      },
+      "zh-CN": {
+        promoTitle: "📱 同步推出：DX日历 Android App（手机／折叠屏／平板）",
+        promoDesc: "在手机、折叠屏与平板上享受完整原生体验：5 款高清矢量桌面小组件、Google 日历／Tasks 双向同步、多重连段闹钟、离线语音快记与前 7 天无广告全功能试用（多设备体验一律免费）。",
+        promoHint: "⏳ 提示：加入群组后系统将在 10 分钟～3 小时内批量授予测试资格，建议稍后再点击步骤 2 与 3。",
+        langTitle: "🌐 界面语言（四语系同步）",
+        tabs: ["📅 月历", "✅ 待办/番茄", "🏷️ 排班/倒数", "☁️ 同步/App"]
+      },
+      "en": {
+        promoTitle: "📱 Also on Android: DX-Calendar App (Phone / Foldable / Tablet)",
+        promoDesc: "Get the full native Android experience: 5 crisp vector home widgets, two-way Google Calendar & Tasks sync, multi-burst alarms, offline voice quick-add, and a 7-day ad-free full trial (multi-device always free).",
+        promoHint: "⏳ Note: After joining the Google Group, Play test access is batch-granted within 10 min – 3 hrs. Please wait briefly before tapping steps 2 & 3.",
+        langTitle: "🌐 Interface Language (4 Languages)",
+        tabs: ["📅 Calendar", "✅ Tasks/Pomo", "🏷️ Shifts/Health", "☁️ Sync/App"]
+      },
+      "ja": {
+        promoTitle: "📱 Android版も公開中：DXカレンダー（スマホ／折りたたみ／タブレット）",
+        promoDesc: "高精細ネイティブウィジェット5種、Googleカレンダー＆Tasks双方向同期、連続アラーム、オフライン音声入力、広告なしの7日間無料フル体験（マルチデバイス体験は完全無料）。",
+        promoHint: "⏳ ご案内：グループ参加後、テスト権限の付与に10分〜3時間ほどかかります。少し待ってから手順2・3を開いてください。",
+        langTitle: "🌐 表示言語（4言語対応）",
+        tabs: ["📅 カレンダー", "✅ タスク/集中", "🏷️ シフト/健康", "☁️ 同期/App"]
+      }
+    };
+    const langSel = document.getElementById("uiLangSelect");
+    function applyI18n(lang) {
+      const pack = I18N_MAP[lang] || I18N_MAP["zh-TW"];
+      const t1 = document.getElementById("androidPromoTitle");
+      const t2 = document.getElementById("androidPromoDesc");
+      const t3 = document.getElementById("androidPromoHint");
+      const t4 = document.getElementById("langCardTitle");
+      if (t1) t1.textContent = pack.promoTitle;
+      if (t2) t2.textContent = pack.promoDesc;
+      if (t3) t3.textContent = pack.promoHint;
+      if (t4) t4.textContent = pack.langTitle;
+      document.querySelectorAll(".bottom-nav .nav-btn").forEach((btn, idx) => {
+        if (pack.tabs[idx]) btn.textContent = pack.tabs[idx];
+      });
+    }
+    if (langSel) {
+      const browserLang = (navigator.language || "zh-TW").toLowerCase();
+      const detected = state.uiLang || (browserLang.startsWith("zh-cn") || browserLang.startsWith("zh-sg") ? "zh-CN" : browserLang.startsWith("ja") ? "ja" : browserLang.startsWith("en") ? "en" : "zh-TW");
+      langSel.value = detected;
+      applyI18n(detected);
+      langSel.addEventListener("change", async () => {
+        state.uiLang = langSel.value;
+        await saveState();
+        applyI18n(langSel.value);
+      });
+    }
+
     // 跨視窗即時同步（Popup ⇄ Side Panel ⇄ 獨立桌面視窗）
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
