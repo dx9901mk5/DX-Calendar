@@ -146,7 +146,9 @@ fun DXCalendarRootApp(
     onUploadBackupToGoogleDrive: () -> Unit = {},
     onExportFullBackupFile: () -> Unit = {},
     onRestoreFullBackupFile: () -> Unit = {},
-    onImportContactBirthdays: () -> Unit = {}
+    onImportContactBirthdays: () -> Unit = {},
+    onImportLineFromClipboard: () -> Unit = {},
+    onOpenLineApp: () -> Unit = {}
 ) {
     val settings by viewModel.settings.collectAsState()
     val categories by viewModel.categories.collectAsState()
@@ -330,6 +332,7 @@ fun DXCalendarRootApp(
                         showPomodoroDialog = true
                     },
                     onImportContactBirthdays = onImportContactBirthdays,
+                    onImportLineFromClipboard = onImportLineFromClipboard,
                     onOpenFeatureGuide = { showFeatureGuideDialog = true },
                     onJumpToDate = {
                         runCatching {
@@ -644,6 +647,9 @@ fun DXCalendarRootApp(
                                             },
                                             onAddSharedComment = { item, text ->
                                                 viewModel.addSharedComment(item, text)
+                                            },
+                                            onSetTaskDueTime = { item, h, m ->
+                                                viewModel.updateTaskDueTime(item.rawId, h, m)
                                             }
                                         )
                                     }
@@ -874,6 +880,9 @@ fun DXCalendarRootApp(
                                                     },
                                                     onAddSharedComment = { item, text ->
                                                         viewModel.addSharedComment(item, text)
+                                                    },
+                                                    onSetTaskDueTime = { item, h, m ->
+                                                        viewModel.updateTaskDueTime(item.rawId, h, m)
                                                     }
                                                 )
                                             }
@@ -1018,6 +1027,11 @@ fun DXCalendarRootApp(
                 onExportFullBackupFile = onExportFullBackupFile,
                 onRestoreFullBackupFile = onRestoreFullBackupFile,
                 onImportContactBirthdays = onImportContactBirthdays,
+                onImportLineFromClipboard = {
+                    viewModel.openSettings(false)
+                    onImportLineFromClipboard()
+                },
+                onOpenLineApp = onOpenLineApp,
                 onOpenFeatureGuide = {
                     viewModel.openSettings(false)
                     showFeatureGuideDialog = true
@@ -1097,6 +1111,13 @@ fun DXCalendarRootApp(
             BackHandler(enabled = editorState.isOpen) {
                 viewModel.closeEditor()
             }
+            androidx.compose.runtime.key(
+                editorState.editingEvent?.id,
+                editorState.editingTask?.id,
+                editorState.editingSystemEvent?.rawId,
+                editorState.prefillFromShare,
+                editorState.initialDate
+            ) {
             EventEditorScreen(
                 initialDate = editorState.initialDate,
                 editingEvent = editorState.editingEvent,
@@ -1108,6 +1129,8 @@ fun DXCalendarRootApp(
                 presetTaskMode = editorState.presetTaskMode,
                 presetWomensHealth = settings.womensHealthFeatureEnabled && editorState.presetWomensHealth,
                 womensHealthFeatureEnabled = settings.womensHealthFeatureEnabled,
+                prefillFromShare = editorState.prefillFromShare,
+                prefillSourceLabel = editorState.prefillSourceLabel,
                 privacyFeatureEnabled = settings.privacyFeatureEnabled,
                 allowPrivacyEditing = settings.privacyFeatureEnabled && isPrivacyUnlocked,
                 routineDefaultHideFromMonth = settings.routineDefaultHideFromMonth,
@@ -1136,6 +1159,7 @@ fun DXCalendarRootApp(
                 onSaveAsTemplate = { tpl -> viewModel.saveEventTemplate(tpl) },
                 onLaunchVoiceInput = onLaunchVoiceInput
             )
+            }
         }
         }
 
@@ -1191,6 +1215,7 @@ fun DXCalendarRootApp(
                     }
                 },
                 onImportContactBirthdays = onImportContactBirthdays,
+                onImportLineFromClipboard = onImportLineFromClipboard,
                 onOpenWeekTimeline = {
                     viewModel.setMainSection(MainSection.CALENDAR)
                     viewModel.setViewMode(CalendarViewMode.WEEK)
@@ -1452,6 +1477,7 @@ private fun AdaptiveTopHeaderBar(
     onToggleTemplateBar: () -> Unit = {},
     onOpenPomodoro: () -> Unit = {},
     onImportContactBirthdays: () -> Unit = {},
+    onImportLineFromClipboard: () -> Unit = {},
     onOpenFeatureGuide: () -> Unit = {},
     onJumpToDate: () -> Unit,
     onOpenAlmanacDiscovery: () -> Unit,
@@ -1630,6 +1656,11 @@ private fun AdaptiveTopHeaderBar(
                         text = { Text("🍅 番茄鐘專注計時器") },
                         leadingIcon = { Icon(Icons.Filled.Today, contentDescription = null) },
                         onClick = { showOverflow = false; onOpenPomodoro() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("💬 貼上 LINE 訊息快建行程") },
+                        leadingIcon = { Icon(Icons.Filled.CalendarMonth, contentDescription = null, tint = Color(0xFF06C755)) },
+                        onClick = { showOverflow = false; onImportLineFromClipboard() }
                     )
                     DropdownMenuItem(
                         text = { Text("🎂 匯入聯絡人生日（自動算歲數）") },

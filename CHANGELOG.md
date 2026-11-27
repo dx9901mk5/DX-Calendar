@@ -5,6 +5,25 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v2.0.5] - 2026-11-27 (`versionCode = 31`)
+
+### 💬 新增個人 LINE 智慧聯動（免 API・零費用） / Added
+- **LINE 分享與選字直達 DX日曆（`ACTION_SEND` ＋ `ACTION_PROCESS_TEXT` ＋ `.ics` `ACTION_VIEW`）**：
+  - 在個人 LINE 聊天室或群組看到聚餐／活動／日期訊息時，長按選擇 **「分享 → 加入 DX日曆行程」**，或反白選取文字點擊系統工具列 **「加入 DX日曆」**，即可直接喚起編輯頁並自動預填。
+  - 若於 LINE 聊天室收到 `.ics` 行程邀請檔，點擊亦可直接匯入 DX日曆。
+- **升級離線自然語言引擎支援多行 LINE 通知與台灣口語**：
+  - `NaturalLanguageEventParser` 新增擷取多行通知中的**標題**、**地點**（`地點：`／`地址：`／`📍`）、**網址**（Google Maps／報名連結）、**完整原始對話備註**與「下禮拜／這禮拜」台灣口語日期。
+- **一鍵剪貼簿貼上與雙向同步引導**：
+  - 設定頁「行事曆與 Google Tasks」新增 **「💬 個人 LINE 行事曆聯動」** 專屬卡片（提供 **`📋 貼上 LINE 訊息建行程`** 與 **`開啟 LINE`** 一鍵按鈕，並引導開啟 LINE 內建「與裝置中的行事曆同步」達成雙向看見）；主畫面右上角 `⋮` 選單與功能指南同步提供 **`💬 貼上 LINE 訊息快建行程`** 快捷按鈕。
+
+### ✅ Google Tasks 啟動修復與時刻支援 / Fixed & Improved
+- **修復「開啟 Google Tasks」按鈕跳轉至 Google Play 的問題**：
+  - 於 `AndroidManifest.xml` 補齊 Android 11+ `<queries>` 套件可見性宣告（`com.google.android.apps.tasks`、`jp.naver.line.android` 等）並實作 `ExternalAppLauncher`，優先直接啟動手機已安裝之原生 Google Tasks／LINE App，僅在確認未安裝時才開啟 Play 商店下載頁；同步修正詳情頁「開啟 Google Tasks」按鈕多行換行問題。
+- **補齊 Google Tasks 時刻辨識與「⏰ 補設時間」**：
+  - 針對 Google Tasks 官方 REST API v1 的 `due` 欄位僅回傳日期（時刻強制歸零 `00:00:00Z`）的官方限制，`GoogleTasksSyncManager` 新增智慧辨識任務標題／備註中明確時刻（如 `[13:30]`、`14:30`、`下午3點半`）與未來非午夜時刻支援，並於詳情卡新增一鍵 **`⏰ 補設時間`／`⏰ 改時間`** 按鈕（下次雲端同步自動保留本機時刻並連動鬧鐘與時間軸）。
+
+---
+
 ## [v2.0.4] - 2026-11-27 (`versionCode = 30`)
 
 ### ✨ 桌面小工具全面升級原生向量字體（追平 vivo 清晰度）＋ 女性健康設定頁開關

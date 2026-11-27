@@ -315,6 +315,27 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
                     }
+                },
+                onImportLineFromClipboard = {
+                    val cm = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                    val clipText = cm?.primaryClip?.takeIf { it.itemCount > 0 }
+                        ?.getItemAt(0)
+                        ?.coerceToText(this)
+                        ?.toString()
+                        ?.trim()
+                        .orEmpty()
+                    if (clipText.isNotBlank()) {
+                        viewModel.openEditorFromSharedText(clipText, "LINE 剪貼簿訊息")
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "剪貼簿目前沒有文字；請先在 LINE 複製聊天／活動訊息，或直接長按對話選「分享 → 加入 DX日曆行程」",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                },
+                onOpenLineApp = {
+                    com.dx.calendar.util.ExternalAppLauncher.openLineApp(this)
                 }
             )
         }
@@ -390,6 +411,40 @@ class MainActivity : AppCompatActivity() {
             if (intent.getBooleanExtra(WidgetRefreshHelper.EXTRA_QUICK_ADD, false)) {
                 intent.removeExtra(WidgetRefreshHelper.EXTRA_QUICK_ADD)
                 viewModel.openNewEditor()
+            }
+
+            // 處理來自個人 LINE（或任何 App）之「分享 → 加入 DX日曆行程」與反白選字「加入 DX日曆」
+            when (intent.action) {
+                Intent.ACTION_SEND -> {
+                    if (intent.type?.startsWith("text/") == true) {
+                        val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.trim().orEmpty()
+                        val body = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim().orEmpty()
+                        val combined = listOf(subject, body).filter { it.isNotBlank() }.distinct().joinToString("\n")
+                        intent.removeExtra(Intent.EXTRA_SUBJECT)
+                        intent.removeExtra(Intent.EXTRA_TEXT)
+                        intent.action = Intent.ACTION_MAIN
+                        if (combined.isNotBlank()) {
+                            viewModel.openEditorFromSharedText(combined, "LINE / 分享訊息")
+                        }
+                    }
+                }
+                Intent.ACTION_PROCESS_TEXT -> {
+                    val selected = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()?.trim().orEmpty()
+                    intent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+                    intent.action = Intent.ACTION_MAIN
+                    if (selected.isNotBlank()) {
+                        viewModel.openEditorFromSharedText(selected, "選取文字快記")
+                    }
+                }
+                Intent.ACTION_VIEW -> {
+                    val dataUri = intent.data
+                    val mime = intent.type.orEmpty()
+                    if (dataUri != null && (mime.contains("calendar") || dataUri.toString().endsWith(".ics", ignoreCase = true))) {
+                        intent.data = null
+                        intent.action = Intent.ACTION_MAIN
+                        viewModel.importIcsFromUri(dataUri)
+                    }
+                }
             }
         }
     }

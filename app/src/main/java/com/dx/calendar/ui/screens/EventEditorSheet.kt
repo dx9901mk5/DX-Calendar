@@ -183,6 +183,8 @@ fun EventEditorScreen(
     presetTaskMode: Boolean,
     presetWomensHealth: Boolean = false,
     womensHealthFeatureEnabled: Boolean = false,
+    prefillFromShare: com.dx.calendar.util.ParsedQuickEvent? = null,
+    prefillSourceLabel: String = "",
     privacyFeatureEnabled: Boolean = false,
     allowPrivacyEditing: Boolean = false,
     routineDefaultHideFromMonth: Boolean,
@@ -237,6 +239,7 @@ fun EventEditorScreen(
                 editingEvent != null -> PrivacyCryptoManager.decryptIfNeeded(editingEvent.title)
                 editingTask != null -> PrivacyCryptoManager.decryptIfNeeded(editingTask.title)
                 editingSystemEvent != null -> editingSystemEvent.title
+                prefillFromShare != null -> prefillFromShare.title
                 else -> ""
             }
         )
@@ -274,11 +277,12 @@ fun EventEditorScreen(
         }
     }
 
-    var isAllDay by remember { mutableStateOf(editingEvent?.isAllDay ?: editingSystemEvent?.isAllDay ?: false) }
+    var isAllDay by remember { mutableStateOf(editingEvent?.isAllDay ?: editingSystemEvent?.isAllDay ?: prefillFromShare?.isAllDay ?: false) }
     var startDate by remember {
         mutableStateOf(
             initStartZdt?.toLocalDate()
                 ?: editingTask?.dueEpochDay?.let { LocalDate.ofEpochDay(it) }
+                ?: prefillFromShare?.date
                 ?: initialDate
         )
     }
@@ -286,11 +290,12 @@ fun EventEditorScreen(
         mutableStateOf(
             initStartZdt?.toLocalTime()
                 ?: editingTask?.dueMinuteOfDay?.let { LocalTime.of(it / 60, it % 60) }
+                ?: prefillFromShare?.startTime
                 ?: LocalTime.of((LocalTime.now().hour + 1) % 24, 0)
         )
     }
     var endDate by remember { mutableStateOf(initEndZdt?.toLocalDate() ?: startDate) }
-    var endTime by remember { mutableStateOf(initEndZdt?.toLocalTime() ?: startTime.plusHours(1)) }
+    var endTime by remember { mutableStateOf(initEndZdt?.toLocalTime() ?: prefillFromShare?.endTime ?: startTime.plusHours(1)) }
 
     val extraDates = remember {
         mutableStateListOf<LocalDate>().apply {
@@ -298,10 +303,14 @@ fun EventEditorScreen(
         }
     }
 
-    val initialRecPair = remember(editingEvent?.id, editingTask?.id, presetRoutine) {
-        com.dx.calendar.data.model.RecurrenceCodec.decode(
-            editingEvent?.recurrenceType ?: editingTask?.recurrenceType ?: if (presetRoutine) "DAILY" else "NONE"
-        )
+    val initialRecPair = remember(editingEvent?.id, editingTask?.id, presetRoutine, prefillFromShare) {
+        if (editingEvent == null && editingTask == null && prefillFromShare != null && prefillFromShare.recurrenceType != RecurrenceType.NONE) {
+            prefillFromShare.recurrenceType to prefillFromShare.recurrenceIntervalWeeks
+        } else {
+            com.dx.calendar.data.model.RecurrenceCodec.decode(
+                editingEvent?.recurrenceType ?: editingTask?.recurrenceType ?: if (presetRoutine) "DAILY" else "NONE"
+            )
+        }
     }
     var recurrence by remember { mutableStateOf(initialRecPair.first) }
     var recurrenceIntervalWeeks by remember { mutableIntStateOf(initialRecPair.second.coerceAtLeast(2)) }
@@ -312,6 +321,7 @@ fun EventEditorScreen(
                 editingEvent != null -> parseIntList(editingEvent.reminderMinutesJson)
                 editingTask != null -> parseIntList(editingTask.reminderMinutesJson)
                 editingSystemEvent != null -> editingSystemEvent.reminderMinutes
+                prefillFromShare != null && prefillFromShare.reminderMinutes.isNotEmpty() -> prefillFromShare.reminderMinutes
                 presetTaskMode -> defaultTaskReminders
                 else -> defaultEventReminders
             }
@@ -354,16 +364,18 @@ fun EventEditorScreen(
         mutableStateOf(
             editingEvent?.let { PrivacyCryptoManager.decryptIfNeeded(it.location) }
                 ?: editingSystemEvent?.location
+                ?: prefillFromShare?.location
                 ?: ""
         )
     }
-    var url by remember { mutableStateOf(editingEvent?.url ?: "") }
+    var url by remember { mutableStateOf(editingEvent?.url ?: prefillFromShare?.url ?: "") }
     var notes by remember {
         mutableStateOf(
             when {
                 editingEvent != null -> PrivacyCryptoManager.decryptIfNeeded(editingEvent.notes)
                 editingTask != null -> PrivacyCryptoManager.decryptIfNeeded(editingTask.notes)
                 editingSystemEvent != null -> editingSystemEvent.notes
+                prefillFromShare != null -> prefillFromShare.notes
                 else -> ""
             }
         )
@@ -376,7 +388,7 @@ fun EventEditorScreen(
     var showRecurrenceDialog by remember { mutableStateOf(false) }
     var showExtraDatesDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    var isCountdown by remember { mutableStateOf(initialRichMeta?.isCountdown ?: false) }
+    var isCountdown by remember { mutableStateOf(initialRichMeta?.isCountdown ?: prefillFromShare?.isCountdown ?: false) }
     var isBirthday by remember { mutableStateOf(initialRichMeta?.isBirthday ?: false) }
     var anniversaryYearText by remember { mutableStateOf(initialRichMeta?.anniversaryStartYear?.toString().orEmpty()) }
     var selectedWomensHealthPresetId by remember {
@@ -503,6 +515,26 @@ fun EventEditorScreen(
             }
 
             val leftEditorSection: @Composable () -> Unit = {
+                if (prefillFromShare != null) {
+                    val lineGreen = Color(0xFF06C755)
+                    Surface(
+                        color = lineGreen.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, lineGreen.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    ) {
+                        Text(
+                            text = "💬 已從「${prefillSourceLabel.ifBlank { "LINE / 分享訊息" }}」自動解析預填 — 確認日期時間無誤後點右上角「保存」即可加入日曆",
+                            color = lineGreen,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 17.sp,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+
                 // 模式快速切換：一般活動 / 例行事務（設定開啟「女性健康」後才顯示 🌸 女性健康 選項）
                 val modeOptions = remember(canUseWomensHealth) {
                     if (canUseWomensHealth) listOf(0 to "一般活動", 2 to "例行事務", 3 to "🌸 女性健康")

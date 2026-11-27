@@ -20,7 +20,7 @@
 
 ---
 
-### ✨ Android `v2.0.4` 核心功能特色（已全部實裝）
+### ✨ Android `v2.0.5` 核心功能特色（已全部實裝）
 
 #### 1. 🎙️ 100% 本機離線自然語言＋語音快速建行程（0 費用、免 API）
 - 純本機時間詞法引擎，免外接 LLM API、免額外 OAuth、零延遲。
@@ -58,7 +58,7 @@
 - **🌸 女性健康追蹤與臨時獨立檢視（設定可選開關）**：可於設定頁依需求開啟（預設關閉保持介面清爽）；開啟後提供 **`女性健康`** 專屬類別與 8 組追蹤範本（生理期、排卵期、懷孕週數、產檢預約、預產期 EDD、產後護理、事前藥／葉酸、婦科回診）自動安排週期與提醒，主畫面頂欄 **`🌸健康`** 一鍵臨時只檢視並隨時恢復全部。
 
 #### 8. ✅ Google 行事曆／Tasks 雙向同步 ＋ 自訂裝置名稱雲端硬碟備份 ＋ 雙指紋隱私日曆
-- **Google 生態與自動時區**：防抖即時監聽 Google 行事曆（含語音助理新增）、支援多組 Gmail 帳號並以官方藍色圓圈打勾圖示同步呈現 Google Tasks（新增交由官方 Google Tasks App，預設個人日曆採奢華金鮮明區隔）、標準 `.ics` 匯出入與 URL 訂閱、自動判定所在地時區與 1900–2100 區域農曆黃曆。
+- **Google 生態、個人 LINE 智慧聯動與自動時區**：防抖即時監聽 Google 行事曆（含語音助理新增）、支援多組 Gmail 帳號並以官方藍色圓圈打勾圖示同步呈現 Google Tasks；支援從 **LINE 聊天室「分享 → 加入 DX日曆行程」／反白選字「加入 DX日曆」／剪貼簿一鍵貼上**離線自動解析標題、時間、地點、網址與備註（搭配 LINE 內建「與裝置中的行事曆同步」雙向配合）；標準 `.ics` 匯出入與 URL 訂閱、自動判定所在地時區與 1900–2100 區域農曆黃曆。
 - **自訂裝置名稱整庫備份 ＋ Google 雲端硬碟連動**：上方自訂「裝置名稱」自動寫入 `.dxbackup.json` 檔名與協作留言署名，一鍵連動 Google 雲端硬碟 App 上傳並與 Chrome 插件無損互通。
 - **零痕跡雙指紋「隱私日曆」**：設定頁啟用前全 App 零痕跡；啟用後僅呈現閃爍「眼睛」按鈕，底層強制連續 2 枚指紋驗證＋Keystore `AES-256-GCM` 硬體加密，關閉 App、切換視窗或關閉螢幕瞬間自動隱藏。
 
@@ -91,7 +91,7 @@
 - **Android App**: Download the latest signed APK from [**GitHub Releases**](https://github.com/dx9901mk5/DX-Calendar/releases/latest) (includes built-in **GitHub Update Checker** with confirmation dialog and live progress bar).
 - **Cross-Platform Desktop Companion (Chrome / Edge / Brave Extension)**: Replaces the former Windows-only desktop app plan so **Windows, macOS, Linux, and Chromebook** users all get the full companion experience in [`chrome-extension/`](chrome-extension/README_CHROME_EXTENSION.md) (`chrome://extensions/` → Developer Mode → Load unpacked).
 
-### ✨ Shipped Highlights (`Android v2.0.4` + `Chrome Extension v2.1.0`)
+### ✨ Shipped Highlights (`Android v2.0.5` + `Chrome Extension v2.1.0`)
 - **🎙️ 100% Offline Natural-Language & Voice Quick Add** (zero LLM API cost / zero extra OAuth): Type or speak phrases like *"Tomorrow 3:30pm dentist remind 15m early"* or *"Lunar 1st & 15th offering"* for instant zero-latency parsing.
 - **🎬 Spring Animations, Drag & Drop Rescheduling & Adaptive Multi-Pane UI**: Unified bouncy transitions, 1:1 vertical month-to-agenda swipe gesture, drag-to-reschedule on Month cells & 15-min snap dragging on 24h timelines, plus dual-pane / 3-pane layouts for foldables, tablets, and Chromebooks.
 - **🎨 Luxury Gold Auto Theme & Dynamic 1–31 Day Icons**: Automatic Gold-on-White (Light) / Gold-on-Graphite-Black (Dark) themes and 31 dynamic day-of-month adaptive vector icons.

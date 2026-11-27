@@ -545,6 +545,7 @@ fun FeatureGuideDialog(
     womensHealthFeatureEnabled: Boolean = false,
     onToggleWomensHealthFilter: () -> Unit = {},
     onImportContactBirthdays: () -> Unit,
+    onImportLineFromClipboard: () -> Unit = {},
     onOpenWeekTimeline: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
@@ -569,6 +570,9 @@ fun FeatureGuideDialog(
                 )
                 GuideActionRow("🎙️ 離線語音／一句話快記", "主畫面底部 + 旁麥克風、或編輯頁標題欄右側麥克風", "立即說", tokens.accentColor) {
                     onDismiss(); onOpenVoiceQuickAdd()
+                }
+                GuideActionRow("💬 個人 LINE 分享／貼上快建行程", "LINE 長按對話「分享 → 加入 DX日曆行程」、反白選字「加入 DX日曆」或複製後一鍵貼上", "貼上解析", Color(0xFF06C755)) {
+                    onDismiss(); onImportLineFromClipboard()
                 }
                 GuideActionRow(
                     title = "🌸 女性健康追蹤與臨時檢視",

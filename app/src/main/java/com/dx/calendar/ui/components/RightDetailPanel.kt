@@ -95,7 +95,8 @@ fun RightDetailPanel(
     richMetaMap: Map<String, com.dx.calendar.data.local.EventRichMeta> = emptyMap(),
     onStartPomodoro: ((UnifiedCalendarItem) -> Unit)? = null,
     onBeginMoveItem: ((UnifiedCalendarItem) -> Unit)? = null,
-    onAddSharedComment: ((UnifiedCalendarItem, String) -> Unit)? = null
+    onAddSharedComment: ((UnifiedCalendarItem, String) -> Unit)? = null,
+    onSetTaskDueTime: ((UnifiedCalendarItem, Int, Int) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
 
@@ -127,7 +128,8 @@ fun RightDetailPanel(
                 onHideExternalToRoutine = { onHideExternalToRoutine(activeFocused) },
                 onStartPomodoro = onStartPomodoro?.let { fn -> { fn(activeFocused) } },
                 onBeginMoveItem = onBeginMoveItem?.let { fn -> { fn(activeFocused) } },
-                onAddSharedComment = onAddSharedComment?.let { fn -> { text -> fn(activeFocused, text) } }
+                onAddSharedComment = onAddSharedComment?.let { fn -> { text -> fn(activeFocused, text) } },
+                onSetTaskDueTime = onSetTaskDueTime?.let { fn -> { h, m -> fn(activeFocused, h, m) } }
             )
             return@AnimatedContent
         }
@@ -392,7 +394,8 @@ private fun FocusedItemDetailCard(
     onHideExternalToRoutine: () -> Unit,
     onStartPomodoro: (() -> Unit)? = null,
     onBeginMoveItem: (() -> Unit)? = null,
-    onAddSharedComment: ((String) -> Unit)? = null
+    onAddSharedComment: ((String) -> Unit)? = null,
+    onSetTaskDueTime: ((Int, Int) -> Unit)? = null
 ) {
     val tokens = LocalBrandTokens.current
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -416,32 +419,19 @@ private fun FocusedItemDetailCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
-            TextButton(onClick = onBack) {
-                Text("← 返回當日總覽", color = tokens.secondaryTextColor)
+            TextButton(onClick = onBack, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 4.dp)) {
+                Text("← 返回當日總覽", color = tokens.secondaryTextColor, fontSize = 13.sp, maxLines = 1)
             }
             if (item.isTask) {
                 Button(
-                    onClick = {
-                        val launch = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.tasks")
-                        if (launch != null) {
-                            runCatching { context.startActivity(launch) }
-                        } else {
-                            runCatching {
-                                context.startActivity(
-                                    android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.tasks")
-                                    )
-                                )
-                            }
-                        }
-                    },
+                    onClick = { com.dx.calendar.util.ExternalAppLauncher.openGoogleTasks(context) },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A73E8)),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     shape = RoundedCornerShape(18.dp)
                 ) {
                     Icon(Icons.Filled.TaskAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("開啟 Google Tasks", color = Color.White, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text("開啟 Google Tasks", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                 }
             } else {
                 Button(
@@ -485,7 +475,60 @@ private fun FocusedItemDetailCard(
                     }
                 }
                 HorizontalDivider(color = tokens.gridLineColor)
-                if (item.isAllDay) {
+                if (item.isTask) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (item.isAllDay) {
+                                "時間：${item.date}（API 未回傳時刻）"
+                            } else {
+                                "時間：$startText"
+                            },
+                            color = tokens.secondaryTextColor,
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (onSetTaskDueTime != null) {
+                            TextButton(
+                                onClick = {
+                                    val initTime = if (item.isAllDay) {
+                                        java.time.LocalTime.of(9, 0)
+                                    } else {
+                                        Instant.ofEpochMilli(item.startMillis).atZone(zone).toLocalTime()
+                                    }
+                                    runCatching {
+                                        android.app.TimePickerDialog(
+                                            context,
+                                            { _, h, m -> onSetTaskDueTime(h, m) },
+                                            initTime.hour,
+                                            initTime.minute,
+                                            true
+                                        ).show()
+                                    }
+                                },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (item.isAllDay) "⏰ 補設時間" else "⏰ 改時間",
+                                    color = Color(0xFF1A73E8),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                    if (item.isAllDay) {
+                        Text(
+                            text = "※ Google Tasks 官方 API 目前僅提供日期、會將時刻歸零；您可點右側「⏰ 補設時間」，或在 Tasks 標題／備註寫入如 14:30（同步將自動保留並準時響鈴）。",
+                            color = tokens.secondaryTextColor.copy(alpha = 0.85f),
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
+                    }
+                } else if (item.isAllDay) {
                     Text("時間：${item.date} (整日活動)", color = tokens.secondaryTextColor, fontSize = 13.sp)
                 } else {
                     Text("開始：$startText", color = tokens.secondaryTextColor, fontSize = 13.sp)

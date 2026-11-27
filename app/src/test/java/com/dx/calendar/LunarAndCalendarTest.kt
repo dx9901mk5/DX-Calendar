@@ -393,4 +393,81 @@ class LunarAndCalendarTest {
         assertEquals(0xBA, (darkCardTint ushr 24) and 0xFF)
         assertEquals("☁️", com.dx.calendar.data.weather.WeatherForecastManager.mapWmoWeatherCode(45).first)
     }
+
+    @Test
+    fun lineSharedMultiLineMessage_parsesTitleDateTimeLocationUrlAndNotes() {
+        val base = LocalDate.of(2026, 11, 27)
+        val lineMsg = """
+            【歲末部門聚餐】
+            日期：12/5 (六)
+            時間：晚上 7:00 - 9:30
+            地點：鼎泰豐信義店
+            https://maps.app.goo.gl/example123
+            備註：記得帶交換禮物 提前30分
+        """.trimIndent()
+
+        val parsed = com.dx.calendar.util.NaturalLanguageEventParser.parse(lineMsg, base)
+        assertEquals("歲末部門聚餐", parsed.title)
+        assertEquals(LocalDate.of(2026, 12, 5), parsed.date)
+        assertFalse(parsed.isAllDay)
+        assertEquals(19, parsed.startTime.hour)
+        assertEquals(0, parsed.startTime.minute)
+        assertEquals(21, parsed.endTime.hour)
+        assertEquals(30, parsed.endTime.minute)
+        assertEquals("鼎泰豐信義店", parsed.location)
+        assertEquals("https://maps.app.goo.gl/example123", parsed.url)
+        assertTrue(parsed.reminderMinutes.contains(30))
+        assertTrue(parsed.notes.contains("交換禮物"))
+
+        // 支援台灣口語「下禮拜三」
+        val casual = com.dx.calendar.util.NaturalLanguageEventParser.parse("下禮拜三下午2點半看牙醫", base)
+        assertEquals(LocalDate.of(2026, 12, 2), casual.date)
+        assertEquals(14, casual.startTime.hour)
+        assertEquals(30, casual.startTime.minute)
+    }
+
+    @Test
+    fun googleTasksDueTimeExtraction_handlesApiMidnightAndTextTimeFallback() {
+        val zone = java.time.ZoneId.of("Asia/Taipei")
+        // 1. Google Tasks API 預設回傳 00:00:00.000Z，無時間文字時回傳 null
+        assertEquals(
+            null,
+            com.dx.calendar.data.sync.GoogleTasksSyncManager.extractDueMinuteOfDay(
+                dueIso = "2026-11-27T00:00:00.000Z",
+                title = "去慈惠醫院",
+                notes = "",
+                zone = zone
+            )
+        )
+        // 2. 標題帶 [13:30] 或 14:30 時自動擷取正確時刻
+        assertEquals(
+            13 * 60 + 30,
+            com.dx.calendar.data.sync.GoogleTasksSyncManager.extractDueMinuteOfDay(
+                dueIso = "2026-11-27T00:00:00.000Z",
+                title = "[13:30] 去慈惠醫院",
+                notes = "",
+                zone = zone
+            )
+        )
+        // 3. 備註帶中文時刻（下午3點半）自動擷取 15:30
+        assertEquals(
+            15 * 60 + 30,
+            com.dx.calendar.data.sync.GoogleTasksSyncManager.extractDueMinuteOfDay(
+                dueIso = "2026-11-27T00:00:00.000Z",
+                title = "去慈惠醫院",
+                notes = "下午3點半掛號",
+                zone = zone
+            )
+        )
+        // 4. 若未來 API 回傳非午夜 UTC 時間，依時區正確轉換（06:30 UTC = 14:30 Asia/Taipei）
+        assertEquals(
+            14 * 60 + 30,
+            com.dx.calendar.data.sync.GoogleTasksSyncManager.extractDueMinuteOfDay(
+                dueIso = "2026-11-27T06:30:00.000Z",
+                title = "去慈惠醫院",
+                notes = "",
+                zone = zone
+            )
+        )
+    }
 }

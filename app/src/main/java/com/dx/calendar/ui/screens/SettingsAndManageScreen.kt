@@ -177,6 +177,8 @@ fun SettingsAndManageScreen(
     onExportFullBackupFile: () -> Unit = {},
     onRestoreFullBackupFile: () -> Unit = {},
     onImportContactBirthdays: () -> Unit = {},
+    onImportLineFromClipboard: () -> Unit = {},
+    onOpenLineApp: () -> Unit = {},
     onOpenFeatureGuide: () -> Unit = {},
     onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
@@ -470,6 +472,8 @@ fun SettingsAndManageScreen(
                                     onExportFullBackupFile = onExportFullBackupFile,
                                     onRestoreFullBackupFile = onRestoreFullBackupFile,
                                     onImportContactBirthdays = onImportContactBirthdays,
+                                    onImportLineFromClipboard = onImportLineFromClipboard,
+                                    onOpenLineApp = onOpenLineApp,
                                     onOpenFeatureGuide = onOpenFeatureGuide,
                                     onUpdateHolidayPrefs = onUpdateHolidayPrefs,
                                     onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
@@ -587,6 +591,8 @@ fun SettingsAndManageScreen(
                                     onExportFullBackupFile = onExportFullBackupFile,
                                     onRestoreFullBackupFile = onRestoreFullBackupFile,
                                     onImportContactBirthdays = onImportContactBirthdays,
+                                    onImportLineFromClipboard = onImportLineFromClipboard,
+                                    onOpenLineApp = onOpenLineApp,
                                     onOpenFeatureGuide = onOpenFeatureGuide,
                                     onUpdateHolidayPrefs = onUpdateHolidayPrefs,
                                     onUpdateDefaultEventReminders = onUpdateDefaultEventReminders,
@@ -744,6 +750,8 @@ private fun DxSettingsSectionContent(
     onExportFullBackupFile: () -> Unit = {},
     onRestoreFullBackupFile: () -> Unit = {},
     onImportContactBirthdays: () -> Unit = {},
+    onImportLineFromClipboard: () -> Unit = {},
+    onOpenLineApp: () -> Unit = {},
     onOpenFeatureGuide: () -> Unit = {},
     onUpdateHolidayPrefs: (Boolean, Boolean, Boolean) -> Unit = { _, _, _ -> },
     onUpdateDefaultEventReminders: (List<Int>) -> Unit = {},
@@ -1004,6 +1012,45 @@ private fun DxSettingsSectionContent(
                             checked = settings.showCompletedTasks,
                             onCheckedChange = onToggleShowCompletedTasks
                         )
+                    }
+                }
+
+                // 1.5. 💬 個人 LINE 行事曆聯動（免 API／零費用：LINE 分享解析 ＋ 剪貼簿匯入 ＋ LINE 裝置行事曆同步引導）
+                Surface(
+                    color = tokens.surfaceCardColor,
+                    shape = RoundedCornerShape(tokens.cardCorner),
+                    modifier = Modifier.border(1.dp, Color(0xFF06C755).copy(alpha = 0.4f), RoundedCornerShape(tokens.cardCorner))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "💬 個人 LINE 行事曆聯動（免 API・零費用）",
+                            color = Color(0xFF06C755),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "• LINE → DX日曆：在 LINE 長按對話點「分享 → 加入 DX日曆行程」、反白選字點「加入 DX日曆」，或複製對話後點下方按鈕自動解析日期／時間／地點／網址。\n• DX日曆 → LINE：開啟 LINE →「行事曆」→ 右上角選單 → 設定 → 開啟「與裝置中的行事曆同步」，DX日曆同步至 Google 的行程即會雙向顯示於 LINE！",
+                            color = tokens.secondaryTextColor,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            Button(
+                                onClick = onImportLineFromClipboard,
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF06C755)),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.weight(1.3f)
+                            ) {
+                                Text("📋 貼上 LINE 訊息建行程", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                            OutlinedButton(
+                                onClick = onOpenLineApp,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.weight(0.9f)
+                            ) {
+                                Text("開啟 LINE", color = Color(0xFF06C755), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
 

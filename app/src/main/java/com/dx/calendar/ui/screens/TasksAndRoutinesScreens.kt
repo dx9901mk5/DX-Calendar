@@ -158,26 +158,14 @@ fun TasksCenterView(
                 ) {
                     Button(
                         onClick = {
-                            val launch = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.tasks")
-                            if (launch != null) {
-                                runCatching { context.startActivity(launch) }
-                            } else {
-                                runCatching {
-                                    context.startActivity(
-                                        android.content.Intent(
-                                            android.content.Intent.ACTION_VIEW,
-                                            android.net.Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.tasks")
-                                        )
-                                    )
-                                }
-                            }
+                            com.dx.calendar.util.ExternalAppLauncher.openGoogleTasks(context)
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = googleTasksBlue),
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Filled.TaskAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(5.dp))
-                        Text("開啟 Google Tasks", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("開啟 Google Tasks", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                     OutlinedButton(
                         onClick = onSyncGoogleTasks,

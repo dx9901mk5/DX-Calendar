@@ -15,7 +15,10 @@ data class ParsedQuickEvent(
     val recurrenceIntervalWeeks: Int = 1,
     val reminderMinutes: List<Int> = listOf(0, 15),
     val isTaskMode: Boolean = false,
-    val isCountdown: Boolean = false
+    val isCountdown: Boolean = false,
+    val location: String = "",
+    val url: String = "",
+    val notes: String = ""
 )
 
 /**
@@ -36,7 +39,8 @@ object NaturalLanguageEventParser {
     )
 
     fun parse(rawInput: String, today: LocalDate = LocalDate.now()): ParsedQuickEvent {
-        var text = rawInput.trim().replace("　", " ")
+        val originalTrimmed = rawInput.trim()
+        var text = originalTrimmed.replace("　", " ")
         if (text.isBlank()) {
             return ParsedQuickEvent(
                 title = "新行程",
@@ -46,6 +50,40 @@ object NaturalLanguageEventParser {
                 isAllDay = false
             )
         }
+
+        val isMultiLine = text.contains('\n')
+        var extractedUrl = ""
+        var extractedLocation = ""
+
+        // -2. 擷取 LINE 訊息或通知中的網址（如 Google Maps / 活動報名連結）
+        val urlRegex = Regex("https?://[^\\s\\u3000<>\"'）)】」』]+", RegexOption.IGNORE_CASE)
+        urlRegex.find(text)?.let { m ->
+            extractedUrl = m.value.trimEnd('.', ',', '，', '。', ')', '）')
+        }
+        text = text.replace(urlRegex, " ")
+
+        // -1. 擷取結構化或口語「地點」欄位（支援多行 LINE 通知如「地點：鼎泰豐信義店」或「📍台北101」）
+        val locLineRegex = Regex("(?m)^\\s*(?:地點|地点|地址|集合地點|集合|場地|位置|📍|Location)\\s*[:：]?\\s*(.+)$", RegexOption.IGNORE_CASE)
+        val locLineMatch = locLineRegex.find(text)
+        if (locLineMatch != null) {
+            extractedLocation = locLineMatch.groupValues[1].trim()
+            text = text.replace(locLineMatch.value, " ")
+        } else {
+            val inlineLocRegex = Regex("(?:地點|地点|地址|在)\\s*[:：]\\s*([^\\n，,。]+)")
+            inlineLocRegex.find(text)?.let { m ->
+                extractedLocation = m.groupValues[1].trim()
+                text = text.replaceFirst(m.value, " ")
+            }
+        }
+
+        // 先擷取多行通知中的「主題／活動／標題」或第一行有意義文字作為標題候選
+        val rawLines = originalTrimmed.lines().map { it.trim() }.filter { it.isNotBlank() }
+        val explicitTitleLine = Regex("(?m)^\\s*(?:主題|活動|活動名稱|標題|行程|事件|Event|Title)\\s*[:：]\\s*(.+)$", RegexOption.IGNORE_CASE)
+            .find(text)?.groupValues?.get(1)?.trim()
+
+        // 清除結構化欄位前綴（日期：、時間：、備註：）以便精準擷取數值與乾淨標題
+        val notesLineMatch = Regex("(?m)^\\s*(?:備註|备注|說明|说明|Notes?)\\s*[:：]\\s*(.+)$", RegexOption.IGNORE_CASE).find(text)
+        text = text.replace(Regex("(?m)^\\s*(?:日期|時間|时间|主題|活動|活動名稱|標題|行程|事件|備註|备注|說明|说明)\\s*[:：]\\s*"), " ")
 
         var date = today
         var startTime: LocalTime? = null
@@ -138,8 +176,8 @@ object NaturalLanguageEventParser {
         val fullDateRegex = Regex("(\\d{4})\\s*[年/\\-.]\\s*(\\d{1,2})\\s*[月/\\-.]\\s*(\\d{1,2})\\s*[日號号]?")
         val mdDateRegex = Regex("(\\d{1,2})\\s*[月/]\\s*(\\d{1,2})\\s*[日號号]?")
         val inDaysRegex = Regex("(\\d+|[一二兩两三四五六七八九十]+)\\s*天[後后]")
-        val nextWeekDowRegex = Regex("(下個?[週周]|下星期)([一二三四五六日天])")
-        val thisWeekDowRegex = Regex("(這個?[週周]|本[週周]|這星期|[週周]|星期)([一二三四五六日天])")
+        val nextWeekDowRegex = Regex("(下個?[週周]|下星期|下個?禮拜|下個?礼拜)([一二三四五六日天])")
+        val thisWeekDowRegex = Regex("(這個?[週周]|本[週周]|這星期|這禮拜|本禮拜|[週周]|星期|禮拜|礼拜)([一二三四五六日天])")
 
         when {
             fullDateRegex.containsMatchIn(text) -> {
@@ -251,10 +289,32 @@ object NaturalLanguageEventParser {
         val isAllDay = startTime == null
         val finalStart = startTime ?: LocalTime.of(9, 0)
         val finalEnd = endTime ?: finalStart.plusHours(1)
-        val cleanedTitle = text
+
+        // 清除像 "(六)"、"（週六）" 這類殘留星期括號，並決定乾淨標題
+        val strippedRemainder = text
+            .replace(Regex("[（(]\\s*(?:[週周]|星期|禮拜)?[一二三四五六日天]\\s*[）)]"), " ")
             .replace(Regex("\\s+"), " ")
-            .trim(' ', '，', ',', '、', '。', ':', '：')
-            .ifBlank { rawInput.trim() }
+            .trim(' ', '，', ',', '、', '。', ':', '：', '-', '—')
+
+        val cleanedTitle = when {
+            !explicitTitleLine.isNullOrBlank() -> explicitTitleLine.trim('【', '】', '[', ']', ' ')
+            isMultiLine -> {
+                val firstHeadline = rawLines.firstOrNull { line ->
+                    val trimmedLine = line.replace(urlRegex, "").trim()
+                    trimmedLine.isNotBlank() &&
+                        !Regex("^(?:日期|時間|时间|地點|地点|地址|備註|备注|說明|说明|📍)\\s*[:：]?", RegexOption.IGNORE_CASE).containsMatchIn(trimmedLine) &&
+                        !Regex("^\\d{4}[/\\-.年]\\d{1,2}[/\\-.月]\\d{1,2}").containsMatchIn(trimmedLine) &&
+                        !Regex("^\\d{1,2}[:：]\\d{2}").containsMatchIn(trimmedLine)
+                }?.trim('【', '】', '[', ']', ' ')
+                firstHeadline?.takeIf { it.length <= 48 } ?: strippedRemainder.take(48).ifBlank { originalTrimmed.lines().first().take(48) }
+            }
+            else -> strippedRemainder.ifBlank { originalTrimmed }
+        }
+
+        val finalNotes = when {
+            isMultiLine || extractedLocation.isNotBlank() || extractedUrl.isNotBlank() || notesLineMatch != null -> originalTrimmed
+            else -> ""
+        }
 
         return ParsedQuickEvent(
             title = cleanedTitle,
@@ -266,7 +326,10 @@ object NaturalLanguageEventParser {
             recurrenceIntervalWeeks = intervalWeeks,
             reminderMinutes = if (reminders.isEmpty()) listOf(0, 15) else (reminders + 0).sorted(),
             isTaskMode = isTask,
-            isCountdown = isCountdown
+            isCountdown = isCountdown,
+            location = extractedLocation,
+            url = extractedUrl,
+            notes = finalNotes
         )
     }
 

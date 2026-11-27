@@ -86,7 +86,9 @@ data class EditorLaunchState(
     val presetRoutine: Boolean = false,
     val presetPrivacy: Boolean = false,
     val presetTaskMode: Boolean = false,
-    val presetWomensHealth: Boolean = false
+    val presetWomensHealth: Boolean = false,
+    val prefillFromShare: com.dx.calendar.util.ParsedQuickEvent? = null,
+    val prefillSourceLabel: String = ""
 )
 
 class CalendarViewModel(app: Application) : AndroidViewModel(app) {
@@ -435,6 +437,32 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             presetPrivacy = presetPrivacy,
             presetTaskMode = presetTaskMode,
             presetWomensHealth = presetWomensHealth
+        )
+    }
+
+    /**
+     * 接收來自個人 LINE 聊天室「分享 → 加入 DX日曆行程」、系統選字「加入 DX日曆」或剪貼簿貼上的對話文字，
+     * 以 100% 本機離線自然語言引擎自動解析標題、日期、時間、地點、網址與備註，並開啟編輯頁供使用者一鍵確認保存。
+     */
+    fun openEditorFromSharedText(rawText: String, sourceLabel: String = "LINE / 分享訊息") {
+        val clean = rawText.trim()
+        if (clean.isBlank()) {
+            toast("未偵測到可解析的行程文字")
+            return
+        }
+        val zone = settings.value.effectiveZoneId
+        val today = LocalDate.now(zone)
+        val parsed = com.dx.calendar.util.NaturalLanguageEventParser.parse(clean, today)
+        _isSettingsOpen.value = false
+        _mainSection.value = MainSection.CALENDAR
+        _selectedDate.value = parsed.date
+        _currentYearMonth.value = YearMonth.from(parsed.date)
+        refreshSystemCalendars()
+        _editorState.value = EditorLaunchState(
+            isOpen = true,
+            initialDate = parsed.date,
+            prefillFromShare = parsed,
+            prefillSourceLabel = sourceLabel
         )
     }
 
@@ -1242,6 +1270,38 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             repo.dao.deleteTaskById(tk.id)
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
+        }
+    }
+
+    /**
+     * 補設／調整 Google Tasks 在 DX日曆內的指定時刻（因官方 Google Tasks REST API 不回傳時刻欄位），
+     * 設定後立即更新月曆、時間軸、鬧鐘與桌面小工具，且後續雲端同步將自動保留此時段。
+     */
+    fun updateTaskDueTime(taskId: Long, hour: Int, minute: Int) {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val existing = repo.dao.getTaskById(taskId) ?: return@launch
+            val safeH = hour.coerceIn(0, 23)
+            val safeM = minute.coerceIn(0, 59)
+            val updated = existing.copy(
+                dueMinuteOfDay = safeH * 60 + safeM,
+                updatedAt = System.currentTimeMillis()
+            )
+            repo.dao.upsertTask(updated)
+            MultiCallAlarmScheduler.scheduleForTask(app, updated)
+            _focusedItem.value?.let { cur ->
+                if (cur.isTask && cur.rawId == taskId) {
+                    val zone = settings.value.effectiveZoneId
+                    val newStart = cur.date.atTime(safeH, safeM).atZone(zone).toInstant().toEpochMilli()
+                    _focusedItem.value = cur.copy(
+                        isAllDay = false,
+                        startMillis = newStart,
+                        endMillis = newStart + 1_800_000L
+                    )
+                }
+            }
+            WidgetRefreshHelper.refreshAllWidgets(app)
+            toast("已設定時間 %02d:%02d（下次同步將自動保留）".format(safeH, safeM))
         }
     }
 
