@@ -376,7 +376,7 @@ object MultiCallAlarmScheduler {
             return
         }
 
-        val nextOccurrenceStart = findNextEventStartMillis(event, nowMillis) ?: return
+        val nextOccurrenceStart = findNextEventStartMillis(context, event, nowMillis) ?: return
         val zone = ZoneId.systemDefault()
         val startZdt = Instant.ofEpochMilli(nextOccurrenceStart).atZone(zone)
         val durationMs = (event.endEpochMillis - event.startEpochMillis).coerceAtLeast(0L)
@@ -670,14 +670,26 @@ object MultiCallAlarmScheduler {
         }
     }
 
-    private fun findNextEventStartMillis(event: CalendarEventEntity, nowMillis: Long): Long? {
+    private fun findNextEventStartMillis(context: Context, event: CalendarEventEntity, nowMillis: Long): Long? {
         val zone = ZoneId.systemDefault()
         val baseZdt = Instant.ofEpochMilli(event.startEpochMillis).atZone(zone)
         val baseDate = baseZdt.toLocalDate()
         val baseTime = if (event.isAllDay) LocalTime.of(9, 0) else baseZdt.toLocalTime()
         val (recType, recIntervalWeeks) = com.dx.calendar.data.model.RecurrenceCodec.decode(event.recurrenceType)
+        val recEndDate = event.recurrenceEndEpochMillis?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() }
+        val excludedDates = com.dx.calendar.data.local.RecurrenceExclusionStore.getExcludedDates(
+            context, "LOCAL_EVENT", event.id
+        )
 
-        val nextDate = findNextDateByRecurrence(baseDate, recType, nowMillis, baseTime, recIntervalWeeks) ?: return null
+        val nextDate = findNextDateByRecurrence(
+            baseDate = baseDate,
+            recType = recType,
+            nowMillis = nowMillis,
+            timeOfDay = baseTime,
+            intervalWeeks = recIntervalWeeks,
+            excludedDates = excludedDates,
+            recEndDate = recEndDate
+        ) ?: return null
         return nextDate.atTime(baseTime).atZone(zone).toInstant().toEpochMilli()
     }
 
@@ -686,10 +698,13 @@ object MultiCallAlarmScheduler {
         recType: RecurrenceType,
         nowMillis: Long,
         timeOfDay: LocalTime,
-        intervalWeeks: Int = 1
+        intervalWeeks: Int = 1,
+        excludedDates: Set<String> = emptySet(),
+        recEndDate: LocalDate? = null
     ): LocalDate? {
         val zone = ZoneId.systemDefault()
         if (recType == RecurrenceType.NONE) {
+            if (excludedDates.contains(baseDate.toString())) return null
             val ms = baseDate.atTime(timeOfDay).atZone(zone).toInstant().toEpochMilli()
             return if (ms >= nowMillis - 60_000L) baseDate else null
         }
@@ -698,6 +713,8 @@ object MultiCallAlarmScheduler {
         val candidate = if (today.isAfter(baseDate)) today else baseDate
         for (step in 0..370) {
             val d = candidate.plusDays(step.toLong())
+            if (recEndDate != null && d.isAfter(recEndDate)) return null
+            if (excludedDates.contains(d.toString())) continue
             val ms = d.atTime(timeOfDay).atZone(zone).toInstant().toEpochMilli()
             if (ms < nowMillis) continue
             val matches = when (recType) {

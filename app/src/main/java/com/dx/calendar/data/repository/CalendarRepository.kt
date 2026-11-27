@@ -168,14 +168,19 @@ class CalendarRepository(private val context: Context) {
                     }
                 }
             } else {
-                // 重複規則展開
+                // 重複規則展開（支援單日排除與截止日）
                 val recEndDate = ev.recurrenceEndEpochMillis?.let {
                     Instant.ofEpochMilli(it).atZone(zone).toLocalDate()
                 }
+                val excludedSet = com.dx.calendar.data.local.RecurrenceExclusionStore.getExcludedDates(
+                    context, UnifiedSourceType.LOCAL_EVENT.name, ev.id
+                )
                 var cursorDate = if (rangeStart.isAfter(baseDate)) rangeStart else baseDate
                 while (!cursorDate.isAfter(rangeEnd)) {
                     if (recEndDate != null && cursorDate.isAfter(recEndDate)) break
-                    if (matchesRecurrence(baseDate, cursorDate, recType, recIntervalWeeks)) {
+                    if (!excludedSet.contains(cursorDate.toString()) &&
+                        matchesRecurrence(baseDate, cursorDate, recType, recIntervalWeeks)
+                    ) {
                         val occStart = cursorDate.atTime(baseStartZdt.toLocalTime()).atZone(zone).toInstant().toEpochMilli()
                         val occEnd = cursorDate.plusDays(spanDays).atTime(baseEndZdt.toLocalTime()).atZone(zone).toInstant().toEpochMilli()
                         val isDone = checkInSet.contains("EVENT:${ev.id}:${cursorDate.toEpochDay()}")
@@ -244,10 +249,19 @@ class CalendarRepository(private val context: Context) {
                         )
                     }
                 } else {
-                    // 重複型待辦 / 例行待辦（每日打卡制）
+                    // 重複型待辦 / 例行待辦（每日打卡制，支援單日排除與截止日）
+                    val taskExcluded = com.dx.calendar.data.local.RecurrenceExclusionStore.getExcludedDates(
+                        context, UnifiedSourceType.TASK.name, task.id
+                    )
+                    val taskCutoff = com.dx.calendar.data.local.RecurrenceExclusionStore.getCutoffEndDate(
+                        context, UnifiedSourceType.TASK.name, task.id
+                    )
                     var d = if (rangeStart.isAfter(baseDueDate)) rangeStart else baseDueDate
                     while (!d.isAfter(rangeEnd)) {
-                        if (matchesRecurrence(baseDueDate, d, recType, taskIntervalWeeks)) {
+                        if (taskCutoff != null && d.isAfter(taskCutoff)) break
+                        if (!taskExcluded.contains(d.toString()) &&
+                            matchesRecurrence(baseDueDate, d, recType, taskIntervalWeeks)
+                        ) {
                             val doneToday = checkInSet.contains("TASK:${task.id}:${d.toEpochDay()}")
                             if (settings.showCompletedTasks || !doneToday) {
                                 val startMs = (timeOfDay?.let { d.atTime(it) } ?: d.atStartOfDay())

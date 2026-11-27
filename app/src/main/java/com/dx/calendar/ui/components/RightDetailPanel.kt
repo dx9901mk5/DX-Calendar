@@ -85,7 +85,7 @@ fun RightDetailPanel(
     onSelectItem: (UnifiedCalendarItem) -> Unit,
     onAddEventForDate: (LocalDate) -> Unit,
     onEditItem: (UnifiedCalendarItem) -> Unit,
-    onDeleteItem: (UnifiedCalendarItem) -> Unit,
+    onDeleteItem: (UnifiedCalendarItem, com.dx.calendar.ui.CalendarViewModel.RecurrenceDeleteScope) -> Unit,
     onShareItem: (UnifiedCalendarItem) -> Unit,
     onToggleComplete: (UnifiedCalendarItem) -> Unit,
     onHideExternalToRoutine: (UnifiedCalendarItem) -> Unit,
@@ -123,7 +123,7 @@ fun RightDetailPanel(
                 richMeta = richMetaMap[metaKey],
                 onBack = onClearFocusedItem,
                 onEdit = { onEditItem(activeFocused) },
-                onDelete = { onDeleteItem(activeFocused) },
+                onDelete = { scope -> onDeleteItem(activeFocused, scope) },
                 onShare = { onShareItem(activeFocused) },
                 onHideExternalToRoutine = { onHideExternalToRoutine(activeFocused) },
                 onStartPomodoro = onStartPomodoro?.let { fn -> { fn(activeFocused) } },
@@ -389,7 +389,7 @@ private fun FocusedItemDetailCard(
     richMeta: com.dx.calendar.data.local.EventRichMeta? = null,
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (com.dx.calendar.ui.CalendarViewModel.RecurrenceDeleteScope) -> Unit,
     onShare: () -> Unit,
     onHideExternalToRoutine: () -> Unit,
     onStartPomodoro: (() -> Unit)? = null,
@@ -733,7 +733,12 @@ private fun FocusedItemDetailCard(
             }
         }
 
-        // 分享與刪除
+        // 分享與刪除（重複事務支援「僅刪除此日 / 刪除此日與後續 / 刪除整個系列」三選一）
+        var showRecurrenceDeleteDialog by remember(item.uniqueKey) { mutableStateOf(false) }
+        val isRecurringItem = item.recurrenceLabel.isNotBlank() &&
+            item.recurrenceLabel != "不重複" &&
+            item.recurrenceLabel != "多個日期"
+
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(onClick = onShare, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -742,7 +747,13 @@ private fun FocusedItemDetailCard(
             }
             if (item.sourceType != UnifiedSourceType.SYSTEM_EVENT) {
                 OutlinedButton(
-                    onClick = onDelete,
+                    onClick = {
+                        if (isRecurringItem) {
+                            showRecurrenceDeleteDialog = true
+                        } else {
+                            onDelete(com.dx.calendar.ui.CalendarViewModel.RecurrenceDeleteScope.ALL_SERIES)
+                        }
+                    },
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF5350)),
                     modifier = Modifier.weight(1f)
                 ) {
@@ -751,6 +762,63 @@ private fun FocusedItemDetailCard(
                     Text("刪除")
                 }
             }
+        }
+
+        if (showRecurrenceDeleteDialog) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showRecurrenceDeleteDialog = false },
+                title = {
+                    Text(
+                        text = "刪除重複事務",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "「${item.title}」為重複項目（${item.recurrenceLabel}），請選擇刪除範圍：",
+                            fontSize = 13.sp,
+                            color = tokens.secondaryTextColor
+                        )
+                        Button(
+                            onClick = {
+                                showRecurrenceDeleteDialog = false
+                                onDelete(com.dx.calendar.ui.CalendarViewModel.RecurrenceDeleteScope.THIS_DAY_ONLY)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("僅刪除此日（${item.date}）", color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                showRecurrenceDeleteDialog = false
+                                onDelete(com.dx.calendar.ui.CalendarViewModel.RecurrenceDeleteScope.THIS_AND_FOLLOWING)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("刪除此日與後續所有重複")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                showRecurrenceDeleteDialog = false
+                                onDelete(com.dx.calendar.ui.CalendarViewModel.RecurrenceDeleteScope.ALL_SERIES)
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF5350)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("刪除整個重複系列（含所有提醒）")
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { showRecurrenceDeleteDialog = false }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(72.dp))

@@ -1292,17 +1292,107 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun deleteUnifiedItem(item: UnifiedCalendarItem) {
+    enum class RecurrenceDeleteScope {
+        THIS_DAY_ONLY,
+        THIS_AND_FOLLOWING,
+        ALL_SERIES
+    }
+
+    fun deleteUnifiedItem(
+        item: UnifiedCalendarItem,
+        scope: RecurrenceDeleteScope = RecurrenceDeleteScope.ALL_SERIES
+    ) {
         viewModelScope.launch {
             val app = getApplication<Application>()
+            val zone = ZoneId.systemDefault()
             when (item.sourceType) {
                 UnifiedSourceType.LOCAL_EVENT -> {
-                    repo.dao.getEventById(item.rawId)?.let { MultiCallAlarmScheduler.cancelEventAlarms(app, it) }
-                    repo.dao.deleteEventById(item.rawId)
+                    val ev = repo.dao.getEventById(item.rawId)
+                    when (scope) {
+                        RecurrenceDeleteScope.THIS_DAY_ONLY -> {
+                            com.dx.calendar.data.local.RecurrenceExclusionStore.addExcludedDate(
+                                app, UnifiedSourceType.LOCAL_EVENT.name, item.rawId, item.date
+                            )
+                            if (ev != null) {
+                                MultiCallAlarmScheduler.cancelEventAlarms(app, ev)
+                                MultiCallAlarmScheduler.scheduleForEvent(app, ev)
+                            }
+                            _refreshTick.value += 1
+                            toast("已僅刪除 ${item.date} 該日項目（後續重複提醒不受影響）")
+                        }
+                        RecurrenceDeleteScope.THIS_AND_FOLLOWING -> {
+                            if (ev != null) {
+                                val baseDate = java.time.Instant.ofEpochMilli(ev.startEpochMillis).atZone(zone).toLocalDate()
+                                if (!item.date.isAfter(baseDate)) {
+                                    MultiCallAlarmScheduler.cancelEventAlarms(app, ev)
+                                    repo.dao.deleteEventById(item.rawId)
+                                    com.dx.calendar.data.local.RecurrenceExclusionStore.clearAllForItem(
+                                        app, UnifiedSourceType.LOCAL_EVENT.name, item.rawId
+                                    )
+                                    toast("已刪除整個重複系列")
+                                } else {
+                                    val cutoffMillis = item.date.minusDays(1)
+                                        .atTime(23, 59, 59)
+                                        .atZone(zone).toInstant().toEpochMilli()
+                                    val updated = ev.copy(recurrenceEndEpochMillis = cutoffMillis)
+                                    repo.dao.upsertEvent(updated)
+                                    MultiCallAlarmScheduler.cancelEventAlarms(app, ev)
+                                    MultiCallAlarmScheduler.scheduleForEvent(app, updated)
+                                    _refreshTick.value += 1
+                                    toast("已刪除 ${item.date} 與後續所有重複提醒")
+                                }
+                            }
+                        }
+                        RecurrenceDeleteScope.ALL_SERIES -> {
+                            ev?.let { MultiCallAlarmScheduler.cancelEventAlarms(app, it) }
+                            repo.dao.deleteEventById(item.rawId)
+                            com.dx.calendar.data.local.RecurrenceExclusionStore.clearAllForItem(
+                                app, UnifiedSourceType.LOCAL_EVENT.name, item.rawId
+                            )
+                            toast("已刪除整個重複系列")
+                        }
+                    }
                 }
                 UnifiedSourceType.TASK -> {
-                    repo.dao.getTaskById(item.rawId)?.let { MultiCallAlarmScheduler.cancelTaskAlarms(app, it) }
-                    repo.dao.deleteTaskById(item.rawId)
+                    val tk = repo.dao.getTaskById(item.rawId)
+                    when (scope) {
+                        RecurrenceDeleteScope.THIS_DAY_ONLY -> {
+                            com.dx.calendar.data.local.RecurrenceExclusionStore.addExcludedDate(
+                                app, UnifiedSourceType.TASK.name, item.rawId, item.date
+                            )
+                            if (tk != null) {
+                                MultiCallAlarmScheduler.cancelTaskAlarms(app, tk)
+                                MultiCallAlarmScheduler.scheduleForTask(app, tk)
+                            }
+                            _refreshTick.value += 1
+                            toast("已僅刪除 ${item.date} 該日待辦（後續重複不受影響）")
+                        }
+                        RecurrenceDeleteScope.THIS_AND_FOLLOWING -> {
+                            val baseDate = tk?.dueEpochDay?.let { LocalDate.ofEpochDay(it) }
+                            if (tk == null || baseDate == null || !item.date.isAfter(baseDate)) {
+                                tk?.let { MultiCallAlarmScheduler.cancelTaskAlarms(app, it) }
+                                repo.dao.deleteTaskById(item.rawId)
+                                com.dx.calendar.data.local.RecurrenceExclusionStore.clearAllForItem(
+                                    app, UnifiedSourceType.TASK.name, item.rawId
+                                )
+                                toast("已刪除整個重複待辦")
+                            } else {
+                                com.dx.calendar.data.local.RecurrenceExclusionStore.setCutoffEndDate(
+                                    app, UnifiedSourceType.TASK.name, item.rawId, item.date.minusDays(1)
+                                )
+                                MultiCallAlarmScheduler.cancelTaskAlarms(app, tk)
+                                _refreshTick.value += 1
+                                toast("已刪除 ${item.date} 與後續所有重複待辦")
+                            }
+                        }
+                        RecurrenceDeleteScope.ALL_SERIES -> {
+                            tk?.let { MultiCallAlarmScheduler.cancelTaskAlarms(app, it) }
+                            repo.dao.deleteTaskById(item.rawId)
+                            com.dx.calendar.data.local.RecurrenceExclusionStore.clearAllForItem(
+                                app, UnifiedSourceType.TASK.name, item.rawId
+                            )
+                        }
+                    }
                 }
                 UnifiedSourceType.SYSTEM_EVENT -> {
                     val ok = withContext(Dispatchers.IO) {

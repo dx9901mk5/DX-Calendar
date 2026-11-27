@@ -639,7 +639,7 @@ fun DXCalendarRootApp(
                                             onSelectItem = { viewModel.setFocusedItem(it) },
                                             onAddEventForDate = { viewModel.openNewEditor(date = it, presetWomensHealth = activeWomensHealthFilter) },
                                             onEditItem = { viewModel.openEditForUnifiedItem(it) },
-                                            onDeleteItem = { viewModel.deleteUnifiedItem(it) },
+                                            onDeleteItem = { item, scope -> viewModel.deleteUnifiedItem(item, scope) },
                                             onShareItem = { item ->
                                                 runCatching {
                                                     val meta = richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(item.sourceType.name, item.rawId)]
@@ -920,7 +920,7 @@ fun DXCalendarRootApp(
                                                 onSelectItem = { viewModel.setFocusedItem(it) },
                                                 onAddEventForDate = { viewModel.openNewEditor(date = it, presetWomensHealth = activeWomensHealthFilter) },
                                                 onEditItem = { viewModel.openEditForUnifiedItem(it) },
-                                                onDeleteItem = { viewModel.deleteUnifiedItem(it) },
+                                                onDeleteItem = { item, scope -> viewModel.deleteUnifiedItem(item, scope) },
                                                 onShareItem = { item ->
                                                     runCatching {
                                                         val meta = richMetaMap[com.dx.calendar.data.local.EventRichMetaStore.makeKey(item.sourceType.name, item.rawId)]
