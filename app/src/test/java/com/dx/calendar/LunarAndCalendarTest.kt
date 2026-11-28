@@ -647,4 +647,77 @@ class LunarAndCalendarTest {
         assertTrue(licensed.hasProFeatures)
         assertFalse(licensed.shouldShowBannerAd)
     }
+
+    @Test
+    fun googleTasksOwnerDetectionAndByoOAuthHelpers_workAccurately() {
+        // 1. 開發者專屬帳號雜湊比對（不區分大小寫與前後空白，非本人帳號一律 false）
+        val owner = "dx9901mk5" + "@gmail.com"
+        assertTrue(com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isOwnerEmail(owner))
+        assertTrue(com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isOwnerEmail("  ${owner.uppercase()} "))
+        assertFalse(com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isOwnerEmail("other.user@gmail.com"))
+        assertFalse(com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isOwnerEmail(""))
+
+        assertEquals(
+            owner,
+            com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.findOwnerEmail(
+                listOf("work@company.com", owner, "other@gmail.com")
+            )
+        )
+        assertEquals(
+            null,
+            com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.findOwnerEmail(
+                listOf("work@company.com", "other@gmail.com")
+            )
+        )
+
+        // 2. Client ID 格式檢核與 Google 下載 JSON 自動解析
+        assertTrue(
+            com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isValidGoogleClientId(
+                "123456789012-abcdefg123456.apps.googleusercontent.com"
+            )
+        )
+        assertFalse(com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isValidGoogleClientId("invalid-id"))
+
+        val installedJson = """
+            {"installed":{"client_id":"123456789012-desktopxyz.apps.googleusercontent.com","client_secret":"GOCSPX-secret123","redirect_uris":["http://localhost"]}}
+        """.trimIndent()
+        assertEquals(
+            "123456789012-desktopxyz.apps.googleusercontent.com" to "GOCSPX-secret123",
+            com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.parseGoogleClientJson(installedJson)
+        )
+
+        val webJson = """
+            {"web":{"client_id":"987654321098-webabc.apps.googleusercontent.com","client_secret":"GOCSPX-websec"}}
+        """.trimIndent()
+        assertEquals(
+            "987654321098-webabc.apps.googleusercontent.com" to "GOCSPX-websec",
+            com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.parseGoogleClientJson(webJson)
+        )
+
+        // 3. PKCE S256 產出與授權網址參數組裝驗證
+        val (verifier, challenge) = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.generatePkcePair()
+        assertTrue(verifier.length >= 43)
+        assertEquals(43, challenge.length)
+        assertFalse(verifier.contains("="))
+        assertFalse(challenge.contains("="))
+
+        val authUrl = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.buildAuthorizationUrl(
+            clientId = "123456789012-desktopxyz.apps.googleusercontent.com",
+            redirectUri = "http://127.0.0.1:43210/callback",
+            codeChallenge = challenge,
+            state = "state123",
+            loginHint = "tester@gmail.com"
+        )
+        assertTrue(authUrl.startsWith("https://accounts.google.com/o/oauth2/v2/auth?"))
+        assertTrue(authUrl.contains("code_challenge_method=S256"))
+        assertTrue(authUrl.contains("access_type=offline"))
+        assertTrue(authUrl.contains("prompt=consent"))
+        assertTrue(authUrl.contains("state=state123"))
+
+        val q = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.parseQueryParams(
+            "/callback?state=state123&code=4%2F0AfJohX_test"
+        )
+        assertEquals("state123", q["state"])
+        assertEquals("4/0AfJohX_test", q["code"])
+    }
 }

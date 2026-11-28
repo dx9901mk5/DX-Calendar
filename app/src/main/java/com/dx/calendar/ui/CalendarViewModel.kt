@@ -158,6 +158,20 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
     private val _isSyncingTasks = MutableStateFlow(false)
     val isSyncingTasks: StateFlow<Boolean> = _isSyncingTasks.asStateFlow()
 
+    private val _isOwnerTasksAccess = MutableStateFlow(false)
+    val isOwnerTasksAccess: StateFlow<Boolean> = _isOwnerTasksAccess.asStateFlow()
+
+    private val _customTasksOAuthState = MutableStateFlow(
+        com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(app)
+    )
+    val customTasksOAuthState: StateFlow<com.dx.calendar.data.sync.CustomOAuthUiState> = _customTasksOAuthState.asStateFlow()
+
+    private val _showTasksByoDialog = MutableStateFlow(false)
+    val showTasksByoDialog: StateFlow<Boolean> = _showTasksByoDialog.asStateFlow()
+
+    private var autoPromptedTasksByoThisSession: Boolean = false
+    private var activeCustomOAuthJob: Job? = null
+
     private val _updateState = MutableStateFlow(
         AppUpdateUiState(currentVersion = GitHubAutoUpdater.getCurrentVersionName(app))
     )
@@ -257,9 +271,7 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
             WidgetRefreshHelper.refreshAllWidgets(getApplication())
             val initSettings = repo.prefs.settingsFlow.first()
             refreshWeatherForecast(initSettings.effectiveZoneId)
-            if (initSettings.googleAccountEmail.isNotBlank()) {
-                autoSyncGoogleTasksSilently(initSettings.googleAccountEmail)
-            }
+            evaluateTasksAccessAndAutoSync(initSettings, forceSync = true)
             if (initSettings.autoCheckUpdate && !BuildConfig.IS_PLAY_BUILD) {
                 // 自動檢查更新並彈窗提示，由使用者確認點擊「立即下載更新」後才開始下載
                 checkGitHubUpdate(autoDownloadIfFound = false, showDialogIfOnMain = true)
@@ -286,23 +298,61 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val s = repo.prefs.getSettingsOnce()
             refreshWeatherForecast(s.effectiveZoneId)
-            val email = s.googleAccountEmail
-            if (email.isNotBlank() && System.currentTimeMillis() - lastAutoTasksSyncMillis >= 120_000L) {
-                autoSyncGoogleTasksSilently(email)
+            evaluateTasksAccessAndAutoSync(s, forceSync = false)
+        }
+    }
+
+    private fun resolveOwnerEmail(
+        s: UserSettings,
+        sysCals: List<SystemCalendarAccountInfo> = _systemCalendars.value
+    ): String? {
+        val candidates = buildList {
+            if (s.googleAccountEmail.isNotBlank()) add(s.googleAccountEmail)
+            addAll(s.googleAccountEmails)
+            sysCals.filter { it.isGoogleAccount && it.accountName.isNotBlank() }
+                .forEach { add(it.accountName) }
+        }
+        return com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.findOwnerEmail(candidates)
+    }
+
+    private suspend fun evaluateTasksAccessAndAutoSync(s: UserSettings, forceSync: Boolean) {
+        val app = getApplication<Application>()
+        _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(
+            app,
+            isAuthorizing = _customTasksOAuthState.value.isAuthorizing,
+            lastError = _customTasksOAuthState.value.lastError
+        )
+        val ownerEmail = resolveOwnerEmail(s)
+        _isOwnerTasksAccess.value = ownerEmail != null
+
+        val cooldownOk = forceSync || (System.currentTimeMillis() - lastAutoTasksSyncMillis >= 120_000L)
+        if (!cooldownOk) return
+
+        if (ownerEmail != null) {
+            if (!s.googleAccountEmail.equals(ownerEmail, ignoreCase = true)) {
+                repo.prefs.setGoogleAccountEmail(ownerEmail)
             }
+            autoSyncGoogleTasksSilently(ownerEmail)
+        } else if (com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isAuthorized(app)) {
+            val byoEmail = _customTasksOAuthState.value.authorizedEmail.ifBlank { s.googleAccountEmail }
+            autoSyncGoogleTasksSilently(byoEmail)
         }
     }
 
     private suspend fun autoSyncGoogleTasksSilently(email: String) {
-        if (_isSyncingTasks.value || email.isBlank()) return
+        if (_isSyncingTasks.value) return
+        val app = getApplication<Application>()
+        val isOwner = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isOwnerEmail(email)
+        if (!isOwner && !com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isAuthorized(app)) return
+        if (isOwner && email.isBlank()) return
         lastAutoTasksSyncMillis = System.currentTimeMillis()
         _isSyncingTasks.value = true
         val res = googleTasksSync.syncWithGoogleAccount(email)
         _isSyncingTasks.value = false
         res.onSuccess {
             _refreshTick.value += 1
-            MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
-            WidgetRefreshHelper.refreshAllWidgets(getApplication())
+            MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
+            WidgetRefreshHelper.refreshAllWidgets(app)
         }
     }
 
@@ -326,8 +376,18 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshSystemCalendars() {
         viewModelScope.launch {
-            _systemCalendars.value = repo.getSystemCalendars()
+            val cals = repo.getSystemCalendars()
+            _systemCalendars.value = cals
             _refreshTick.value += 1
+            val s = repo.prefs.getSettingsOnce()
+            val ownerEmail = resolveOwnerEmail(s, cals)
+            _isOwnerTasksAccess.value = ownerEmail != null
+            if (ownerEmail != null && System.currentTimeMillis() - lastAutoTasksSyncMillis >= 120_000L) {
+                if (!s.googleAccountEmail.equals(ownerEmail, ignoreCase = true)) {
+                    repo.prefs.setGoogleAccountEmail(ownerEmail)
+                }
+                autoSyncGoogleTasksSilently(ownerEmail)
+            }
         }
     }
 
@@ -1484,23 +1544,159 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun requestGoogleTasksSync() {
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            val s = repo.prefs.getSettingsOnce()
+            val ownerEmail = resolveOwnerEmail(s)
+            _isOwnerTasksAccess.value = ownerEmail != null
+            if (ownerEmail != null) {
+                syncGoogleTasksWithEmail(ownerEmail)
+                return@launch
+            }
+            if (com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isAuthorized(app)) {
+                val byoEmail = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(app)
+                    .authorizedEmail.ifBlank { s.googleAccountEmail }
+                syncGoogleTasksWithEmail(byoEmail)
+            } else {
+                _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(app)
+                _showTasksByoDialog.value = true
+            }
+        }
+    }
+
+    fun maybeAutoPromptTasksByoTutorial() {
+        val app = getApplication<Application>()
+        val ownerEmail = resolveOwnerEmail(settings.value)
+        _isOwnerTasksAccess.value = ownerEmail != null
+        if (ownerEmail != null) return
+        val oauthState = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(app)
+        _customTasksOAuthState.value = oauthState
+        if (!oauthState.isAuthorized && !autoPromptedTasksByoThisSession) {
+            autoPromptedTasksByoThisSession = true
+            _showTasksByoDialog.value = true
+        }
+    }
+
+    fun openTasksByoDialog() {
+        val app = getApplication<Application>()
+        _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(app)
+        _showTasksByoDialog.value = true
+    }
+
+    fun dismissTasksByoDialog() {
+        _showTasksByoDialog.value = false
+    }
+
+    fun getSavedCustomClientSecret(): String {
+        return com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getSavedClientSecret(getApplication())
+    }
+
+    fun startCustomGoogleTasksOAuth(
+        clientId: String,
+        clientSecret: String,
+        onOpenAuthUrl: (String) -> Unit
+    ) {
+        activeCustomOAuthJob?.cancel()
+        val app = getApplication<Application>()
+        activeCustomOAuthJob = viewModelScope.launch {
+            _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(
+                app,
+                isAuthorizing = true,
+                lastError = ""
+            )
+            val hint = settings.value.googleAccountEmail
+            val res = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.authorizeWithLoopback(
+                context = app,
+                rawClientId = clientId,
+                rawClientSecret = clientSecret,
+                loginHint = hint,
+                onOpenAuthUrl = onOpenAuthUrl
+            )
+            res.onSuccess { authEmail ->
+                if (authEmail.contains("@")) {
+                    repo.prefs.setGoogleAccountEmail(authEmail)
+                }
+                _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(
+                    app,
+                    isAuthorizing = false,
+                    lastError = ""
+                )
+                _showTasksByoDialog.value = false
+                toast("✓ 自訂 OAuth 授權成功，正在同步 Google Tasks...")
+                syncGoogleTasksWithEmail(authEmail)
+            }.onFailure { err ->
+                _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(
+                    app,
+                    isAuthorizing = false,
+                    lastError = err.message ?: "授權失敗，請確認憑證設定"
+                )
+            }
+        }
+    }
+
+    fun cancelCustomGoogleTasksOAuth() {
+        com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.cancelPendingAuthorization()
+        activeCustomOAuthJob?.cancel()
+        activeCustomOAuthJob = null
+        _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(
+            getApplication(),
+            isAuthorizing = false,
+            lastError = ""
+        )
+    }
+
+    fun clearCustomGoogleTasksOAuth() {
+        val app = getApplication<Application>()
+        activeCustomOAuthJob?.cancel()
+        activeCustomOAuthJob = null
+        com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.clearAll(app)
+        _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(app)
+        toast("已清除自訂 Google Tasks OAuth 憑證與授權")
+    }
+
     fun syncGoogleTasksWithEmail(email: String) {
         viewModelScope.launch {
+            val app = getApplication<Application>()
+            val cleanEmail = email.trim()
+            if (cleanEmail.contains("@")) {
+                repo.prefs.setGoogleAccountEmail(cleanEmail)
+            }
+            val isOwner = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isOwnerEmail(cleanEmail)
+            if (isOwner) {
+                _isOwnerTasksAccess.value = true
+            } else if (!com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isAuthorized(app)) {
+                _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(app)
+                _showTasksByoDialog.value = true
+                return@launch
+            }
+
             _isSyncingTasks.value = true
-            repo.prefs.setGoogleAccountEmail(email)
             lastAutoTasksSyncMillis = System.currentTimeMillis()
-            val res = googleTasksSync.syncWithGoogleAccount(email)
+            val res = googleTasksSync.syncWithGoogleAccount(cleanEmail)
             _isSyncingTasks.value = false
             res.onSuccess { cnt ->
                 _refreshTick.value += 1
-                MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(getApplication())
+                MultiCallAlarmScheduler.rescheduleAllUpcomingReminders(app)
                 toast("Google Tasks 已自動同步完成（共 $cnt 項任務，無日期項目將預設顯示於今日）")
-                WidgetRefreshHelper.refreshAllWidgets(getApplication())
+                WidgetRefreshHelper.refreshAllWidgets(app)
             }.onFailure { err ->
-                if (err is GoogleTasksConsentRequiredException) {
-                    _pendingGoogleTasksConsentIntent.value = err.consentIntent
-                } else {
-                    toast("同步提示：${err.message ?: "請確認網路或授權狀態"}")
+                when (err) {
+                    is GoogleTasksConsentRequiredException -> {
+                        _pendingGoogleTasksConsentIntent.value = err.consentIntent
+                    }
+                    is com.dx.calendar.data.sync.GoogleTasksCustomSetupRequiredException,
+                    is com.dx.calendar.data.sync.GoogleTasksCustomAuthRequiredException -> {
+                        _customTasksOAuthState.value = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.getUiState(
+                            app,
+                            isAuthorizing = false,
+                            lastError = err.message.orEmpty()
+                        )
+                        _showTasksByoDialog.value = true
+                    }
+                    else -> {
+                        toast("同步提示：${err.message ?: "請確認網路或授權狀態"}")
+                    }
                 }
             }
         }
@@ -1929,6 +2125,8 @@ class CalendarViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         super.onCleared()
+        com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.cancelPendingAuthorization()
+        activeCustomOAuthJob?.cancel()
         calendarObserverDebounceJob?.cancel()
         calendarContentObserver?.let { obs ->
             runCatching {

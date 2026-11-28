@@ -23,6 +23,12 @@ import java.util.concurrent.TimeUnit
 class GoogleTasksConsentRequiredException(val consentIntent: Intent) :
     Exception("需要授權存取 Google Tasks")
 
+class GoogleTasksCustomSetupRequiredException(message: String = "請先依教學填入您自申請的 Google Cloud OAuth 憑證") :
+    Exception(message)
+
+class GoogleTasksCustomAuthRequiredException(message: String = "請開啟設定教學完成自訂 Google OAuth 授權") :
+    Exception(message)
+
 /**
  * Google Tasks 雲端雙向自動同步引擎：
  * 首次綁定授權一次後，每次開啟／切回 App 即自動於背景判讀同步 Google Tasks 至月曆、時間表與桌面小工具！
@@ -105,26 +111,40 @@ class GoogleTasksSyncManager(
         .build()
 
     suspend fun syncWithGoogleAccount(accountEmail: String): Result<Int> = withContext(Dispatchers.IO) {
-        if (accountEmail.isBlank()) {
+        val isOwner = GoogleTasksCustomOAuthManager.isOwnerEmail(accountEmail)
+        if (!isOwner && !GoogleTasksCustomOAuthManager.isAuthorized(context)) {
+            return@withContext Result.failure(
+                if (GoogleTasksCustomOAuthManager.hasClientConfig(context)) {
+                    GoogleTasksCustomAuthRequiredException("已填入自訂 Client ID，請點「前往授權並同步」完成登入")
+                } else {
+                    GoogleTasksCustomSetupRequiredException("使用 Google Tasks 同步前，請先依教學填入您自己申請的 Google Cloud OAuth 憑證")
+                }
+            )
+        }
+        if (isOwner && accountEmail.isBlank()) {
             return@withContext Result.failure(IllegalArgumentException("尚未選擇連結帳號"))
         }
         runCatching {
-            val account = Account(accountEmail, "com.google")
-            val token = try {
-                GoogleAuthUtil.getToken(context, account, TASKS_SCOPE)
-            } catch (recoverable: UserRecoverableAuthException) {
-                val intent = recoverable.intent
-                if (intent != null) {
-                    throw GoogleTasksConsentRequiredException(intent)
+            val token = if (isOwner) {
+                val account = Account(accountEmail, "com.google")
+                try {
+                    GoogleAuthUtil.getToken(context, account, TASKS_SCOPE)
+                } catch (recoverable: UserRecoverableAuthException) {
+                    val intent = recoverable.intent
+                    if (intent != null) {
+                        throw GoogleTasksConsentRequiredException(intent)
+                    }
+                    throw recoverable
+                } catch (e: Exception) {
+                    if (e.message?.contains("UnregisteredOnApiConsole", ignoreCase = true) == true) {
+                        throw IllegalStateException(
+                            "尚未於 Google Cloud Console 登記 Android OAuth 憑證或尚未啟用 Google Tasks API"
+                        )
+                    }
+                    throw e
                 }
-                throw recoverable
-            } catch (e: Exception) {
-                if (e.message?.contains("UnregisteredOnApiConsole", ignoreCase = true) == true) {
-                    throw IllegalStateException(
-                        "尚未於 Google Cloud Console 登記 Android OAuth (套件 com.dx.calendar / SHA-1: 54:4E:D3:50:5A:9E:54:4A:5A:AC:3B:D2:3D:48:4E:F1:E7:FA:6E:74) 並啟用 Google Tasks API"
-                    )
-                }
-                throw e
+            } else {
+                GoogleTasksCustomOAuthManager.getValidAccessToken(context)
             }
 
             val defaultTaskReminders = com.dx.calendar.data.local.AppPreferences(context)
@@ -223,11 +243,18 @@ class GoogleTasksSyncManager(
     }
 
     suspend fun pushTaskCompletionToCloud(accountEmail: String, task: TaskItemEntity) {
-        if (accountEmail.isBlank() || task.googleTaskId.isNullOrBlank() || task.googleTaskListId.isNullOrBlank()) return
+        if (task.googleTaskId.isNullOrBlank() || task.googleTaskListId.isNullOrBlank()) return
+        val isOwner = GoogleTasksCustomOAuthManager.isOwnerEmail(accountEmail)
+        if (isOwner && accountEmail.isBlank()) return
+        if (!isOwner && !GoogleTasksCustomOAuthManager.isAuthorized(context)) return
         withContext(Dispatchers.IO) {
             runCatching {
-                val account = Account(accountEmail, "com.google")
-                val token = GoogleAuthUtil.getToken(context, account, TASKS_SCOPE)
+                val token = if (isOwner) {
+                    val account = Account(accountEmail, "com.google")
+                    GoogleAuthUtil.getToken(context, account, TASKS_SCOPE)
+                } else {
+                    GoogleTasksCustomOAuthManager.getValidAccessToken(context)
+                }
                 val bodyJson = JsonObject().apply {
                     addProperty("id", task.googleTaskId)
                     addProperty("title", task.title)

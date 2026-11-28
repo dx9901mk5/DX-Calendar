@@ -90,6 +90,10 @@ fun TasksCenterView(
     showCompleted: Boolean,
     googleEmail: String,
     isSyncingTasks: Boolean,
+    isOwnerTasksAccess: Boolean = false,
+    customOAuthState: com.dx.calendar.data.sync.CustomOAuthUiState = com.dx.calendar.data.sync.CustomOAuthUiState(),
+    onOpenTasksByoDialog: () -> Unit = {},
+    onFirstVisitNeedsByoTutorial: () -> Unit = {},
     onQuickAddTask: (title: String, dueToday: Boolean, showInMonth: Boolean) -> Unit,
     onToggleTask: (TaskItemEntity) -> Unit,
     onToggleTaskMonthVisible: (TaskItemEntity) -> Unit,
@@ -104,13 +108,21 @@ fun TasksCenterView(
     val tokens = LocalBrandTokens.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val googleTasksBlue = Color(0xFF1A73E8)
+    val canSyncNow = isOwnerTasksAccess || customOAuthState.isAuthorized
+
+    // 非開發者帳號且尚未完成自訂 OAuth 憑證設定時，進入待辦分頁立即彈出申請教學與填入視窗
+    androidx.compose.runtime.LaunchedEffect(isOwnerTasksAccess, customOAuthState.isAuthorized) {
+        if (!isOwnerTasksAccess && !customOAuthState.isAuthorized) {
+            onFirstVisitNeedsByoTutorial()
+        }
+    }
 
     val visibleTasks = remember(tasks, isPrivacyUnlocked, showCompleted) {
         tasks.filter { (!it.isPrivacy || isPrivacyUnlocked) && (showCompleted || !it.isCompleted) }
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp)) {
-        // 頂部 Google Tasks 同步呈現列（僅同步與檢視；新增待辦直接交由官方 Google Tasks App）
+        // 頂部 Google Tasks 同步呈現列（本人帳號自動登入直連；一般用戶依教學填入自訂免費 OAuth 憑證啟用）
         Surface(
             color = tokens.surfaceCardColor,
             shape = RoundedCornerShape(tokens.cardCorner),
@@ -144,11 +156,41 @@ fun TasksCenterView(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (googleEmail.isNotBlank()) "已連結同步顯示 · 新增待辦請直接於 Google Tasks App 操作"
-                            else "連結帳號後將自動同步 Google Tasks 並呈現於月曆與小工具",
+                            text = when {
+                                isOwnerTasksAccess -> "已自動識別本人 Google 帳號同步顯示 · 新增待辦請至 Google Tasks App"
+                                customOAuthState.isAuthorized -> "已連結自訂 OAuth 憑證（${customOAuthState.authorizedEmail.ifBlank { googleEmail }}）"
+                                else -> "需填入您免費申請的 Google Cloud Desktop OAuth 憑證即可同步顯示"
+                            },
                             color = tokens.secondaryTextColor,
                             fontSize = 12.sp
                         )
+                    }
+                }
+
+                if (!canSyncNow) {
+                    Surface(
+                        color = googleTasksBlue.copy(alpha = 0.10f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(10.dp)
+                        ) {
+                            Text(
+                                text = "🔑 尚未啟用雲端同步：點下方「📖 申請教學與填入憑證」依 4 步驟免費申請並貼入您的 Google Cloud Desktop OAuth 憑證，即可自動同步 Google Tasks 至月曆與小工具。",
+                                color = tokens.primaryTextColor,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp
+                            )
+                            Button(
+                                onClick = onOpenTasksByoDialog,
+                                colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("📖 查看申請教學並填入憑證", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
                 }
 
@@ -168,13 +210,31 @@ fun TasksCenterView(
                         Text("開啟 Google Tasks", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                     OutlinedButton(
-                        onClick = onSyncGoogleTasks,
+                        onClick = {
+                            if (canSyncNow) onSyncGoogleTasks() else onOpenTasksByoDialog()
+                        },
                         enabled = !isSyncingTasks,
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Filled.CloudSync, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (isSyncingTasks) "同步中..." else "立即同步", fontSize = 12.sp)
+                        Text(
+                            text = when {
+                                isSyncingTasks -> "同步中..."
+                                canSyncNow -> "立即同步"
+                                else -> "填入憑證"
+                            },
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                if (!isOwnerTasksAccess && customOAuthState.isAuthorized) {
+                    TextButton(
+                        onClick = onOpenTasksByoDialog,
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                    ) {
+                        Text("🔑 管理自訂 OAuth 憑證與教學", fontSize = 12.sp, color = tokens.accentColor)
                     }
                 }
             }

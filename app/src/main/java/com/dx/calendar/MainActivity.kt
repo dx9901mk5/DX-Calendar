@@ -224,12 +224,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 },
                 onLaunchGoogleAccountPicker = {
-                    val savedEmail = viewModel.settings.value.googleAccountEmail
-                    if (savedEmail.isNotBlank()) {
-                        viewModel.syncGoogleTasksWithEmail(savedEmail)
-                    } else {
-                        launchGoogleAccountChooser()
-                    }
+                    viewModel.requestGoogleTasksSync()
                 },
                 onAddGoogleAccount = {
                     launchGoogleAccountChooser()

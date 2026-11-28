@@ -5,6 +5,19 @@ All notable changes to **DX-Calendar** are documented in this file.
 
 ---
 
+## [v2.1.8] - 2026-11-28 (`versionCode = 42`)
+
+### 🔑 Google Tasks 雙軌授權與 BYO 自訂免費 OAuth 憑證（含內建彈出教學） / Added
+- **支援使用者自帶免費 Google Cloud Desktop OAuth 憑證同步 Google Tasks（PKCE + 本機硬體加密）**：
+  - 新增 `GoogleTasksCustomOAuthManager` 與 `network_security_config.xml`（對外全面 HTTPS，僅允許本機 `127.0.0.1` Loopback 承接 OAuth 2.0 + PKCE `S256` 授權回呼），憑證與 Refresh Token 皆以 Android Keystore `AES-256-GCM` 硬體加密保存於本機，100% 直連使用者自己的 Google Cloud 專案、不經第三方伺服器。
+  - 支援直接貼上 `Client ID`／`Client Secret`，亦可直接貼上 Google Cloud 下載之整份 `client_secret_*.json` 一鍵自動解析填入。
+- **Tasks 頁面自動彈出 4 步驟免費申請教學與設定視窗**：
+  - 新增 `GoogleTasksByoDialog`：尚未設定自訂憑證的一般使用者進入「待辦事項 (Tasks)」分頁或點擊「同步 / 填入憑證」時，自動彈出詳細 4 步驟圖文申請教學（含一鍵開啟 Google Cloud Console Tasks API 頁面與「務必選 Desktop app 勿選 Android」防呆提醒），完成填入並授權後立即雙向同步 Google Tasks 至月曆與桌面小工具。
+- **現有開發者專屬 Google 帳號自動辨識直連**：
+  - 依裝置既有 Google 帳號以 SHA-256 雜湊無感辨識（公開原始碼零明文信箱外洩），本人帳號自動直連同步免手動輸入，其他使用者則完全隔離並由自訂憑證啟用。
+
+---
+
 ## [v2.1.7] - 2026-11-27 (`versionCode = 41`)
 
 ### 🛠️ 互動防誤觸優化 / Improved

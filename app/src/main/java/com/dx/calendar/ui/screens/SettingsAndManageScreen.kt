@@ -201,6 +201,9 @@ fun SettingsAndManageScreen(
     onToggleRequireDualFingerprint: (Boolean) -> Unit,
     onOpenPrivacyVault: () -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
+    isOwnerTasksAccess: Boolean = false,
+    customTasksOAuthState: com.dx.calendar.data.sync.CustomOAuthUiState = com.dx.calendar.data.sync.CustomOAuthUiState(),
+    onOpenTasksByoDialog: () -> Unit = {},
     onSyncGoogleTasks: () -> Unit,
     onSyncGoogleTasksForEmail: (String) -> Unit = { onSyncGoogleTasks() },
     onAddGoogleAccount: () -> Unit = onSyncGoogleTasks,
@@ -504,6 +507,9 @@ fun SettingsAndManageScreen(
                                     onToggleRequireDualFingerprint = onToggleRequireDualFingerprint,
                                     onOpenPrivacyVault = onOpenPrivacyVault,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
+                                    isOwnerTasksAccess = isOwnerTasksAccess,
+                                    customTasksOAuthState = customTasksOAuthState,
+                                    onOpenTasksByoDialog = onOpenTasksByoDialog,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
                                     onSyncGoogleTasksForEmail = onSyncGoogleTasksForEmail,
                                     onAddGoogleAccount = onAddGoogleAccount,
@@ -631,6 +637,9 @@ fun SettingsAndManageScreen(
                                     onToggleRequireDualFingerprint = onToggleRequireDualFingerprint,
                                     onOpenPrivacyVault = onOpenPrivacyVault,
                                     onToggleShowCompletedTasks = onToggleShowCompletedTasks,
+                                    isOwnerTasksAccess = isOwnerTasksAccess,
+                                    customTasksOAuthState = customTasksOAuthState,
+                                    onOpenTasksByoDialog = onOpenTasksByoDialog,
                                     onSyncGoogleTasks = onSyncGoogleTasks,
                                     onSyncGoogleTasksForEmail = onSyncGoogleTasksForEmail,
                                     onAddGoogleAccount = onAddGoogleAccount,
@@ -803,6 +812,9 @@ private fun DxSettingsSectionContent(
     onToggleRequireDualFingerprint: (Boolean) -> Unit,
     onOpenPrivacyVault: () -> Unit,
     onToggleShowCompletedTasks: (Boolean) -> Unit,
+    isOwnerTasksAccess: Boolean = false,
+    customTasksOAuthState: com.dx.calendar.data.sync.CustomOAuthUiState = com.dx.calendar.data.sync.CustomOAuthUiState(),
+    onOpenTasksByoDialog: () -> Unit = {},
     onSyncGoogleTasks: () -> Unit,
     onSyncGoogleTasksForEmail: (String) -> Unit = { onSyncGoogleTasks() },
     onAddGoogleAccount: () -> Unit = onSyncGoogleTasks,
@@ -990,16 +1002,25 @@ private fun DxSettingsSectionContent(
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
+                                        val isOwnerGmail = com.dx.calendar.data.sync.GoogleTasksCustomOAuthManager.isOwnerEmail(gmail)
+                                        val isCustomReady = customTasksOAuthState.isAuthorized
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text("Google Tasks", color = tokens.primaryTextColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                                             Text(
-                                                text = if (isTasksLinked) "已同步呈現於日曆（新增請至 Google Tasks App）" else "點擊右側啟動同步呈現",
+                                                text = when {
+                                                    isOwnerGmail -> "已自動識別本人帳號直連同步（免填憑證）"
+                                                    isCustomReady -> "已透過自訂 OAuth 憑證同步呈現"
+                                                    else -> "需填入自申請的免費 OAuth 憑證（點右側查看教學）"
+                                                },
                                                 color = tokens.secondaryTextColor,
                                                 fontSize = 11.sp
                                             )
                                         }
                                         Button(
-                                            onClick = { onSyncGoogleTasksForEmail(gmail) },
+                                            onClick = {
+                                                if (isOwnerGmail || isCustomReady) onSyncGoogleTasksForEmail(gmail)
+                                                else onOpenTasksByoDialog()
+                                            },
                                             enabled = !isSyncingTasks,
                                             colors = ButtonDefaults.buttonColors(containerColor = tokens.accentColor),
                                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
@@ -1008,8 +1029,8 @@ private fun DxSettingsSectionContent(
                                             Text(
                                                 text = when {
                                                     isSyncingTasks -> "同步中..."
-                                                    isTasksLinked -> "立即同步"
-                                                    else -> "初步啟動"
+                                                    isOwnerGmail || isCustomReady -> "立即同步"
+                                                    else -> "教學／填入"
                                                 },
                                                 fontSize = 11.sp,
                                                 color = Color.White,
@@ -1043,6 +1064,23 @@ private fun DxSettingsSectionContent(
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(sc.displayName, color = tokens.primaryTextColor, fontSize = 14.sp)
                                 }
+                            }
+                        }
+
+                        if (!isOwnerTasksAccess) {
+                            OutlinedButton(
+                                onClick = onOpenTasksByoDialog,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (customTasksOAuthState.isAuthorized) {
+                                        "🔑 管理自訂 Google Tasks OAuth 憑證與申請教學"
+                                    } else {
+                                        "📖 Google Tasks 自訂 OAuth 憑證申請教學與填入"
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
 

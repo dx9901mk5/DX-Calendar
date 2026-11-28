@@ -174,6 +174,9 @@ fun DXCalendarRootApp(
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
     val systemCalendars by viewModel.systemCalendars.collectAsState()
     val isSyncingTasks by viewModel.isSyncingTasks.collectAsState()
+    val isOwnerTasksAccess by viewModel.isOwnerTasksAccess.collectAsState()
+    val customTasksOAuthState by viewModel.customTasksOAuthState.collectAsState()
+    val showTasksByoDialog by viewModel.showTasksByoDialog.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     val rangeItems by viewModel.visibleRangeItems.collectAsState()
     val weatherByDate by viewModel.weatherByDate.collectAsState()
@@ -480,6 +483,10 @@ fun DXCalendarRootApp(
                                 showCompleted = settings.showCompletedTasks,
                                 googleEmail = settings.googleAccountEmail,
                                 isSyncingTasks = isSyncingTasks,
+                                isOwnerTasksAccess = isOwnerTasksAccess,
+                                customOAuthState = customTasksOAuthState,
+                                onOpenTasksByoDialog = { viewModel.openTasksByoDialog() },
+                                onFirstVisitNeedsByoTutorial = { viewModel.maybeAutoPromptTasksByoTutorial() },
                                 onQuickAddTask = { t, todayFlag, showM -> viewModel.quickAddTask(t, todayFlag, showM) },
                                 onToggleTask = { viewModel.toggleTaskEntity(it) },
                                 onToggleTaskMonthVisible = { viewModel.toggleTaskMonthVisible(it) },
@@ -1160,6 +1167,9 @@ fun DXCalendarRootApp(
                     viewModel.setMainSection(MainSection.CALENDAR)
                 },
                 onToggleShowCompletedTasks = { viewModel.setShowCompletedTasks(it) },
+                isOwnerTasksAccess = isOwnerTasksAccess,
+                customTasksOAuthState = customTasksOAuthState,
+                onOpenTasksByoDialog = { viewModel.openTasksByoDialog() },
                 onSyncGoogleTasks = onLaunchGoogleAccountPicker,
                 onSyncGoogleTasksForEmail = { email -> viewModel.syncGoogleTasksWithEmail(email) },
                 onAddGoogleAccount = onAddGoogleAccount,
@@ -1257,6 +1267,32 @@ fun DXCalendarRootApp(
             )
             }
         }
+        }
+
+        if (showTasksByoDialog) {
+            com.dx.calendar.ui.components.GoogleTasksByoDialog(
+                oauthState = customTasksOAuthState,
+                initialClientSecret = viewModel.getSavedCustomClientSecret(),
+                onDismiss = { viewModel.dismissTasksByoDialog() },
+                onStartAuthorize = { cid, csec ->
+                    viewModel.startCustomGoogleTasksOAuth(cid, csec) { authUrl ->
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, android.net.Uri.parse(authUrl))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }.onFailure {
+                            android.widget.Toast.makeText(
+                                context,
+                                "無法開啟瀏覽器進行 Google 授權，請確認系統瀏覽器狀態",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                },
+                onCancelAuthorize = { viewModel.cancelCustomGoogleTasksOAuth() },
+                onClearCredentials = { viewModel.clearCustomGoogleTasksOAuth() }
+            )
         }
 
         // === v2.0 快捷效率彈窗：離線一句話／語音快速建行程、新增範本、番茄鐘專注 ===
